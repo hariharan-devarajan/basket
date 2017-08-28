@@ -23,13 +23,16 @@ private:
   MPI_Win value_bucket_win;
   MPI_Win bucket_size_win;
   MPI_Win presence_win;
+  MPI_Win value_bucket_win_add;
+  MPI_Win key_bucket_win_add;
+  MPI_Win presence_win_add;
   int rank;
   MPI_Datatype key_type;
   MPI_Datatype value_type;
   Key **key_buckets;
   Value **value_buckets;
   int **presence;
-
+  MPI_Aint key_buckets_add, value_buckets_add, presence_add;
   void buildTypes() {
     Key k;
     Value v;
@@ -49,15 +52,26 @@ private:
     int objectsize=n.size();
     DBGVAR2(std::cout, key_bucket_win,value_bucket_win);
 #endif
+    MPI_Aint baseAddress = 0;
+    MPI_Win_lock(MPI_LOCK_SHARED, server, 0, key_bucket_win_add);
+    MPI_Get(&baseAddress, 1, MPI_INT, server, 0, 1, MPI_INT,
+            key_bucket_win_add);
+    MPI_Win_unlock(server, key_bucket_win_add);
+    MPI_Aint address = baseAddress + displacement * sizeof(Key);
     MPI_Win_lock(MPI_LOCK_EXCLUSIVE, server, 0, key_bucket_win);
-    int error = MPI_Put(&n.key, 1, key_type, server, displacement, 1, key_type,
+    int error = MPI_Put(&n.key, 1, key_type, server, address, 1, key_type,
                         key_bucket_win);
     int error2 = MPI_Win_unlock(server, key_bucket_win);
 #ifdef DEBUG
     DBGVAR3(std::cout, n,error,error2);
 #endif
+    MPI_Win_lock(MPI_LOCK_SHARED, server, 0, value_bucket_win_add);
+    MPI_Get(&baseAddress, 1, MPI_INT, server, 0, 1, MPI_INT,
+            value_bucket_win_add);
+    MPI_Win_unlock(server, value_bucket_win_add);
+    address = baseAddress + displacement * sizeof(Value);
     MPI_Win_lock(MPI_LOCK_EXCLUSIVE, server, 0, value_bucket_win);
-    error = MPI_Put(&n.value, 1, value_type, server, displacement, 1,
+    error = MPI_Put(&n.value, 1, value_type, server, address, 1,
                     value_type, value_bucket_win);
     error2 = MPI_Win_unlock(server, value_bucket_win);
 #ifdef DEBUG
@@ -70,8 +84,13 @@ private:
     DBGVAR3(std::cout, presence,server,displacement);
     DBGVAR(std::cout, presence_win);
 #endif
+    MPI_Aint baseAddress = 0;
+    MPI_Win_lock(MPI_LOCK_SHARED, server, 0, presence_win_add);
+    MPI_Get(&baseAddress, 1, MPI_INT, server, 0, 1, MPI_INT, presence_win_add);
+    MPI_Win_unlock(server, presence_win_add);
+    MPI_Aint address = baseAddress + displacement * sizeof(int);
     MPI_Win_lock(MPI_LOCK_EXCLUSIVE, server, 0, presence_win);
-    int error = MPI_Put(&presence, 1, MPI_INT, server, displacement, 1, MPI_INT,
+    int error = MPI_Put(&presence, 1, MPI_INT, server, address, 1, MPI_INT,
                         presence_win);
     int error2 = MPI_Win_unlock(server, presence_win);
 #ifdef DEBUG
@@ -85,16 +104,26 @@ private:
     int objectsize=n.size();
     DBGVAR2(std::cout, key_bucket_win,value_bucket_win);
 #endif
+    MPI_Aint baseAddress = 0;
+    MPI_Win_lock(MPI_LOCK_SHARED, server, 0, key_bucket_win_add);
+    MPI_Get(&baseAddress, 1, MPI_INT, server, 0, 1, MPI_INT,
+            key_bucket_win_add);
+    MPI_Win_unlock(server, key_bucket_win_add);
+    MPI_Aint address = baseAddress + displacement * sizeof(Key);
     MPI_Win_lock(MPI_LOCK_SHARED, server, 0, key_bucket_win);
-    int error = MPI_Get(&n.key, 1, key_type, server, displacement, 1, key_type,
+    int error = MPI_Get(&n.key, 1, key_type, server, address, 1, key_type,
                         key_bucket_win);
     int error2 = MPI_Win_unlock(server, key_bucket_win);
 #ifdef DEBUG
     DBGVAR3(std::cout, n,error,error2);
 #endif
-
+    MPI_Win_lock(MPI_LOCK_SHARED, server, 0, value_bucket_win_add);
+    MPI_Get(&baseAddress, 1, MPI_INT, server, 0, 1, MPI_INT,
+            value_bucket_win_add);
+    MPI_Win_unlock(server, value_bucket_win_add);
+    address = baseAddress + displacement * sizeof(Value);
     MPI_Win_lock(MPI_LOCK_SHARED, server, 0, value_bucket_win);
-    error = MPI_Get(&n.value, 1, value_type, server, displacement, 1,
+    error = MPI_Get(&n.value, 1, value_type, server, address, 1,
                     value_type, value_bucket_win);
     error2 = MPI_Win_unlock(server, value_bucket_win);
 #ifdef DEBUG
@@ -106,8 +135,16 @@ private:
 #ifdef DEBUG
     DBGVAR3(std::cout, presence,server,displacement);
 #endif
+    MPI_Aint baseAddress = 0;
+    MPI_Win_lock(MPI_LOCK_SHARED, server, 0, presence_win_add);
+    MPI_Get(&baseAddress, 1, MPI_INT, server, 0, 1, MPI_INT, presence_win_add);
+    MPI_Win_unlock(server, presence_win_add);
+    MPI_Aint address = baseAddress + displacement * sizeof(int);
+#ifdef DEBUG
+    DBGVAR(std::cout, address);
+#endif
     MPI_Win_lock(MPI_LOCK_SHARED, server, 0, presence_win);
-    int error = MPI_Get(&presence, 1, MPI_INT, server, displacement, 1, MPI_INT,
+    int error = MPI_Get(&presence, 1, MPI_INT, server, address, 1, MPI_INT,
                         presence_win);
     int error2 = MPI_Win_unlock(server, presence_win);
 #ifdef DEBUG
@@ -144,14 +181,36 @@ private:
     Node<Key, Value> n;
     buildTypes();
 
-    MPI_Win_create(key_buckets, bucket_size * allowed_conflicts * sizeof(Key),
-                   sizeof(Key), MPI_INFO_NULL, MPI_COMM_WORLD, &key_bucket_win);
-    MPI_Win_create(value_buckets,
-                   bucket_size * allowed_conflicts * sizeof(Value),
-                   sizeof(Value), MPI_INFO_NULL, MPI_COMM_WORLD,
-                   &value_bucket_win);
-    MPI_Win_create(presence, bucket_size * allowed_conflicts * sizeof(int),
-                   sizeof(int), MPI_INFO_NULL, MPI_COMM_WORLD, &presence_win);
+    /*
+     * create base address window
+     */
+    MPI_Win_create(&key_buckets_add, sizeof(MPI_Aint),
+                   sizeof(MPI_Aint), MPI_INFO_NULL, MPI_COMM_WORLD,
+                   &key_bucket_win_add);
+    MPI_Win_create(&value_buckets_add, sizeof(MPI_Aint),
+                   sizeof(MPI_Aint), MPI_INFO_NULL, MPI_COMM_WORLD,
+                   &value_bucket_win_add);
+    MPI_Win_create(&presence_add, sizeof(MPI_Aint),
+                   sizeof(MPI_Aint), MPI_INFO_NULL, MPI_COMM_WORLD,
+                   &presence_win_add);
+    /*
+     * Build base address
+     */
+    MPI_Get_address(key_buckets, &key_buckets_add);
+    MPI_Get_address(value_buckets, &value_buckets_add);
+    MPI_Get_address(presence, &presence_add);
+    /*
+     * create dynamic windows
+     */
+    MPI_Win_create_dynamic(MPI_INFO_NULL, MPI_COMM_WORLD, &key_bucket_win);
+    MPI_Win_create_dynamic(MPI_INFO_NULL, MPI_COMM_WORLD, &value_bucket_win);
+    MPI_Win_create_dynamic(MPI_INFO_NULL, MPI_COMM_WORLD, &presence_win);
+    MPI_Win_attach(key_bucket_win, key_buckets,
+                   bucket_size * allowed_conflicts * sizeof(Key));
+    MPI_Win_attach(value_bucket_win, value_buckets,
+                   bucket_size * allowed_conflicts * sizeof(Value));
+    MPI_Win_attach(presence_win, presence,
+                   bucket_size * allowed_conflicts * sizeof(int));
     MPI_Win_create(&bucket_size, sizeof(int), sizeof(int), MPI_INFO_NULL,
                    MPI_COMM_WORLD, &bucket_size_win);
     MPI_Barrier(MPI_COMM_WORLD);
@@ -259,10 +318,15 @@ public:
   }
 
   void kill() {
-
+    MPI_Win_detach(key_bucket_win, key_buckets);
     MPI_Win_free(&key_bucket_win);
+    MPI_Win_detach(value_bucket_win, value_buckets);
     MPI_Win_free(&value_bucket_win);
+    MPI_Win_detach(presence_win, presence);
     MPI_Win_free(&presence_win);
+    MPI_Win_free(&key_bucket_win_add);
+    MPI_Win_free(&value_bucket_win_add);
+    MPI_Win_free(&presence_win_add);
     MPI_Win_free(&bucket_size_win);
     MPI_Type_free(&key_type);
     MPI_Type_free(&value_type);

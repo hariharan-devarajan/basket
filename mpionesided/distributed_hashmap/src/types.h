@@ -57,7 +57,6 @@ template<typename Key, typename Value>
 struct Node {
   Value value;
   Key key;
-
   size_t size() {
     return sizeof(Node<Key, Value>);
   }

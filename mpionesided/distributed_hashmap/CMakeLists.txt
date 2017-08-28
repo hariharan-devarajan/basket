@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.8)
 project(mpionesided)
 
 set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -rdynamic -DDEBUG2")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -rdynamic -DDEBUG1")
 SET(CMAKE_CXX_COMPILER /usr/local/bin/mpic++)
 # Require MPI for this project:
 find_package(MPI REQUIRED)
