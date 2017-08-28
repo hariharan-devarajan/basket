@@ -6,7 +6,7 @@
 #define MPIONESIDED_DISTRIBUTED_HASHMAP_H
 
 #include "mpi.h"
-#include "../src/DistributedHashMap.h"
-#include "../src/types.h"
+#include "../src/map/DistributedHashMap.h"
+#include "../src/common/types.h"
 
 #endif //MPIONESIDED_DISTRIBUTED_HASHMAP_H

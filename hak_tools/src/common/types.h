@@ -78,5 +78,15 @@ struct Node {
   }
 };
 
+template<typename M>
+struct Message{
+
+};
+
+template<typename R>
+struct Reply{
+
+};
+
 
 #endif //MPIONESIDED_TYPES_H_H
