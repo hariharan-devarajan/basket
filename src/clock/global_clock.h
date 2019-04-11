@@ -11,12 +11,13 @@
 #include <boost/interprocess/allocators/allocator.hpp>
 #include <boost/interprocess/sync/interprocess_mutex.hpp>
 #include <boost/interprocess/sync/scoped_lock.hpp>
-#include <src/common/singleton.h>
-#include <src/common/distributed_ds/communication/rpc_lib.h>
-#include <src/common/debug.h>
+#include <src/singleton.h>
+#include <src/data_structures.h>
+#include <src/typedefs.h>
+#include <src/communication/rpc_lib.h>
+#include <src/debug.h>
 
 namespace bip=boost::interprocess;
-typedef unsigned long long int really_long;
 class GlobalClock{
 private:
     typedef std::chrono::high_resolution_clock::time_point chrono_time;
@@ -31,7 +32,7 @@ private:
     std::shared_ptr<RPC> rpc;
 public:
     ~GlobalClock(){
-        AutoTrace trace = AutoTrace("~GlobalClock");
+        AutoTrace trace = AutoTrace("~GlobalClock", NULL);
         if(is_server) bip::shared_memory_object::remove(name.c_str());
     }
     GlobalClock(std::string name_,
@@ -67,7 +68,7 @@ public:
     }
 
     HTime GetTime(){
-        AutoTrace trace = AutoTrace("GlobalClock::GetTime");
+        AutoTrace trace = AutoTrace("GlobalClock::GetTime", NULL);
         boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(*mutex);
         auto t2 = std::chrono::high_resolution_clock::now();
         auto t =  std::chrono::duration_cast<std::chrono::microseconds>(

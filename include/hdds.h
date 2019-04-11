@@ -1,0 +1,6 @@
+#include "../src/hashmap/DistributedHashMap.h"
+#include "../src/map/DistributedMap.h"
+#include "../src/multimap/DistributedMultiMap.h"
+#include "../src/clock/global_clock.h"
+#include "../src/queue/DistributedMessageQueue.h"
+#include "../src/priority_queue/DistributedPriorityQueue.h"

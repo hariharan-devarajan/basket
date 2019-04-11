@@ -12,12 +12,13 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include <rpc/client.h>
-#include <src/common/constants.h>
+#include <src/constants.h>
 #include <boost/interprocess/managed_shared_memory.hpp>
 #include <boost/interprocess/allocators/allocator.hpp>
 #include <boost/interprocess/containers/vector.hpp>
-#include <src/common/data_structure.h>
-#include <src/common/debug.h>
+#include <src/typedefs.h>
+#include <src/data_structures.h>
+#include <src/debug.h>
 
 namespace bip = boost::interprocess;
 /* typedefs */

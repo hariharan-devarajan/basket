@@ -15,8 +15,8 @@
 /** MPI Headers**/
 #include <mpi.h>
 /** RPC Lib Headers**/
-#include "../../../../external/rpclib/include/rpc/server.h"
-#include "../../../../external/rpclib/include/rpc/client.h"
+#include <rpc/server.h>
+#include <rpc/client.h>
 /** Boost Headers **/
 #include <boost/interprocess/managed_shared_memory.hpp>
 #include <boost/interprocess/containers/map.hpp>
@@ -24,11 +24,12 @@
 #include <boost/interprocess/sync/interprocess_mutex.hpp>
 #include <boost/interprocess/sync/scoped_lock.hpp>
 #include <boost/algorithm/string.hpp>
-#include <src/common/constants.h>
-#include <src/common/distributed_ds/communication/rpc_lib.h>
-#include <src/common/singleton.h>
-#include <src/common/macros.h>
-#include <src/common/configuration_manager.h>
+// #include <src/constants.h>
+#include <src/communication/rpc_lib.h>
+#include <src/singleton.h>
+#include <src/debug.h>
+// #include <src/common/macros.h>
+// #include <src/common/configuration_manager.h>
 
 /**
  * This is a Distributed HashMap Class. It uses shared memory + RPC + MPI to achieve the data structure.
