@@ -67,7 +67,7 @@ class DistributedMultiMap {
             name.c_str());
   }
 
-  explicit DistributedMultiMap() {}
+  DistributedMultiMap() {}
   explicit DistributedMultiMap(std::string name_,
                                bool is_server_,
                                uint16_t my_server_,
