@@ -13,9 +13,9 @@
 #include <boost/interprocess/allocators/allocator.hpp>
 #include <boost/interprocess/sync/interprocess_mutex.hpp>
 #include <boost/interprocess/sync/scoped_lock.hpp>
-#include<utility>
-#include<memory>
-#include<string>
+#include <utility>
+#include <memory>
+#include <string>
 
 namespace bip = boost::interprocess;
 

@@ -4,7 +4,7 @@ project(basket VERSION 1.0.0 DESCRIPTION "Basket: A library for flexible distrib
 
 include(GNUInstallDirs)
 
-set(BASKET_SRC src/singleton.h src/debug.h src/constants.h src/typedefs.h src/data_structures.h src/communication/rpc_lib.h src/hashmap/DistributedHashMap.h src/map/DistributedMap.h src/multimap/DistributedMultiMap.h src/clock/global_clock.h src/queue/DistributedMessageQueue.h src/priority_queue/DistributedPriorityQueue.h src/sequencer/global_sequence.h)
+set(BASKET_SRC src/singleton.h src/debug.h src/constants.h src/typedefs.h src/data_structures.h src/communication/rpc_lib.h src/hashmap/distributed_hash_map.h src/map/distributed_map.h src/multimap/distributed_multi_map.h src/clock/global_clock.h src/queue/distributed_message_queue.h src/priority_queue/distributed_priority_queue.h src/sequencer/global_sequence.h)
 
 add_library(${PROJECT_NAME} SHARED ${BASKET_SRC})
 

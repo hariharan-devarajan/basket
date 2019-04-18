@@ -12,12 +12,12 @@
 #ifndef INCLUDE_BASKET_H_
 #define INCLUDE_BASKET_H_
 
-#include "../src/hashmap/DistributedHashMap.h"
-#include "../src/map/DistributedMap.h"
-#include "../src/multimap/DistributedMultiMap.h"
+#include "../src/hashmap/distributed_hash_map.h"
+#include "../src/map/distributed_map.h"
+#include "../src/multimap/distributed_multi_map.h"
 #include "../src/clock/global_clock.h"
-#include "../src/queue/DistributedMessageQueue.h"
-#include "../src/priority_queue/DistributedPriorityQueue.h"
+#include "../src/queue/distributed_message_queue.h"
+#include "../src/priority_queue/distributed_priority_queue.h"
 #include "../src/sequencer/global_sequence.h"
 
 #endif  // INCLUDE_BASKET_H_

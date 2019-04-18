@@ -2,8 +2,8 @@
 // Created by HariharanDevarajan on 2/1/2019.
 //
 
-#ifndef SRC_QUEUE_DISTRIBUTEDMESSAGEQUEUE_H_
-#define SRC_QUEUE_DISTRIBUTEDMESSAGEQUEUE_H_
+#ifndef SRC_PRIORITY_QUEUE_DISTRIBUTED_PRIORITY_QUEUE_H_
+#define SRC_PRIORITY_QUEUE_DISTRIBUTED_PRIORITY_QUEUE_H_
 
 /**
  * Include Headers
@@ -11,6 +11,7 @@
 #include <src/communication/rpc_lib.h>
 #include <src/singleton.h>
 #include <src/debug.h>
+#include <src/typedefs.h>
 /** MPI Headers**/
 #include <mpi.h>
 /** RPC Lib Headers**/
@@ -18,7 +19,6 @@
 #include <rpc/client.h>
 /** Boost Headers **/
 #include <boost/interprocess/managed_shared_memory.hpp>
-#include <boost/interprocess/containers/deque.hpp>
 #include <boost/interprocess/allocators/allocator.hpp>
 #include <boost/interprocess/sync/interprocess_mutex.hpp>
 #include <boost/interprocess/sync/scoped_lock.hpp>
@@ -27,26 +27,32 @@
 #include <iostream>
 #include <functional>
 #include <utility>
-#include <memory>
+#include <queue>
 #include <string>
+#include <memory>
+#include <vector>
 
 /** Namespaces Uses **/
 namespace bip = boost::interprocess;
 
+/** Global Typedefs **/
+
 /**
- * This is a Distributed HashMap Class. It uses shared memory + RPC + MPI to
- * achieve the data structure.
+ * This is a Distributed PriorityQueue Class. It uses shared memory + RPC + MPI
+ * to achieve the data structure.
  *
- * @tparam MappedType, the value of the HashMap
+ * @tparam MappedType, the value of the PriorityQueue
  */
-template<typename MappedType>
-class DistributedMessageQueue {
+template<typename MappedType, typename Compare = std::less<MappedType>>
+class DistributedPriorityQueue {
  private:
   /** Class Typedefs for ease of use **/
   typedef bip::allocator<MappedType,
                          bip::managed_shared_memory::segment_manager>
   ShmemAllocator;
-  typedef boost::interprocess::deque<MappedType, ShmemAllocator> Queue;
+  typedef std::priority_queue<MappedType,
+                              std::vector<MappedType, ShmemAllocator>, Compare>
+  Queue;
 
   /** Class attributes**/
   int comm_size, my_rank, num_servers;
@@ -61,26 +67,27 @@ class DistributedMessageQueue {
 
  public:
   /* Constructor to deallocate the shared memory*/
-  ~DistributedMessageQueue() {
+  ~DistributedPriorityQueue() {
     if (is_server) bip::shared_memory_object::remove(name.c_str());
   }
 
-  explicit DistributedMessageQueue(std::string name_,
-                                   bool is_server_,
-                                   uint16_t my_server_,
-                                   int num_servers_)
+  explicit DistributedPriorityQueue(std::string name_,
+                                    bool is_server_,
+                                    uint16_t my_server_,
+                                    int num_servers_)
       : is_server(is_server_), my_server(my_server_), num_servers(num_servers_),
         comm_size(1), my_rank(0), memory_allocated(1024ULL * 1024ULL * 128ULL),
         name(name_), segment(),
         queue(), func_prefix(name_) {
-    AutoTrace trace = AutoTrace("DistributedMessageQueue(local)", name_,
-                                is_server_, my_server_, num_servers_);
+    AutoTrace trace = AutoTrace("DistributedPriorityQueue", name_, is_server_,
+                                my_server_, num_servers_);
     /* Initialize MPI rank and size of world */
     MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
     /* create per server name for shared memory. Needed if multiple servers are
        spawned on one node*/
     this->name += "_" + std::to_string(my_server);
+    /* if current rank is a server */
     rpc = Singleton<RPC>::GetInstance("RPC_SERVER_LIST", is_server_, my_server_,
                                       num_servers_);
     if (is_server) {
@@ -88,25 +95,28 @@ class DistributedMessageQueue {
       bip::shared_memory_object::remove(name.c_str());
       /* allocate new shared memory space */
       segment = bip::managed_shared_memory(bip::create_only, name.c_str(),
-                                         memory_allocated);
+                                           memory_allocated);
       ShmemAllocator alloc_inst(segment.get_segment_manager());
       /* Construct Hashmap in the shared memory space. */
-      queue = segment.construct<Queue>("Queue")(alloc_inst);
+      queue = segment.construct<Queue>("Queue")(Compare(), alloc_inst);
       mutex = segment.construct<bip::interprocess_mutex>("mtx")();
       /* Create a RPC server and map the methods to it. */
+      rpc = Singleton<RPC>::GetInstance();
       std::function<bool(MappedType, uint16_t)> pushFunc(
-          std::bind(&DistributedMessageQueue<MappedType>::Push, this,
+          std::bind(&DistributedPriorityQueue<MappedType, Compare>::Push, this,
                     std::placeholders::_1, std::placeholders::_2));
-      std::function<std::pair<bool, MappedType>(uint16_t)> popFunc(std::bind(
-          &DistributedMessageQueue::Pop, this, std::placeholders::_1));
-      std::function<size_t(uint16_t)> sizeFunc(std::bind(
-          &DistributedMessageQueue::Size, this, std::placeholders::_1));
-      std::function<bool(uint16_t)> waitForElementFunc(std::bind(
-          &DistributedMessageQueue::WaitForElement, this,
-          std::placeholders::_1));
+      std::function<std::pair<bool, MappedType>(uint16_t)> popFunc(
+          std::bind(&DistributedPriorityQueue<MappedType, Compare>::Pop, this,
+                    std::placeholders::_1));
+      std::function<std::pair<bool, MappedType>(uint16_t)> topFunc(
+          std::bind(&DistributedPriorityQueue<MappedType, Compare>::Top, this,
+                    std::placeholders::_1));
+      std::function<size_t(uint16_t)> sizeFunc(
+          std::bind(&DistributedPriorityQueue<MappedType, Compare>::Size, this,
+                    std::placeholders::_1));
       rpc->bind(func_prefix+"_Push", pushFunc);
       rpc->bind(func_prefix+"_Pop", popFunc);
-      rpc->bind(func_prefix+"_WaitForElement", waitForElementFunc);
+      rpc->bind(func_prefix+"_Top", topFunc);
       rpc->bind(func_prefix+"_Size", sizeFunc);
     }
     /* Make clients wait untill all servers reach here*/
@@ -132,14 +142,14 @@ class DistributedMessageQueue {
    */
   bool Push(MappedType data, uint16_t key_int) {
     if (key_int == my_server) {
-      AutoTrace trace = AutoTrace("DistributedMessageQueue::Push(local)", data,
-                                  key_int);
+      AutoTrace trace = AutoTrace("DistributedPriorityQueue::Push(local)",
+                                  data, key_int);
       bip::scoped_lock<bip::interprocess_mutex> lock(*mutex);
-      queue->push_back(std::move(data));
+      queue->push(data);
       return true;
     } else {
-      AutoTrace trace = AutoTrace("DistributedMessageQueue::Push(remote)", data,
-                                  key_int);
+      AutoTrace trace = AutoTrace("DistributedPriorityQueue::Push(remote)",
+                                  data, key_int);
       return rpc->call(key_int, func_prefix+"_Push", data).template as<bool>();
     }
   }
@@ -152,39 +162,45 @@ class DistributedMessageQueue {
    */
   std::pair<bool, MappedType> Pop(uint16_t key_int) {
     if (key_int == my_server) {
-      AutoTrace trace = AutoTrace("DistributedMessageQueue::Pop(local)",
+      AutoTrace trace = AutoTrace("DistributedPriorityQueue::Pop(local)",
                                   key_int);
       bip::scoped_lock<bip::interprocess_mutex> lock(*mutex);
       if (queue->size() > 0) {
-        MappedType value = queue->front();
-        queue->pop_front();
+        MappedType value = queue->top();
+        queue->pop();
         return std::pair<bool, MappedType>(true, value);
       }
       return std::pair<bool, MappedType>(false, MappedType());
     } else {
-      AutoTrace trace = AutoTrace("DistributedMessageQueue::Pop(remote)",
+      AutoTrace trace = AutoTrace("DistributedPriorityQueue::Pop(remote)",
                                   key_int);
       return rpc->call(key_int, func_prefix+"_Pop").template
           as<std::pair<bool, MappedType>>();
     }
   }
 
-  bool WaitForElement(uint16_t key_int) {
+  /**
+   * Get the data from the queue. Uses key_int to decide the server to hash it
+   * to,
+   * @param key_int, key_int to know which server
+   * @return return a pair of bool and Value. If bool is true then data was
+   * found and is present in value part else bool is set to false
+   */
+  std::pair<bool, MappedType> Top(uint16_t key_int) {
     if (key_int == my_server) {
-      AutoTrace trace = AutoTrace(
-          "DistributedMessageQueue::WaitForElement(local)", key_int);
-      int count = 0;
-      while (queue->size() == 0) {
-        usleep(10);
-        if (count == 0) printf("Server %d, No Events in Queue\n", key_int);
-        count++;
+      AutoTrace trace = AutoTrace("DistributedPriorityQueue::Top(local)",
+                                  key_int);
+      bip::scoped_lock<bip::interprocess_mutex> lock(*mutex);
+      if (queue->size() > 0) {
+        MappedType value = queue->top();
+        return std::pair<bool, MappedType>(true, value);
       }
-      return true;
+      return std::pair<bool, MappedType>(false, MappedType());;
     } else {
-      AutoTrace trace = AutoTrace(
-          "DistributedMessageQueue::WaitForElement(remote)", key_int);
-      return rpc->call(key_int, func_prefix+"_WaitForElement").template
-          as<bool>();
+      AutoTrace trace = AutoTrace("DistributedPriorityQueue::Top(remote)",
+                                  key_int);
+      return rpc->call(key_int, func_prefix+"_Pop").template
+          as<std::pair<bool, MappedType>>();
     }
   }
 
@@ -195,17 +211,17 @@ class DistributedMessageQueue {
    */
   size_t Size(uint16_t key_int) {
     if (key_int == my_server) {
-      AutoTrace trace = AutoTrace("DistributedMessageQueue::Size(local)",
+      AutoTrace trace = AutoTrace("DistributedPriorityQueue::Size(local)",
                                   key_int);
       bip::scoped_lock<bip::interprocess_mutex> lock(*mutex);
       size_t value = queue->size();
       return value;
     } else {
-      AutoTrace trace = AutoTrace("DistributedMessageQueue::Size(remote)",
+      AutoTrace trace = AutoTrace("DistributedPriorityQueue::Top(remote)",
                                   key_int);
       return rpc->call(key_int, func_prefix+"_Size").template as<size_t>();
     }
   }
 };
 
-#endif  // SRC_QUEUE_DISTRIBUTEDMESSAGEQUEUE_H_
+#endif  // SRC_PRIORITY_QUEUE_DISTRIBUTED_PRIORITY_QUEUE_H_

@@ -2,8 +2,8 @@
 // Created by HariharanDevarajan on 2/1/2019.
 //
 
-#ifndef SRC_MAP_DISTRIBUTEDMAP_H_
-#define SRC_MAP_DISTRIBUTEDMAP_H_
+#ifndef SRC_MAP_DISTRIBUTED_MAP_H_
+#define SRC_MAP_DISTRIBUTED_MAP_H_
 
 /**
  * Include Headers
@@ -299,4 +299,4 @@ class DistributedMap {
     return final_values;
   }
 };
-#endif  // SRC_MAP_DISTRIBUTEDMAP_H_
+#endif  // SRC_MAP_DISTRIBUTED_MAP_H_

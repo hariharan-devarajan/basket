@@ -2,8 +2,8 @@
 // Created by HariharanDevarajan on 2/1/2019.
 //
 
-#ifndef SRC_MULTIMAP_DISTRIBUTEDMULTIMAP_H_
-#define SRC_MULTIMAP_DISTRIBUTEDMULTIMAP_H_
+#ifndef SRC_MULTIMAP_DISTRIBUTED_MULTI_MAP_H_
+#define SRC_MULTIMAP_DISTRIBUTED_MULTI_MAP_H_
 
 /**
  * Include Headers
@@ -297,4 +297,4 @@ class DistributedMultiMap {
     return final_values;
   }
 };
-#endif  // SRC_MULTIMAP_DISTRIBUTEDMULTIMAP_H_
+#endif  // SRC_MULTIMAP_DISTRIBUTED_MULTI_MAP_H_
