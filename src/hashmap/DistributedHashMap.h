@@ -11,6 +11,7 @@
 
 #include <src/communication/rpc_lib.h>
 #include <src/singleton.h>
+#include <src/typedefs.h>
 /** MPI Headers**/
 #include <mpi.h>
 /** RPC Lib Headers**/
@@ -35,7 +36,6 @@
 /** Namespaces Uses **/
 
 /** Global Typedefs **/
-typedef unsigned long long int really_long;
 
 /**
  * This is a Distributed HashMap Class. It uses shared memory + RPC + MPI to

@@ -21,7 +21,6 @@
 
 namespace bip = boost::interprocess;
 
-typedef long t_mili;
 typedef struct CharStruct {
  private:
   char value[256];
