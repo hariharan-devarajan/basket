@@ -2,8 +2,8 @@
 // Created by hariharan on 3/19/19.
 //
 
-#ifndef HFETCH_TYPEDEFS_H
-#define HFETCH_TYPEDEFS_H
+#ifndef SRC_TYPEDEFS_H_
+#define SRC_TYPEDEFS_H_
 typedef long HTime;
 typedef unsigned long long int really_long;
-#endif //HFETCH_TYPEDEFS_H
+#endif  // SRC_TYPEDEFS_H_

@@ -8,5 +8,5 @@ Description: @PROJECT_DESCRIPTION@
 Version: @PROJECT_VERSION@
 
 Requires:
-Libs: -L${libdir} -lhdds
+Libs: -L${libdir} -lbasket
 Cflags: -I${includedir}
