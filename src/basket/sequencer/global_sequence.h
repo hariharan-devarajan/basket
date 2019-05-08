@@ -5,8 +5,8 @@
 #ifndef SRC_SEQUENCER_GLOBAL_SEQUENCE_H_
 #define SRC_SEQUENCER_GLOBAL_SEQUENCE_H_
 
-#include <src/communication/rpc_lib.h>
-#include <src/singleton.h>
+#include <basket/communication/rpc_lib.h>
+#include <basket/common/singleton.h>
 #include <stdint-gcc.h>
 #include <mpi.h>
 #include <boost/interprocess/managed_shared_memory.hpp>

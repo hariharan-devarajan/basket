@@ -9,9 +9,9 @@
  * Include Headers
  */
 
-#include <src/communication/rpc_lib.h>
-#include <src/singleton.h>
-#include <src/typedefs.h>
+#include <basket/communication/rpc_lib.h>
+#include <basket/common/singleton.h>
+#include <basket/common/typedefs.h>
 /** MPI Headers**/
 #include <mpi.h>
 /** RPC Lib Headers**/

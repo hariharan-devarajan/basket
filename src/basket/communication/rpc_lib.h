@@ -6,10 +6,10 @@
 #define SRC_COMMUNICATION_RPC_LIB_H_
 
 
-#include <src/constants.h>
-#include <src/typedefs.h>
-#include <src/data_structures.h>
-#include <src/debug.h>
+#include <basket/common/constants.h>
+#include <basket/common/typedefs.h>
+#include <basket/common/data_structures.h>
+#include <basket/common/debug.h>
 #include <rpc/server.h>
 #include <mpi.h>
 #include <rpc/client.h>
@@ -70,7 +70,8 @@ class RPC {
         char processor_name[MPI_MAX_PROCESSOR_NAME];
         MPI_Get_processor_name(processor_name, &len);
         /* Get current servers rank in the server group starts with 1*/
-        int server_rank = (my_rank % num_servers) + 1;
+        int ranks_per_server = comm_size/num_servers;
+        int server_rank = (my_rank / ranks_per_server) + 1;
         /* Synchronize hostnames accross all servers*/
         int *recvcounts = NULL;
         if (server_rank == 1) recvcounts = static_cast<int *>(
@@ -103,8 +104,7 @@ class RPC {
           MPI_Bcast(&total_len, 1, MPI_INT, 0, scomm);
           final_server_list = static_cast<char *>(
               malloc(total_len * sizeof(char)));
-          snprintf(final_server_list, sizeof(final_server_list), "%s",
-                   totalstring);
+          sprintf(final_server_list, "%s", totalstring);
           MPI_Bcast(totalstring, total_len, MPI_CHAR, 0, scomm);
           /* free data structures*/
           free(totalstring);
@@ -132,7 +132,10 @@ class RPC {
         for (auto element : temp_list) {
           server_list->push_back(CharStruct(element));
         }
-      } else {
+      }
+
+      MPI_Barrier(MPI_COMM_WORLD);
+      if(!server){
         segment = bip::managed_shared_memory(bip::open_only, name.c_str());
         std::pair<MyVector *, bip::managed_shared_memory::size_type> res;
         res = segment.find<MyVector>("MyVector");
@@ -141,6 +144,7 @@ class RPC {
       /* Create server list from the broadcast list*/
       isInitialized = true;
       MPI_Barrier(MPI_COMM_WORLD);
+      run();
     }
   }
   template <typename F> void bind(std::string str, F func) {

@@ -3,8 +3,9 @@ cmake_minimum_required(VERSION 3.10)
 project(basket VERSION 1.0.0 DESCRIPTION "Basket: A library for flexible distributed data containers")
 
 include(GNUInstallDirs)
-
-set(BASKET_SRC src/singleton.h src/debug.h src/constants.h src/typedefs.h src/data_structures.h src/communication/rpc_lib.h src/hashmap/distributed_hash_map.h src/map/distributed_map.h src/multimap/distributed_multi_map.h src/clock/global_clock.h src/queue/distributed_message_queue.h src/priority_queue/distributed_priority_queue.h src/sequencer/global_sequence.h)
+include_directories(src/basket)
+include_directories(src)
+set(BASKET_SRC src/basket/common/singleton.h src/basket/common/debug.h src/basket/common/constants.h src/basket/common/typedefs.h src/basket/common/data_structures.h src/basket/communication/rpc_lib.h src/basket/hashmap/distributed_hash_map.h src/basket/map/distributed_map.h src/basket/multimap/distributed_multi_map.h src/basket/clock/global_clock.h src/basket/queue/distributed_message_queue.h src/basket/priority_queue/distributed_priority_queue.h src/basket/sequencer/global_sequence.h)
 
 add_library(${PROJECT_NAME} SHARED ${BASKET_SRC})
 
@@ -12,6 +13,8 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     VERSION ${PROJECT_VERSION}
     SOVERSION 1
     PUBLIC_HEADER include/basket.h)
+install(DIRECTORY src/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
 set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
 
 configure_file(basket.pc.in basket.pc @ONLY)

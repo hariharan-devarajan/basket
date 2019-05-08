@@ -75,17 +75,22 @@ inline void handler(int sig) {
 
 class Timer {
  public:
-  void startTime() {
+    Timer():elapsed_time(0){}
+  void resumeTime() {
     t1 = std::chrono::high_resolution_clock::now();
   }
-  double endTime() {
+  double pauseTime() {
     auto t2 = std::chrono::high_resolution_clock::now();
-    auto t =  std::chrono::duration_cast<std::chrono::nanoseconds>(
+    elapsed_time +=  std::chrono::duration_cast<std::chrono::nanoseconds>(
         t2 - t1).count()/1000000.0;
-    return t;
+    return elapsed_time;
   }
+  double getElapsedTime(){
+        return elapsed_time;
+    }
  private:
   std::chrono::high_resolution_clock::time_point t1;
+    double elapsed_time;
 };
 /**
  * Implement Auto tracing Mechanism.

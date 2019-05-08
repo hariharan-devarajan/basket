@@ -11,11 +11,11 @@
 #include <boost/interprocess/allocators/allocator.hpp>
 #include <boost/interprocess/sync/interprocess_mutex.hpp>
 #include <boost/interprocess/sync/scoped_lock.hpp>
-#include <src/singleton.h>
-#include <src/data_structures.h>
-#include <src/typedefs.h>
-#include <src/communication/rpc_lib.h>
-#include <src/debug.h>
+#include <basket/common/singleton.h>
+#include <basket/common/data_structures.h>
+#include <basket/common/typedefs.h>
+#include <basket/communication/rpc_lib.h>
+#include <basket/common/debug.h>
 #include <utility>
 #include <memory>
 #include <string>
