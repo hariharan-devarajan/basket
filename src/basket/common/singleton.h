@@ -1,3 +1,4 @@
+// Copyright 2019 Hariharan Devarajan
 /*-------------------------------------------------------------------------
  *
  * Created: singleton.h
@@ -10,8 +11,8 @@
  *-------------------------------------------------------------------------
  */
 
-#ifndef SRC_SINGLETON_H_
-#define SRC_SINGLETON_H_
+#ifndef SRC_BASKET_COMMON_SINGLETON_H_
+#define SRC_BASKET_COMMON_SINGLETON_H_
 #include <iostream>
 #include <memory>
 #include <utility>
@@ -56,4 +57,4 @@ class Singleton {
 template<typename T>
 std::shared_ptr<T> Singleton<T>::instance = nullptr;
 
-#endif  // SRC_SINGLETON_H_
+#endif  // SRC_BASKET_COMMON_SINGLETON_H_

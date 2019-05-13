@@ -1,24 +1,25 @@
+// Copyright 2019 Hariharan Devarajan
 /*-------------------------------------------------------------------------
-*
-* Created: data_structures.h
-* May 28 2018
-* Hariharan Devarajan <hdevarajan@hdfgroup.org>
-*
-* Purpose: Defines all data structures required in Basket.
-*
-*-------------------------------------------------------------------------
-*/
+ *
+ * Created: data_structures.h
+ * May 28 2018
+ * Hariharan Devarajan <hdevarajan@hdfgroup.org>
+ *
+ * Purpose: Defines all data structures required in Basket.
+ *
+ *-------------------------------------------------------------------------
+ */
 
-#ifndef SRC_DATA_STRUCTURES_H_
-#define SRC_DATA_STRUCTURES_H_
+#ifndef SRC_BASKET_COMMON_DATA_STRUCTURES_H_
+#define SRC_BASKET_COMMON_DATA_STRUCTURES_H_
 
 #include <boost/interprocess/containers/string.hpp>
 #include <boost/interprocess/containers/vector.hpp>
+#include <rpc/msgpack.hpp>
 #include <string>
 #include <vector>
 #include <cstdint>
 #include <chrono>
-#include <rpc/msgpack.hpp>
 
 namespace bip = boost::interprocess;
 
@@ -52,52 +53,56 @@ typedef struct CharStruct {
   }
 } CharStruct;
 namespace std {
-    template<>
-    struct hash<CharStruct> {
-        size_t operator()(const CharStruct &k) const {
-            std::string val(k.c_str());
-            return std::hash<std::string>()(val);
-        }
-    };
+template<>
+struct hash<CharStruct> {
+  size_t operator()(const CharStruct &k) const {
+    std::string val(k.c_str());
+    return std::hash<std::string>()(val);
+  }
+};
 }
 
 namespace clmdep_msgpack {
-    MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) {
-            namespace adaptor {
-                namespace mv1=clmdep_msgpack::v1;
-                template<>
-                struct convert<CharStruct> {
-                    mv1::object const &operator()(mv1::object const &o, CharStruct &input) const {
-                        std::string v = std::string();
-                        v.assign(o.via.str.ptr, o.via.str.size);
-                        input = CharStruct(v);
-                        return o;
-                    }
-                };
+MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) {
+namespace adaptor {
+namespace mv1 = clmdep_msgpack::v1;
+template<>
+struct convert<CharStruct> {
+  mv1::object const &operator()(mv1::object const &o,
+                                CharStruct const &input) const {
+    std::string v = std::string();
+    v.assign(o.via.str.ptr, o.via.str.size);
+    input = CharStruct(v);
+    return o;
+  }
+};
 
-                template<>
-                struct pack<CharStruct> {
-                    template<typename Stream>
-                    packer <Stream> &operator()(mv1::packer <Stream> &o, CharStruct const &input) const {
-                        uint32_t size = checked_get_container_size(input.size());
-                        o.pack_str(size);
-                        o.pack_str_body(input.c_str(), size);
-                        return o;
-                    }
-                };
+template<>
+struct pack<CharStruct> {
+  template<typename Stream>
+  packer <Stream> &operator()(mv1::packer <Stream> const &o,
+                              CharStruct const &input) const {
+    uint32_t size = checked_get_container_size(input.size());
+    o.pack_str(size);
+    o.pack_str_body(input.c_str(), size);
+    return o;
+  }
+};
 
-                template<>
-                struct object_with_zone<CharStruct> {
-                    void operator()(mv1::object::with_zone &o, CharStruct const &input) const {
-                        uint32_t size = checked_get_container_size(input.size());
-                        o.type = clmdep_msgpack::type::STR;
-                        char *ptr = static_cast<char *>(o.zone.allocate_align(size, MSGPACK_ZONE_ALIGNOF(char)));
-                        o.via.str.ptr = ptr;
-                        o.via.str.size = size;
-                        std::memcpy(ptr, input.c_str(), input.size());
-                    }
-                };
-            }
-    }
+template<>
+struct object_with_zone<CharStruct> {
+  void operator()(mv1::object::with_zone const &o,
+                  CharStruct const &input) const {
+    uint32_t size = checked_get_container_size(input.size());
+    o.type = clmdep_msgpack::type::STR;
+    char *ptr = static_cast<char *>(
+        o.zone.allocate_align(size, MSGPACK_ZONE_ALIGNOF(char)));
+    o.via.str.ptr = ptr;
+    o.via.str.size = size;
+    std::memcpy(ptr, input.c_str(), input.size());
+  }
+};
+}  // namespace adaptor
 }
-#endif  // SRC_DATA_STRUCTURES_H_
+}  // namespace clmdep_msgpack
+#endif  // SRC_BASKET_COMMON_DATA_STRUCTURES_H_

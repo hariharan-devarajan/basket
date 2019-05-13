@@ -1,9 +1,10 @@
+// Copyright 2019 Hariharan Devarajan
 //
 // Created by hariharan on 2/25/19.
 //
 
-#ifndef SRC_CLOCK_GLOBAL_CLOCK_H_
-#define SRC_CLOCK_GLOBAL_CLOCK_H_
+#ifndef SRC_BASKET_CLOCK_GLOBAL_CLOCK_H_
+#define SRC_BASKET_CLOCK_GLOBAL_CLOCK_H_
 
 #include <stdint-gcc.h>
 #include <mpi.h>
@@ -101,4 +102,4 @@ class GlobalClock {
     }return rpc->call(server, func_prefix+"GetTime").as<HTime>();
   }
 };
-#endif  // SRC_CLOCK_GLOBAL_CLOCK_H_
+#endif  // SRC_BASKET_CLOCK_GLOBAL_CLOCK_H_

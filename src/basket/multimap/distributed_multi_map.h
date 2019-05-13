@@ -1,9 +1,10 @@
+// Copyright 2019 Hariharan Devarajan
 //
 // Created by HariharanDevarajan on 2/1/2019.
 //
 
-#ifndef SRC_MULTIMAP_DISTRIBUTED_MULTI_MAP_H_
-#define SRC_MULTIMAP_DISTRIBUTED_MULTI_MAP_H_
+#ifndef SRC_BASKET_MULTIMAP_DISTRIBUTED_MULTI_MAP_H_
+#define SRC_BASKET_MULTIMAP_DISTRIBUTED_MULTI_MAP_H_
 
 /**
  * Include Headers
@@ -297,4 +298,4 @@ class DistributedMultiMap {
     return final_values;
   }
 };
-#endif  // SRC_MULTIMAP_DISTRIBUTED_MULTI_MAP_H_
+#endif  // SRC_BASKET_MULTIMAP_DISTRIBUTED_MULTI_MAP_H_

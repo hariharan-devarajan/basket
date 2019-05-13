@@ -1,9 +1,10 @@
+// Copyright 2019 Hariharan Devarajan
 //
 // Created by hariharan on 2/19/19.
 //
 
-#ifndef SRC_SEQUENCER_GLOBAL_SEQUENCE_H_
-#define SRC_SEQUENCER_GLOBAL_SEQUENCE_H_
+#ifndef SRC_BASKET_SEQUENCER_GLOBAL_SEQUENCE_H_
+#define SRC_BASKET_SEQUENCER_GLOBAL_SEQUENCE_H_
 
 #include <basket/communication/rpc_lib.h>
 #include <basket/common/singleton.h>
@@ -89,4 +90,4 @@ class GlobalSequence{
   }
 };
 
-#endif  // SRC_SEQUENCER_GLOBAL_SEQUENCE_H_
+#endif  // SRC_BASKET_SEQUENCER_GLOBAL_SEQUENCE_H_

@@ -1,9 +1,10 @@
+// Copyright 2019 Hariharan Devarajan
 //
 // Created by HariharanDevarajan on 2/1/2019.
 //
 
-#ifndef SRC_QUEUE_DISTRIBUTED_MESSAGE_QUEUE_H_
-#define SRC_QUEUE_DISTRIBUTED_MESSAGE_QUEUE_H_
+#ifndef SRC_BASKET_QUEUE_DISTRIBUTED_MESSAGE_QUEUE_H_
+#define SRC_BASKET_QUEUE_DISTRIBUTED_MESSAGE_QUEUE_H_
 
 /**
  * Include Headers
@@ -208,4 +209,4 @@ class DistributedMessageQueue {
   }
 };
 
-#endif  // SRC_QUEUE_DISTRIBUTED_MESSAGE_QUEUE_H_
+#endif  // SRC_BASKET_QUEUE_DISTRIBUTED_MESSAGE_QUEUE_H_

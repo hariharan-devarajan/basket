@@ -1,3 +1,4 @@
+// Copyright 2019 Hariharan Devarajan
 /*-------------------------------------------------------------------------
  *
  * Created: debug.h
@@ -9,8 +10,8 @@
  *-------------------------------------------------------------------------
  */
 
-#ifndef SRC_DEBUG_H_
-#define SRC_DEBUG_H_
+#ifndef SRC_BASKET_COMMON_DEBUG_H_
+#define SRC_BASKET_COMMON_DEBUG_H_
 
 #include <unistd.h>
 #include <execinfo.h>
@@ -75,22 +76,23 @@ inline void handler(int sig) {
 
 class Timer {
  public:
-    Timer():elapsed_time(0){}
+  Timer():elapsed_time(0) {}
   void resumeTime() {
     t1 = std::chrono::high_resolution_clock::now();
   }
   double pauseTime() {
     auto t2 = std::chrono::high_resolution_clock::now();
-    elapsed_time +=  std::chrono::duration_cast<std::chrono::nanoseconds>(
-        t2 - t1).count()/1000000.0;
+    elapsed_time +=
+        std::chrono::duration_cast<std::chrono::nanoseconds>(
+            t2 - t1).count()/1000000.0;
     return elapsed_time;
   }
-  double getElapsedTime(){
-        return elapsed_time;
-    }
+  double getElapsedTime() {
+    return elapsed_time;
+  }
  private:
   std::chrono::high_resolution_clock::time_point t1;
-    double elapsed_time;
+  double elapsed_time;
 };
 /**
  * Implement Auto tracing Mechanism.
@@ -225,4 +227,4 @@ class AutoTrace {
 
 
 
-#endif  // SRC_DEBUG_H_
+#endif  // SRC_BASKET_COMMON_DEBUG_H_

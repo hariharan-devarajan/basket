@@ -1,9 +1,10 @@
+// Copyright 2019 Hariharan Devarajan
 //
 // Created by hariharan on 2/20/19.
 //
 
-#ifndef SRC_COMMUNICATION_RPC_LIB_H_
-#define SRC_COMMUNICATION_RPC_LIB_H_
+#ifndef SRC_BASKET_COMMUNICATION_RPC_LIB_H_
+#define SRC_BASKET_COMMUNICATION_RPC_LIB_H_
 
 
 #include <basket/common/constants.h>
@@ -104,7 +105,7 @@ class RPC {
           MPI_Bcast(&total_len, 1, MPI_INT, 0, scomm);
           final_server_list = static_cast<char *>(
               malloc(total_len * sizeof(char)));
-          sprintf(final_server_list, "%s", totalstring);
+          snprintf(final_server_list, total_len, "%s", totalstring);
           MPI_Bcast(totalstring, total_len, MPI_CHAR, 0, scomm);
           /* free data structures*/
           free(totalstring);
@@ -135,7 +136,7 @@ class RPC {
       }
 
       MPI_Barrier(MPI_COMM_WORLD);
-      if(!server){
+      if (!server) {
         segment = bip::managed_shared_memory(bip::open_only, name.c_str());
         std::pair<MyVector *, bip::managed_shared_memory::size_type> res;
         res = segment.find<MyVector>("MyVector");
@@ -182,4 +183,4 @@ class RPC {
 };
 
 
-#endif  // SRC_COMMUNICATION_RPC_LIB_H_
+#endif  // SRC_BASKET_COMMUNICATION_RPC_LIB_H_

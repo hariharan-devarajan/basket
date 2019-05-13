@@ -1,9 +1,10 @@
+// Copyright 2019 Hariharan Devarajan
 //
 // Created by HariharanDevarajan on 2/1/2019.
 //
 
-#ifndef SRC_HASHMAP_DISTRIBUTED_HASH_MAP_H_
-#define SRC_HASHMAP_DISTRIBUTED_HASH_MAP_H_
+#ifndef SRC_BASKET_HASHMAP_DISTRIBUTED_HASH_MAP_H_
+#define SRC_BASKET_HASHMAP_DISTRIBUTED_HASH_MAP_H_
 
 /**
  * Include Headers
@@ -239,4 +240,4 @@ class DistributedHashMap {
 };
 
 
-#endif  // SRC_HASHMAP_DISTRIBUTED_HASH_MAP_H_
+#endif  // SRC_BASKET_HASHMAP_DISTRIBUTED_HASH_MAP_H_
