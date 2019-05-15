@@ -283,7 +283,7 @@ class DistributedMap {
     return final_values;
   }
   std::vector<std::pair<KeyType, MappedType>> GetAllDataInServer() {
-    AutoTrace trace = AutoTrace("DistributedMap::GetAllDataInServer");
+    AutoTrace trace = AutoTrace("DistributedMap::GetAllDataInServer", NULL);
     std::vector<std::pair<KeyType, MappedType>> final_values =
         std::vector<std::pair<KeyType, MappedType>>();
     {

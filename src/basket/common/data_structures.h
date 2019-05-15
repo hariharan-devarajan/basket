@@ -69,7 +69,7 @@ namespace mv1 = clmdep_msgpack::v1;
 template<>
 struct convert<CharStruct> {
   mv1::object const &operator()(mv1::object const &o,
-                                CharStruct const &input) const {
+                                CharStruct &input) const {
     std::string v = std::string();
     v.assign(o.via.str.ptr, o.via.str.size);
     input = CharStruct(v);
@@ -91,7 +91,7 @@ struct pack<CharStruct> {
 
 template<>
 struct object_with_zone<CharStruct> {
-  void operator()(mv1::object::with_zone const &o,
+  void operator()(mv1::object::with_zone &o,
                   CharStruct const &input) const {
     uint32_t size = checked_get_container_size(input.size());
     o.type = clmdep_msgpack::type::STR;

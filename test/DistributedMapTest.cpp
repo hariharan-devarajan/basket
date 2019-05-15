@@ -74,7 +74,7 @@ int main (int argc,char* argv[])
     int ranks_per_server=comm_size,case_num=0;
     if(argc > 1)    ranks_per_server = atoi(argv[1]);
     if(argc > 2)    case_num = atoi(argv[2]);
-    DistributedMap<int,ValueType> map =DistributedMap<int,ValueType>("hi", 1024ULL * 1024ULL * 1024ULL, ranks_per_server);
+    DistributedMap<int,ValueType> map("hi", my_rank==0, 0, 1);
     if(case_num==0){
         if(my_rank == comm_size-1){
             for(int i=0;i<comm_size-1;i++){

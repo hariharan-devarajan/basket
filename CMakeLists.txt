@@ -30,3 +30,15 @@ install(TARGETS ${PROJECT_NAME}
 
 install(FILES ${CMAKE_BINARY_DIR}/basket.pc
     DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/pkgconfig)
+
+option(BUILD_TEST "Build the unit tests" ON)
+if(BUILD_TEST)
+    enable_testing()
+    include(CTest)
+    add_subdirectory(test)
+    foreach (example ${examples})
+        add_custom_command(TARGET ${example} POST_BUILD
+                                  COMMAND ${CMAKE_COMMAND} -E copy
+                                  "" $<TARGET_FILE_DIR:${example}>)
+    endforeach()
+endif()

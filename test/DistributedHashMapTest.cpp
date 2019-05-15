@@ -7,7 +7,7 @@
 #include <execinfo.h>
 #include <chrono>
 #include <rpc/client.h>
-#include <src/data_structures.h>
+#include <src/basket/common/data_structures.h>
 
 void bt_sighandler(int sig, struct sigcontext ctx) {
 
@@ -55,15 +55,15 @@ struct ValueType{
 
 int main (int argc,char* argv[])
 {
-   /* struct sigaction sa;
+   // struct sigaction sa;
 
-    sa.sa_handler = reinterpret_cast<__sighandler_t>(bt_sighandler);
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = SA_RESTART;
+   //  sa.sa_handler = reinterpret_cast<__sighandler_t>(bt_sighandler);
+   //  sigemptyset(&sa.sa_mask);
+   //  sa.sa_flags = SA_RESTART;
 
-    sigaction(SIGSEGV, &sa, NULL);
-    sigaction(SIGUSR1, &sa, NULL);
-    sigaction(SIGABRT, &sa, NULL);*/
+   //  sigaction(SIGSEGV, &sa, NULL);
+   //  sigaction(SIGUSR1, &sa, NULL);
+   //  sigaction(SIGABRT, &sa, NULL);
 
     MPI_Init(&argc,&argv);
 
@@ -83,16 +83,16 @@ int main (int argc,char* argv[])
     int ranks_per_server=comm_size,case_num=0;
     if(argc > 1)    ranks_per_server = atoi(argv[1]);
     if(argc > 2)    case_num = atoi(argv[2]);
-    Layer::LAST=new Layer();
-    DistributedHashMap<int,string> map=DistributedHashMap<int,string>("hi",  2000);
-    DistributedHashMap<int,string> map2=DistributedHashMap<int,string>("hi2", 3000);
-    for(int i=0;i<8;i++){
-        if(i%2==0) map.Put(i*my_rank+1,"H");
-        else map2.Put(i*my_rank+1,"H");
+    // Layer::LAST=new Layer();
+    DistributedHashMap<int,string> map("hi", my_rank == 0, 0, 1);
+    DistributedHashMap<int,string> map2("hi2", my_rank == 1, 1, 1);
+
+    if (my_rank != 0) {
+        for(int i=0;i<8;i++){
+            if(i%2==0) map.Put(i*my_rank+1,"H");
+            else map2.Put(i*my_rank+1,"H");
+        }
     }
-
-
-
 
     /*DistributedHashMap<int,ValueType> map=DistributedHashMap<int,ValueType>("hi", 1024ULL * 1024ULL * 1024ULL, ranks_per_server);
     if(case_num==0){
