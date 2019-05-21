@@ -3,6 +3,9 @@
 // Created by keith on 5/21/19.
 //
 
+#ifndef SRC_BASKET_QUEUE_DISTRIBUTED_MESSAGE_QUEUE_CPP_
+#define SRC_BASKET_QUEUE_DISTRIBUTED_MESSAGE_QUEUE_CPP_
+
 /* Constructor to deallocate the shared memory*/
 template<typename MappedType>
 DistributedMessageQueue<MappedType>::~DistributedMessageQueue() {
@@ -157,3 +160,4 @@ size_t DistributedMessageQueue<MappedType>::Size(uint16_t key_int) {
     return rpc->call(key_int, func_prefix+"_Size").template as<size_t>();
   }
 }
+#endif  // SRC_BASKET_QUEUE_DISTRIBUTED_MESSAGE_QUEUE_CPP_

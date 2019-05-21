@@ -2,6 +2,10 @@
 //
 // Created by keith on 5/21/19.
 //
+
+#ifndef SRC_BASKET_CLOCK_GLOBAL_CLOCK_CPP_
+#define SRC_BASKET_CLOCK_GLOBAL_CLOCK_CPP_
+
 #include "global_clock.h"
 
 GlobalClock::~GlobalClock() {
@@ -69,3 +73,4 @@ HTime GlobalClock::GetTimeServer(uint16_t server) {
     return t;
   }return rpc->call(server, func_prefix+"GetTime").as<HTime>();
 }
+#endif  // SRC_BASKET_CLOCK_GLOBAL_CLOCK_CPP_

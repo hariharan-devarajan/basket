@@ -3,6 +3,9 @@
 // Created by keith on 5/21/19.
 //
 
+#ifndef SRC_BASKET_SEQUENCER_GLOBAL_SEQUENCE_CPP_
+#define SRC_BASKET_SEQUENCER_GLOBAL_SEQUENCE_CPP_
+
 #include "global_sequence.h"
 
 GlobalSequence::~GlobalSequence() {
@@ -60,3 +63,4 @@ uint64_t GlobalSequence::GetNextSequenceServer(uint16_t server) {
   }return
        rpc->call(server, func_prefix+"_GetNextSequence").as<uint64_t>();
 }
+#endif  // SRC_BASKET_SEQUENCER_GLOBAL_SEQUENCE_CPP_
