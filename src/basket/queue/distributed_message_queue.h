@@ -73,6 +73,6 @@ class DistributedMessageQueue {
   size_t Size(uint16_t key_int);
 };
 
-#include "distributed_message_queue.tpp"
+#include "distributed_message_queue.cpp"
 
 #endif  // SRC_BASKET_QUEUE_DISTRIBUTED_MESSAGE_QUEUE_H_
