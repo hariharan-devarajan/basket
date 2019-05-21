@@ -6,6 +6,8 @@
 #ifndef SRC_BASKET_PRIORITY_QUEUE_DISTRIBUTED_PRIORITY_QUEUE_CPP_
 #define SRC_BASKET_PRIORITY_QUEUE_DISTRIBUTED_PRIORITY_QUEUE_CPP_
 
+#include <basket/priority_queue/distributed_priority_queue.h>
+
 /* Constructor to deallocate the shared memory*/
 template<typename MappedType, typename Compare>
 DistributedPriorityQueue<MappedType, Compare>::~DistributedPriorityQueue() {

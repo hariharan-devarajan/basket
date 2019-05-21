@@ -5,7 +5,7 @@
 
 #ifndef SRC_BASKET_MAP_DISTRIBUTED_MAP_CPP_
 #define SRC_BASKET_MAP_DISTRIBUTED_MAP_CPP_
-
+#include <basket/map/distributed_map.h>
 /* Constructor to deallocate the shared memory*/
 template<typename KeyType, typename MappedType, typename Compare>
 DistributedMap<KeyType, MappedType, Compare>::~DistributedMap() {

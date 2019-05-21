@@ -77,6 +77,5 @@ class DistributedPriorityQueue {
   size_t Size(uint16_t key_int);
 };
 
-#include "distributed_priority_queue.cpp"
 
 #endif  // SRC_BASKET_PRIORITY_QUEUE_DISTRIBUTED_PRIORITY_QUEUE_H_

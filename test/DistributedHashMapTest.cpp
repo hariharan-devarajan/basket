@@ -7,7 +7,7 @@
 #include <execinfo.h>
 #include <chrono>
 #include <rpc/client.h>
-#include <src/basket/common/data_structures.h>
+#include <basket/common/data_structures.h>
 
 void bt_sighandler(int sig, struct sigcontext ctx) {
 

@@ -1,5 +1,6 @@
 
-#include "include/basket/queue/distributed_message_queue.h"
+#include <basket/queue/distributed_message_queue.h>
+
 /* Constructor to deallocate the shared memory*/
 template<typename MappedType>
 DistributedMessageQueue<MappedType>::~DistributedMessageQueue() {

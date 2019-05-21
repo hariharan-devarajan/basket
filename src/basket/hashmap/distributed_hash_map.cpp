@@ -5,7 +5,7 @@
 
 #ifndef SRC_BASKET_HASHMAP_DISTRIBUTED_HASH_MAP_CPP_
 #define SRC_BASKET_HASHMAP_DISTRIBUTED_HASH_MAP_CPP_
-
+#include <basket/hashmap/distributed_hash_map.h>
 /* Constructor to deallocate the shared memory*/
 template<typename KeyType, typename MappedType>
 DistributedHashMap<KeyType, MappedType>::~DistributedHashMap() {

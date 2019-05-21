@@ -51,8 +51,22 @@ void bt_sighandler(int sig, struct sigcontext ctx) {
 struct ValueType{
     int a;
     MSGPACK_DEFINE(a);
+    bool Contains(const ValueType &o) const {
+        return false;
+    }
+    bool operator<(const ValueType &o) const {
+        return o.a < a;
+    }
 };
-
+namespace std {
+    template<>
+    struct hash<ValueType> {
+        size_t operator()(const ValueType &k) const {
+            std::string val=std::to_string(k.a);
+            return std::hash<std::string>()(val);
+        }
+    };
+}
 int main (int argc,char* argv[])
 {
     struct sigaction sa;
@@ -74,18 +88,20 @@ int main (int argc,char* argv[])
     int ranks_per_server=comm_size,case_num=0;
     if(argc > 1)    ranks_per_server = atoi(argv[1]);
     if(argc > 2)    case_num = atoi(argv[2]);
-    DistributedMap<int,ValueType> map("hi", my_rank==0, 0, 1);
+    DistributedMap<ValueType,ValueType> map("hi", my_rank==0, 0, 1);
     if(case_num==0){
         if(my_rank == comm_size-1){
             for(int i=0;i<comm_size-1;i++){
                 ValueType v;
                 v.a=i;
-                map.Put(i,v);
+                map.Put(v,v);
             }
         }
         MPI_Barrier(MPI_COMM_WORLD);
         if(my_rank != comm_size-1){
-            printf("my_rank: %d, my_value:%d\n",my_rank,map.Get(my_rank).second.a);
+            ValueType v;
+            v.a=my_rank;
+            printf("my_rank: %d, my_value:%d\n",my_rank,map.Get(v).second.a);
         }else{
         }
     }else if(case_num==1){
@@ -93,17 +109,17 @@ int main (int argc,char* argv[])
             for(int i=0;i<1024*1024-1;i++){
                 ValueType v;
                 v.a=i;
-                map.Put(i,v);
+                map.Put(v,v);
             }
         }
     }
     else if(case_num==2){
         ValueType v2;
         v2.a=1;
-        map.Put(1,v2);
+        map.Put(v2,v2);
         if((my_rank+1)%ranks_per_server==0){
             for(int i=0;i<1024*1024-1;i++){
-                map.Get(1);
+                map.Get(v2);
             }
         }
     }else if(case_num==3){
@@ -113,8 +129,8 @@ int main (int argc,char* argv[])
         if((my_rank+1)%ranks_per_server!=0){
             for(really_long i=0;i<loop;i++){
                 ValueType v;
-                v.a=i;
-                map.Put(my_rank/ranks_per_server,v);
+                v.a=my_rank/ranks_per_server;
+                map.Put(v,v);
             }
         }
         MPI_Barrier(MPI_COMM_WORLD);
@@ -124,14 +140,14 @@ int main (int argc,char* argv[])
             printf("time(sec),%f,OPS,%f\n",elapsed,loop*comm_size/elapsed);
     }else if(case_num==4){
         ValueType v2;
-        v2.a=1;
+        v2.a=my_rank/ranks_per_server;
         if((my_rank+1)%ranks_per_server==0){
-            map.Put(my_rank/ranks_per_server,v2);
+            map.Put(v2,v2);
         }
         MPI_Barrier(MPI_COMM_WORLD);
         if((my_rank+1)%ranks_per_server!=0){
             for(int i=0;i<1024*1024-1;i++){
-                map.Get(my_rank/ranks_per_server);
+                map.Get(v2);
             }
         }
     }

@@ -6,7 +6,7 @@
 #ifndef SRC_BASKET_CLOCK_GLOBAL_CLOCK_CPP_
 #define SRC_BASKET_CLOCK_GLOBAL_CLOCK_CPP_
 
-#include "global_clock.h"
+#include <basket/clock/global_clock.h>
 
 GlobalClock::~GlobalClock() {
   AutoTrace trace = AutoTrace("~GlobalClock", NULL);

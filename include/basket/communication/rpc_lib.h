@@ -59,7 +59,4 @@ class RPC {
       uint16_t server_index, std::string const &func_name,
       Args... args);
 };
-
-#include "rpc_lib_templ.cpp"
-
 #endif  // SRC_BASKET_COMMUNICATION_RPC_LIB_H_

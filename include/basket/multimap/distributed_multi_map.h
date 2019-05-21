@@ -3,13 +3,12 @@
 // Created by HariharanDevarajan on 2/1/2019.
 //
 
-#ifndef SRC_BASKET_MAP_DISTRIBUTED_MAP_H_
-#define SRC_BASKET_MAP_DISTRIBUTED_MAP_H_
+#ifndef SRC_BASKET_MULTIMAP_DISTRIBUTED_MULTI_MAP_H_
+#define SRC_BASKET_MULTIMAP_DISTRIBUTED_MULTI_MAP_H_
 
 /**
  * Include Headers
  */
-
 #include <basket/communication/rpc_lib.h>
 #include <basket/common/singleton.h>
 #include <basket/common/debug.h>
@@ -34,15 +33,14 @@
 #include <vector>
 
 /**
- * This is a Distributed Map Class. It uses shared memory + RPC + MPI to
+ * This is a Distributed MultiMap Class. It uses shared memory + RPC + MPI to
  * achieve the data structure.
  *
- * @tparam MappedType, the value of the Map
+ * @tparam MappedType, the value of the MultiMap
  */
-
 template<typename KeyType, typename MappedType, typename Compare =
          std::less<KeyType>>
-class DistributedMap {
+class DistributedMultiMap {
  private:
   std::hash<KeyType> keyHash;
   /** Class Typedefs for ease of use **/
@@ -50,8 +48,8 @@ class DistributedMap {
   typedef boost::interprocess::allocator<
     ValueType, boost::interprocess::managed_shared_memory::segment_manager>
   ShmemAllocator;
-  typedef boost::interprocess::map<KeyType, MappedType, Compare, ShmemAllocator>
-  MyMap;
+  typedef boost::interprocess::multimap<KeyType, MappedType, Compare,
+                                        ShmemAllocator> MyMap;
   /** Class attributes**/
   int comm_size, my_rank, num_servers;
   uint16_t  my_server;
@@ -64,11 +62,12 @@ class DistributedMap {
   boost::interprocess::interprocess_mutex* mutex;
 
  public:
-  ~DistributedMap();
+  /* Constructor to deallocate the shared memory*/
+  ~DistributedMultiMap();
 
-  DistributedMap();
-  explicit DistributedMap(std::string name_, bool is_server_,
-                          uint16_t my_server_, int num_servers_);
+  DistributedMultiMap();
+  explicit DistributedMultiMap(std::string name_, bool is_server_,
+                               uint16_t my_server_, int num_servers_);
   bool Put(KeyType key, MappedType data);
   std::pair<bool, MappedType> Get(KeyType key);
 
@@ -81,6 +80,5 @@ class DistributedMap {
   std::vector<std::pair<KeyType, MappedType>> GetAllDataInServer();
 };
 
-#include "distributed_map.cpp"
 
-#endif  // SRC_BASKET_MAP_DISTRIBUTED_MAP_H_
+#endif  // SRC_BASKET_MULTIMAP_DISTRIBUTED_MULTI_MAP_H_

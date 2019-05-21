@@ -5,7 +5,7 @@
 
 #ifndef SRC_BASKET_MULTIMAP_DISTRIBUTED_MULTI_MAP_CPP_
 #define SRC_BASKET_MULTIMAP_DISTRIBUTED_MULTI_MAP_CPP_
-
+#include <basket/multimap/distributed_multi_map.h>
 /* Constructor to deallocate the shared memory*/
 template<typename KeyType, typename MappedType, typename Compare>
 DistributedMultiMap<KeyType, MappedType, Compare>::~DistributedMultiMap() {

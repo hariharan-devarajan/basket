@@ -79,6 +79,5 @@ class DistributedHashMap {
   std::vector<std::pair<KeyType, MappedType>> GetAllDataInServer();
 };
 
-#include "distributed_hash_map.cpp"
 
 #endif  // SRC_BASKET_HASHMAP_DISTRIBUTED_HASH_MAP_H_

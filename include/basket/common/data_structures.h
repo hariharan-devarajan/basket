@@ -105,4 +105,27 @@ struct object_with_zone<CharStruct> {
 }  // namespace adaptor
 }
 }  // namespace clmdep_msgpack
+
+
+/**
+ * Outstream conversions
+ */
+
+std::ostream &operator<<(std::ostream &os, char const *m);
+template <typename T,typename O>
+std::ostream &operator<<(std::ostream &os, std::pair<T,O> const m){
+    return os   << "{TYPE:pair," << "first:" << m.first << ","
+                << "second:" << m.second << "}";
+}
+std::ostream &operator<<(std::ostream &os, uint8_t const &m);
+std::ostream &operator<<(std::ostream &os, CharStruct const &m);
+template <typename T>
+std::ostream &operator<<(std::ostream &os, std::vector<T> const &ms){
+    os << "[";
+    for(auto m:ms){
+        os <<m<<",";
+    }
+    os << "]";
+    return os;
+}
 #endif  // SRC_BASKET_COMMON_DATA_STRUCTURES_H_

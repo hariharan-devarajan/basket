@@ -6,7 +6,7 @@
 #ifndef SRC_BASKET_SEQUENCER_GLOBAL_SEQUENCE_CPP_
 #define SRC_BASKET_SEQUENCER_GLOBAL_SEQUENCE_CPP_
 
-#include "global_sequence.h"
+#include <basket/sequencer/global_sequence.h>
 
 GlobalSequence::~GlobalSequence() {
   if (is_server) bip::shared_memory_object::remove(name.c_str());
