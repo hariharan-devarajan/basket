@@ -66,10 +66,8 @@ class DistributedMultiMap {
   ~DistributedMultiMap();
 
   DistributedMultiMap();
-  explicit DistributedMultiMap(std::string name_,
-                               bool is_server_,
-                               uint16_t my_server_,
-                               int num_servers_);
+  explicit DistributedMultiMap(std::string name_, bool is_server_,
+                               uint16_t my_server_, int num_servers_);
   bool Put(KeyType key, MappedType data);
   std::pair<bool, MappedType> Get(KeyType key);
 

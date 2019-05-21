@@ -1,13 +1,11 @@
 /* Constructor to deallocate the shared memory*/
-template<typename KeyType, typename MappedType, typename Compare =
-         std::less<KeyType>>
+template<typename KeyType, typename MappedType, typename Compare>
 DistributedMap<KeyType, MappedType, Compare>::~DistributedMap() {
   if (is_server)
     boost::interprocess::shared_memory_object::remove(name.c_str());
 }
 
-template<typename KeyType, typename MappedType, typename Compare =
-         std::less<KeyType>>
+template<typename KeyType, typename MappedType, typename Compare>
 DistributedMap<KeyType, MappedType, Compare>::DistributedMap(std::string name_,
                                                              bool is_server_,
                                                              uint16_t my_servr_,
@@ -82,8 +80,7 @@ DistributedMap<KeyType, MappedType, Compare>::DistributedMap(std::string name_,
  * @param data, the value for put
  * @return bool, true if Put was successful else false.
  */
-template<typename KeyType, typename MappedType, typename Compare =
-         std::less<KeyType>>
+template<typename KeyType, typename MappedType, typename Compare>
 bool DistributedMap<KeyType, MappedType, Compare>::Put(KeyType key,
                                                        MappedType data) {
   size_t key_hash = keyHash(key);
@@ -110,8 +107,7 @@ bool DistributedMap<KeyType, MappedType, Compare>::Put(KeyType key,
  * @return return a pair of bool and Value. If bool is true then
  * data was found and is present in value part else bool is set to false
  */
-template<typename KeyType, typename MappedType, typename Compare =
-         std::less<KeyType>>
+template<typename KeyType, typename MappedType, typename Compare>
 std::pair<bool, MappedType>
 DistributedMap<KeyType, MappedType, Compare>::Get(KeyType key) {
   size_t key_hash = keyHash(key);
@@ -133,8 +129,7 @@ DistributedMap<KeyType, MappedType, Compare>::Get(KeyType key) {
   }
 }
 
-template<typename KeyType, typename MappedType, typename Compare =
-         std::less<KeyType>>
+template<typename KeyType, typename MappedType, typename Compare>
 std::pair<bool, MappedType>
 DistributedMap<KeyType, MappedType, Compare>::Erase(KeyType key) {
   size_t key_hash = keyHash(key);
@@ -158,8 +153,7 @@ DistributedMap<KeyType, MappedType, Compare>::Erase(KeyType key) {
  * @return return a pair of bool and Value. If bool is true then data was
  * found and is present in value part else bool is set to false
  */
-template<typename KeyType, typename MappedType, typename Compare =
-         std::less<KeyType>>
+template<typename KeyType, typename MappedType, typename Compare>
 std::vector<std::pair<KeyType, MappedType>>
 DistributedMap<KeyType, MappedType, Compare>::Contains(KeyType key) {
   AutoTrace trace = AutoTrace("DistributedMap::Contains", key);
@@ -178,8 +172,7 @@ DistributedMap<KeyType, MappedType, Compare>::Contains(KeyType key) {
   return final_values;
 }
 
-template<typename KeyType, typename MappedType, typename Compare =
-         std::less<KeyType>>
+template<typename KeyType, typename MappedType, typename Compare>
 std::vector<std::pair<KeyType, MappedType>>
 DistributedMap<KeyType, MappedType, Compare>::GetAllData() {
   AutoTrace trace = AutoTrace("DistributedMap::GetAllData");
@@ -198,8 +191,7 @@ DistributedMap<KeyType, MappedType, Compare>::GetAllData() {
   return final_values;
 }
 
-template<typename KeyType, typename MappedType, typename Compare =
-         std::less<KeyType>>
+template<typename KeyType, typename MappedType, typename Compare>
 std::vector<std::pair<KeyType, MappedType>>
 DistributedMap<KeyType, MappedType, Compare>::ContainsInServer(KeyType key) {
   AutoTrace trace = AutoTrace("DistributedMap::ContainsInServer", key);
@@ -234,8 +226,7 @@ DistributedMap<KeyType, MappedType, Compare>::ContainsInServer(KeyType key) {
   }
   return final_values;
 }
-template<typename KeyType, typename MappedType, typename Compare =
-         std::less<KeyType>>
+template<typename KeyType, typename MappedType, typename Compare>
 std::vector<std::pair<KeyType, MappedType>>
 DistributedMap<KeyType, MappedType, Compare>::GetAllDataInServer() {
   AutoTrace trace = AutoTrace("DistributedMap::GetAllDataInServer", NULL);

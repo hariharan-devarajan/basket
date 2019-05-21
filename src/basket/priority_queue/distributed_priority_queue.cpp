@@ -1,10 +1,10 @@
 /* Constructor to deallocate the shared memory*/
-template<typename MappedType, typename Compare = std::less<MappedType>>
+template<typename MappedType, typename Compare>
 DistributedPriorityQueue<MappedType, Compare>::~DistributedPriorityQueue() {
   if (is_server) bip::shared_memory_object::remove(name.c_str());
 }
 
-template<typename MappedType, typename Compare = std::less<MappedType>>
+template<typename MappedType, typename Compare>
 DistributedPriorityQueue<MappedType,
                          Compare>::DistributedPriorityQueue(std::string name_,
                                                             bool is_server_,
@@ -77,7 +77,7 @@ DistributedPriorityQueue<MappedType,
  * @param data, the value for put
  * @return bool, true if Put was successful else false.
  */
-template<typename MappedType, typename Compare = std::less<MappedType>>
+template<typename MappedType, typename Compare>
 bool DistributedPriorityQueue<MappedType, Compare>::Push(MappedType data,
                                                          uint16_t key_int) {
   if (key_int == my_server) {
@@ -99,7 +99,7 @@ bool DistributedPriorityQueue<MappedType, Compare>::Push(MappedType data,
  * @return return a pair of bool and Value. If bool is true then data was
  * found and is present in value part else bool is set to false
  */
-template<typename MappedType, typename Compare = std::less<MappedType>>
+template<typename MappedType, typename Compare>
 std::pair<bool, MappedType>
 DistributedPriorityQueue<MappedType, Compare>::Pop(uint16_t key_int) {
   if (key_int == my_server) {
@@ -127,7 +127,7 @@ DistributedPriorityQueue<MappedType, Compare>::Pop(uint16_t key_int) {
  * @return return a pair of bool and Value. If bool is true then data was
  * found and is present in value part else bool is set to false
  */
-template<typename MappedType, typename Compare = std::less<MappedType>>
+template<typename MappedType, typename Compare>
 std::pair<bool, MappedType>
 DistributedPriorityQueue<MappedType, Compare>::Top(uint16_t key_int) {
   if (key_int == my_server) {
@@ -152,7 +152,7 @@ DistributedPriorityQueue<MappedType, Compare>::Top(uint16_t key_int) {
  * @param key_int, key_int to know which server
  * @return return a size of the queue
  */
-template<typename MappedType, typename Compare = std::less<MappedType>>
+template<typename MappedType, typename Compare>
 size_t DistributedPriorityQueue<MappedType, Compare>::Size(uint16_t key_int) {
   if (key_int == my_server) {
     AutoTrace trace = AutoTrace("DistributedPriorityQueue::Size(local)",

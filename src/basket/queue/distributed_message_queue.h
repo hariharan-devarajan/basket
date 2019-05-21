@@ -63,10 +63,8 @@ class DistributedMessageQueue {
  public:
   ~DistributedMessageQueue();
 
-  explicit DistributedMessageQueue(std::string name_,
-                                   bool is_server_,
-                                   uint16_t my_server_,
-                                   int num_servers_);
+  explicit DistributedMessageQueue(std::string name_, bool is_server_,
+                                   uint16_t my_server_, int num_servers_);
   bool Push(MappedType data, uint16_t key_int);
   std::pair<bool, MappedType> Pop(uint16_t key_int);
   bool WaitForElement(uint16_t key_int);
