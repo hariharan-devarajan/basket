@@ -1,3 +1,8 @@
+// Copyright 2019 Hariharan Devarajan
+//
+// Created by keith on 5/21/19.
+//
+
 /* Constructor to deallocate the shared memory*/
 template<typename MappedType, typename Compare>
 DistributedPriorityQueue<MappedType, Compare>::~DistributedPriorityQueue() {

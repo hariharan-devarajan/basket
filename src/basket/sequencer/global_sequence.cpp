@@ -1,3 +1,8 @@
+// Copyright 2019 Hariharan Devarajan
+//
+// Created by keith on 5/21/19.
+//
+
 #include "global_sequence.h"
 
 GlobalSequence::~GlobalSequence() {

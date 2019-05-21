@@ -1,3 +1,7 @@
+// Copyright 2019 Hariharan Devarajan
+//
+// Created by keith on 5/21/19.
+//
 template <typename F> void RPC::bind(std::string str, F func) {
   server->bind(str, func);
 }
