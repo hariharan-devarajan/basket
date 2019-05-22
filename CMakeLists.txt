@@ -54,7 +54,7 @@ install(TARGETS ${PROJECT_NAME}
 install(FILES ${CMAKE_BINARY_DIR}/basket.pc
     DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/pkgconfig)
 
-option(BUILD_TEST "Build the unit tests" FALSE)
+option(BUILD_TEST "Build the unit tests" ON)
 if(BUILD_TEST)
     enable_testing()
     include(CTest)
