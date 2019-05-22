@@ -3,8 +3,8 @@
 // Created by HariharanDevarajan on 2/1/2019.
 //
 
-#ifndef SRC_BASKET_QUEUE_DISTRIBUTED_MESSAGE_QUEUE_H_
-#define SRC_BASKET_QUEUE_DISTRIBUTED_MESSAGE_QUEUE_H_
+#ifndef INCLUDE_BASKET_QUEUE_DISTRIBUTED_MESSAGE_QUEUE_H_
+#define INCLUDE_BASKET_QUEUE_DISTRIBUTED_MESSAGE_QUEUE_H_
 
 /**
  * Include Headers
@@ -75,4 +75,4 @@ class DistributedMessageQueue {
 
 #include "distributed_message_queue.cpp"
 
-#endif  // SRC_BASKET_QUEUE_DISTRIBUTED_MESSAGE_QUEUE_H_
+#endif  // INCLUDE_BASKET_QUEUE_DISTRIBUTED_MESSAGE_QUEUE_H_

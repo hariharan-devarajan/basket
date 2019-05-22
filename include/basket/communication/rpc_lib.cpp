@@ -3,8 +3,8 @@
 // Created by keith on 5/21/19.
 //
 
-#ifndef SRC_BASKET_COMMUNICATION_RPC_LIB_TEMPL_CPP_
-#define SRC_BASKET_COMMUNICATION_RPC_LIB_TEMPL_CPP_
+#ifndef INCLUDE_BASKET_COMMUNICATION_RPC_LIB_CPP_
+#define INCLUDE_BASKET_COMMUNICATION_RPC_LIB_CPP_
 
 template <typename F> void RPC::bind(std::string str, F func) {
   server->bind(str, func);
@@ -31,4 +31,4 @@ std::future<RPCLIB_MSGPACK::object_handle> RPC::async_call(
   // client.set_timeout(5000);
   return client.async_call(func_name, std::forward<Args>(args)...);
 }
-#endif  // SRC_BASKET_COMMUNICATION_RPC_LIB_TEMPL_CPP_
+#endif  // INCLUDE_BASKET_COMMUNICATION_RPC_LIB_CPP_

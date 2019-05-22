@@ -3,8 +3,8 @@
 // Created by hariharan on 2/25/19.
 //
 
-#ifndef SRC_BASKET_CLOCK_GLOBAL_CLOCK_H_
-#define SRC_BASKET_CLOCK_GLOBAL_CLOCK_H_
+#ifndef INCLUDE_BASKET_CLOCK_GLOBAL_CLOCK_H_
+#define INCLUDE_BASKET_CLOCK_GLOBAL_CLOCK_H_
 
 #include <stdint-gcc.h>
 #include <mpi.h>
@@ -45,4 +45,4 @@ class GlobalClock {
   HTime GetTime();
   HTime GetTimeServer(uint16_t server);
 };
-#endif  // SRC_BASKET_CLOCK_GLOBAL_CLOCK_H_
+#endif  // INCLUDE_BASKET_CLOCK_GLOBAL_CLOCK_H_

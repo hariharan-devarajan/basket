@@ -10,8 +10,8 @@
  *-------------------------------------------------------------------------
  */
 
-#ifndef SRC_BASKET_COMMON_DATA_STRUCTURES_H_
-#define SRC_BASKET_COMMON_DATA_STRUCTURES_H_
+#ifndef INCLUDE_BASKET_COMMON_DATA_STRUCTURES_H_
+#define INCLUDE_BASKET_COMMON_DATA_STRUCTURES_H_
 
 #include <boost/interprocess/containers/string.hpp>
 #include <boost/interprocess/containers/vector.hpp>
@@ -128,4 +128,4 @@ std::ostream &operator<<(std::ostream &os, std::vector<T> const &ms){
     os << "]";
     return os;
 }
-#endif  // SRC_BASKET_COMMON_DATA_STRUCTURES_H_
+#endif  // INCLUDE_BASKET_COMMON_DATA_STRUCTURES_H_

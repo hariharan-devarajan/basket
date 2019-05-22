@@ -11,8 +11,8 @@
  *-------------------------------------------------------------------------
  */
 
-#ifndef SRC_BASKET_COMMON_SINGLETON_H_
-#define SRC_BASKET_COMMON_SINGLETON_H_
+#ifndef INCLUDE_BASKET_COMMON_SINGLETON_H_
+#define INCLUDE_BASKET_COMMON_SINGLETON_H_
 #include <iostream>
 #include <memory>
 #include <utility>
@@ -57,4 +57,4 @@ class Singleton {
 template<typename T>
 std::shared_ptr<T> Singleton<T>::instance = nullptr;
 
-#endif  // SRC_BASKET_COMMON_SINGLETON_H_
+#endif  // INCLUDE_BASKET_COMMON_SINGLETON_H_

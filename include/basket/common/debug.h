@@ -10,8 +10,8 @@
  *-------------------------------------------------------------------------
  */
 
-#ifndef SRC_BASKET_COMMON_DEBUG_H_
-#define SRC_BASKET_COMMON_DEBUG_H_
+#ifndef INCLUDE_BASKET_COMMON_DEBUG_H_
+#define INCLUDE_BASKET_COMMON_DEBUG_H_
 
 #include <unistd.h>
 #include <execinfo.h>
@@ -175,4 +175,4 @@ private:
 
 
 
-#endif  // SRC_BASKET_COMMON_DEBUG_H_
+#endif  // INCLUDE_BASKET_COMMON_DEBUG_H_

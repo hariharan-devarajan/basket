@@ -3,9 +3,9 @@
 // Created by keith on 5/21/19.
 //
 
-#ifndef SRC_BASKET_HASHMAP_DISTRIBUTED_HASH_MAP_CPP_
-#define SRC_BASKET_HASHMAP_DISTRIBUTED_HASH_MAP_CPP_
-#include <basket/hashmap/distributed_hash_map.h>
+#ifndef INCLUDE_BASKET_HASHMAP_DISTRIBUTED_HASH_MAP_CPP_
+#define INCLUDE_BASKET_HASHMAP_DISTRIBUTED_HASH_MAP_CPP_
+
 /* Constructor to deallocate the shared memory*/
 template<typename KeyType, typename MappedType>
 DistributedHashMap<KeyType, MappedType>::~DistributedHashMap() {
@@ -187,4 +187,4 @@ DistributedHashMap<KeyType, MappedType>::GetAllDataInServer() {
   }
   return final_values;
 }
-#endif  // SRC_BASKET_HASHMAP_DISTRIBUTED_HASH_MAP_CPP_
+#endif  // INCLUDE_BASKET_HASHMAP_DISTRIBUTED_HASH_MAP_CPP_

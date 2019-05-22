@@ -3,8 +3,8 @@
 // Created by HariharanDevarajan on 2/1/2019.
 //
 
-#ifndef SRC_BASKET_MULTIMAP_DISTRIBUTED_MULTI_MAP_H_
-#define SRC_BASKET_MULTIMAP_DISTRIBUTED_MULTI_MAP_H_
+#ifndef INCLUDE_BASKET_MULTIMAP_DISTRIBUTED_MULTI_MAP_H_
+#define INCLUDE_BASKET_MULTIMAP_DISTRIBUTED_MULTI_MAP_H_
 
 /**
  * Include Headers
@@ -80,5 +80,6 @@ class DistributedMultiMap {
   std::vector<std::pair<KeyType, MappedType>> GetAllDataInServer();
 };
 
+#include "distributed_multi_map.cpp"
 
-#endif  // SRC_BASKET_MULTIMAP_DISTRIBUTED_MULTI_MAP_H_
+#endif  // INCLUDE_BASKET_MULTIMAP_DISTRIBUTED_MULTI_MAP_H_

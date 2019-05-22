@@ -3,10 +3,8 @@
 // Created by keith on 5/21/19.
 //
 
-#ifndef SRC_BASKET_PRIORITY_QUEUE_DISTRIBUTED_PRIORITY_QUEUE_CPP_
-#define SRC_BASKET_PRIORITY_QUEUE_DISTRIBUTED_PRIORITY_QUEUE_CPP_
-
-#include <basket/priority_queue/distributed_priority_queue.h>
+#ifndef INCLUDE_BASKET_PRIORITY_QUEUE_DISTRIBUTED_PRIORITY_QUEUE_CPP_
+#define INCLUDE_BASKET_PRIORITY_QUEUE_DISTRIBUTED_PRIORITY_QUEUE_CPP_
 
 /* Constructor to deallocate the shared memory*/
 template<typename MappedType, typename Compare>
@@ -176,4 +174,4 @@ size_t DistributedPriorityQueue<MappedType, Compare>::Size(uint16_t key_int) {
     return rpc->call(key_int, func_prefix+"_Size").template as<size_t>();
   }
 }
-#endif  // SRC_BASKET_PRIORITY_QUEUE_DISTRIBUTED_PRIORITY_QUEUE_CPP_
+#endif  // INCLUDE_BASKET_PRIORITY_QUEUE_DISTRIBUTED_PRIORITY_QUEUE_CPP_

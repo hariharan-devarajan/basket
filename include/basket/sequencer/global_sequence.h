@@ -3,8 +3,8 @@
 // Created by hariharan on 2/19/19.
 //
 
-#ifndef SRC_BASKET_SEQUENCER_GLOBAL_SEQUENCE_H_
-#define SRC_BASKET_SEQUENCER_GLOBAL_SEQUENCE_H_
+#ifndef INCLUDE_BASKET_SEQUENCER_GLOBAL_SEQUENCE_H_
+#define INCLUDE_BASKET_SEQUENCER_GLOBAL_SEQUENCE_H_
 
 #include <basket/communication/rpc_lib.h>
 #include <basket/common/singleton.h>
@@ -41,4 +41,4 @@ class GlobalSequence{
   uint64_t GetNextSequenceServer(uint16_t server);
 };
 
-#endif  // SRC_BASKET_SEQUENCER_GLOBAL_SEQUENCE_H_
+#endif  // INCLUDE_BASKET_SEQUENCER_GLOBAL_SEQUENCE_H_

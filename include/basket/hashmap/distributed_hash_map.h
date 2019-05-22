@@ -3,8 +3,8 @@
 // Created by HariharanDevarajan on 2/1/2019.
 //
 
-#ifndef SRC_BASKET_HASHMAP_DISTRIBUTED_HASH_MAP_H_
-#define SRC_BASKET_HASHMAP_DISTRIBUTED_HASH_MAP_H_
+#ifndef INCLUDE_BASKET_HASHMAP_DISTRIBUTED_HASH_MAP_H_
+#define INCLUDE_BASKET_HASHMAP_DISTRIBUTED_HASH_MAP_H_
 
 /**
  * Include Headers
@@ -79,5 +79,6 @@ class DistributedHashMap {
   std::vector<std::pair<KeyType, MappedType>> GetAllDataInServer();
 };
 
+#include "distributed_hash_map.cpp"
 
-#endif  // SRC_BASKET_HASHMAP_DISTRIBUTED_HASH_MAP_H_
+#endif  // INCLUDE_BASKET_HASHMAP_DISTRIBUTED_HASH_MAP_H_

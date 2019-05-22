@@ -3,7 +3,7 @@
 #include <boost/interprocess/allocators/allocator.hpp>
 #include <functional>
 #include <utility>
-#include "../include/basket.h"
+#include <basket/map/distributed_map.h>
 #include <mpi.h>
 #include <iostream>
 #include <signal.h>
