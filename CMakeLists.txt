@@ -16,17 +16,12 @@ set(BASKET_SRC  include/basket/common/singleton.h
                 include/basket/communication/rpc_lib.h
                 src/basket/communication/rpc_lib.cpp
                 include/basket/hashmap/distributed_hash_map.h
-                src/basket/hashmap/distributed_hash_map.cpp
                 include/basket/map/distributed_map.h
-        src/basket/map/distributed_map.cpp
         include/basket/multimap/distributed_multi_map.h
-        src/basket/multimap/distributed_multi_map.cpp
         include/basket/clock/global_clock.h
         src/basket/clock/global_clock.cpp
         include/basket/queue/distributed_message_queue.h
-        src/basket/queue/distributed_message_queue.cpp
         include/basket/priority_queue/distributed_priority_queue.h
-        src/basket/priority_queue/distributed_priority_queue.cpp
         include/basket/sequencer/global_sequence.h
         src/basket/sequencer/global_sequence.cpp)
 

@@ -1,6 +1,3 @@
-
-#include <basket/queue/distributed_message_queue.h>
-
 /* Constructor to deallocate the shared memory*/
 template<typename MappedType>
 DistributedMessageQueue<MappedType>::~DistributedMessageQueue() {
@@ -155,3 +152,4 @@ size_t DistributedMessageQueue<MappedType>::Size(uint16_t key_int) {
     return rpc->call(key_int, func_prefix+"_Size").template as<size_t>();
   }
 }
+// template class DistributedMessageQueue<int>;
