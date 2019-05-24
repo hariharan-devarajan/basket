@@ -1,6 +1,6 @@
-* TODO Licensing
-** TODO Licensing headers
-** TODO License choice
+* DONE Licensing
+** DONE Licensing headers
+** DONE License choice
 * TODO Documentation
 ** TODO Comment review
 *** Ensure that comments are accurate and clear
@@ -14,7 +14,7 @@
 **** General procedure
 ***** (eg. `cmake .`, `make`, `make install`)
 * TODO Tests
-** TODO CMakeLists integration
+** DONE CMakeLists integration
 ** TODO One test per structure
-* TODO cpplint
+* DONE cpplint
 ** Make sure source code fits Google C++ style by running cpplint.py on it

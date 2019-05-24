@@ -1,4 +1,4 @@
-# HDDS Library
+# Basket Library
 ## Depends
 - mpi
 - boost
