@@ -39,7 +39,7 @@ configure_file(basket.pc.in basket.pc @ONLY)
 
 target_include_directories(${PROJECT_NAME} PRIVATE .)
 
-set(LIB_FLAGS -lrpc -lmpi -lpthread -lrt -ldl -lboost_filesystem)
+set(LIB_FLAGS -lrpc -lmpi -lpthread -lrt -lboost_filesystem)
 target_link_libraries(basket ${LIB_FLAGS})
 
 install(TARGETS ${PROJECT_NAME}
