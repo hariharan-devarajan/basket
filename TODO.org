@@ -5,10 +5,10 @@
 ** TODO Comment review
 *** Ensure that comments are accurate and clear
 *** Spellcheck comments
-** TODO README
+** DONE README
 *** What is libbasket?
 *** How do I use libbasket?
-** TODO INSTALL
+** DONE INSTALL
 *** How do I compile libbasket?
 **** Dependencies
 **** General procedure

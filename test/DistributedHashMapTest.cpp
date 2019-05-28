@@ -19,7 +19,7 @@
  */
 
 #include <functional>
-#include "../include/basket.h"
+#include <basket.h>
 #include <utility>
 #include <mpi.h>
 #include <iostream>

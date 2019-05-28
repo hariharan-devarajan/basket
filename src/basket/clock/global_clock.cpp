@@ -18,15 +18,20 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-#ifndef SRC_BASKET_CLOCK_GLOBAL_CLOCK_CPP_
-#define SRC_BASKET_CLOCK_GLOBAL_CLOCK_CPP_
-
 #include <basket/clock/global_clock.h>
 
+/*
+ * Destructor removes shared memory from the server
+ */
 GlobalClock::~GlobalClock() {
   AutoTrace trace = AutoTrace("~GlobalClock", NULL);
   if (is_server) bip::shared_memory_object::remove(name.c_str());
 }
+
+/*
+ * Constructor gets the start time in a node for later use, binds RPC
+ * calls, and sets up mutexes for later locking.
+ */
 GlobalClock::GlobalClock(std::string name_,
                          bool is_server_,
                          uint16_t my_server_,
@@ -68,6 +73,10 @@ GlobalClock::GlobalClock(std::string name_,
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
+/*
+ * GetTime() returns the time locally within a node using chrono
+ * high_resolution_clock
+ */
 HTime GlobalClock::GetTime() {
   AutoTrace trace = AutoTrace("GlobalClock::GetTime", NULL);
   boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex>
@@ -77,6 +86,11 @@ HTime GlobalClock::GetTime() {
       t2 - *start).count();
   return t;
 }
+
+/*
+ * GetTimeServer() returns the time on the requested server using RPC calls, or
+ * the local time if the server requested is the current client server
+ */
 HTime GlobalClock::GetTimeServer(uint16_t server) {
   AutoTrace trace = AutoTrace("GlobalClock::GetTimeServer", server);
   if (my_server == server) {
@@ -86,6 +100,5 @@ HTime GlobalClock::GetTimeServer(uint16_t server) {
     auto t =  std::chrono::duration_cast<std::chrono::microseconds>(
         t2 - *start).count();
     return t;
-  }return rpc->call(server, func_prefix+"GetTime").as<HTime>();
+  }return rpc->call(server, func_prefix+"_GetTime").as<HTime>();
 }
-#endif  // SRC_BASKET_CLOCK_GLOBAL_CLOCK_CPP_
