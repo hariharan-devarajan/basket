@@ -61,7 +61,6 @@ DistributedPriorityQueue<MappedType,
     queue = segment.construct<Queue>("Queue")(Compare(), alloc_inst);
     mutex = segment.construct<bip::interprocess_mutex>("mtx")();
     /* Create a RPC server and map the methods to it. */
-    rpc = Singleton<RPC>::GetInstance();
     std::function<bool(MappedType, uint16_t)> pushFunc(
         std::bind(&DistributedPriorityQueue<MappedType, Compare>::Push, this,
                   std::placeholders::_1, std::placeholders::_2));
