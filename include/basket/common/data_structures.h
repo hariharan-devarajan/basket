@@ -99,7 +99,7 @@ struct convert<CharStruct> {
 template<>
 struct pack<CharStruct> {
   template<typename Stream>
-  packer <Stream> &operator()(mv1::packer <Stream> const &o,
+  packer <Stream> &operator()(mv1::packer <Stream> &o,
                               CharStruct const &input) const {
     uint32_t size = checked_get_container_size(input.size());
     o.pack_str(size);
