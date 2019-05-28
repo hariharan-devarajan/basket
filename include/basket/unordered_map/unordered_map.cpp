@@ -18,22 +18,22 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-#ifndef INCLUDE_BASKET_HASHMAP_DISTRIBUTED_HASH_MAP_CPP_
-#define INCLUDE_BASKET_HASHMAP_DISTRIBUTED_HASH_MAP_CPP_
+#ifndef INCLUDE_BASKET_UNORDERED_MAP_UNORDERED_MAP_CPP_
+#define INCLUDE_BASKET_UNORDERED_MAP_UNORDERED_MAP_CPP_
 
 /* Constructor to deallocate the shared memory*/
 template<typename KeyType, typename MappedType>
-DistributedHashMap<KeyType, MappedType>::~DistributedHashMap() {
+unordered_map<KeyType, MappedType>::~unordered_map() {
   if (is_server) {
     boost::interprocess::shared_memory_object::remove(name.c_str());
   }
 }
 
 template<typename KeyType, typename MappedType>
-DistributedHashMap<KeyType, MappedType>::DistributedHashMap(std::string name_,
-                                                            bool is_server_,
-                                                            uint16_t my_server_,
-                                                            int num_servers_)
+unordered_map<KeyType, MappedType>::unordered_map(std::string name_,
+                                                  bool is_server_,
+                                                  uint16_t my_server_,
+                                                  int num_servers_)
     : is_server(is_server_), my_server(my_server_), num_servers(num_servers_),
       comm_size(1), my_rank(0), memory_allocated(1024ULL * 1024ULL * 128ULL),
       name(name_), segment(), myHashMap(), func_prefix(name_) {
@@ -55,23 +55,23 @@ DistributedHashMap<KeyType, MappedType>::DistributedHashMap(std::string name_,
     ShmemAllocator alloc_inst(segment.get_segment_manager());
     mutex = segment.construct<boost::interprocess::interprocess_mutex>(
         "mtx")();
-    /* Construct Hashmap in the shared memory space. */
+    /* Construct unordered_map in the shared memory space. */
     myHashMap = segment.construct<MyHashMap>(name.c_str())(
         128, std::hash<KeyType>(), std::equal_to<KeyType>(),
         segment.get_allocator<ValueType>());
     /* Create a RPC server and map the methods to it. */
     std::function<bool(KeyType, MappedType)> putFunc(
-        std::bind(&DistributedHashMap<KeyType, MappedType>::Put, this,
+        std::bind(&unordered_map<KeyType, MappedType>::Put, this,
                   std::placeholders::_1, std::placeholders::_2));
     std::function<std::pair<bool, MappedType>(KeyType)> getFunc(
-        std::bind(&DistributedHashMap<KeyType, MappedType>::Get, this,
+        std::bind(&unordered_map<KeyType, MappedType>::Get, this,
                   std::placeholders::_1));
     std::function<std::pair<bool, MappedType>(KeyType)> eraseFunc(
-        std::bind(&DistributedHashMap<KeyType, MappedType>::Erase, this,
+        std::bind(&unordered_map<KeyType, MappedType>::Erase, this,
                   std::placeholders::_1));
     std::function<std::vector<std::pair<KeyType, MappedType>>(void)>
         getAllDataInServerFunc(std::bind(
-            &DistributedHashMap<KeyType, MappedType>::GetAllDataInServer,
+            &unordered_map<KeyType, MappedType>::GetAllDataInServer,
             this));
     rpc->bind(func_prefix+"_Put", putFunc);
     rpc->bind(func_prefix+"_Get", getFunc);
@@ -99,14 +99,14 @@ DistributedHashMap<KeyType, MappedType>::DistributedHashMap(std::string name_,
 }
 
 /**
- * Put the data into the hashmap. Uses key to decide the server to hash it to,
+ * Put the data into the unordered map. Uses key to decide the server to hash it to,
  * @param key, the key for put
  * @param data, the value for put
  * @return bool, true if Put was successful else false.
  */
 template<typename KeyType, typename MappedType>
-bool DistributedHashMap<KeyType, MappedType>::Put(KeyType key,
-                                                  MappedType data) {
+bool unordered_map<KeyType, MappedType>::Put(KeyType key,
+                                             MappedType data) {
   size_t key_hash = keyHash(key);
   uint16_t key_int = static_cast<uint16_t>(key_hash % num_servers);
   if (key_int == my_server) {
@@ -125,14 +125,14 @@ bool DistributedHashMap<KeyType, MappedType>::Put(KeyType key,
 }
 
 /**
- * Get the data into the hashmap. Uses key to decide the server to hash it to,
+ * Get the data into the unordered map. Uses key to decide the server to hash it to,
  * @param key, key to get
  * @return return a pair of bool and Value. If bool is true then data was
  * found and is present in value part else bool is set to false
  */
 template<typename KeyType, typename MappedType>
 std::pair<bool, MappedType>
-DistributedHashMap<KeyType, MappedType>::Get(KeyType key) {
+unordered_map<KeyType, MappedType>::Get(KeyType key) {
   size_t key_hash = keyHash(key);
   uint16_t key_int = static_cast<uint16_t>(key_hash % num_servers);
   if (key_int == my_server) {
@@ -151,7 +151,7 @@ DistributedHashMap<KeyType, MappedType>::Get(KeyType key) {
 }
 template<typename KeyType, typename MappedType>
 std::pair<bool, MappedType>
-DistributedHashMap<KeyType, MappedType>::Erase(KeyType key) {
+unordered_map<KeyType, MappedType>::Erase(KeyType key) {
   size_t key_hash = keyHash(key);
   uint16_t key_int = static_cast<uint16_t>(key_hash % num_servers);
   if (key_int == my_server) {
@@ -166,7 +166,7 @@ DistributedHashMap<KeyType, MappedType>::Erase(KeyType key) {
 }
 template<typename KeyType, typename MappedType>
 std::vector<std::pair<KeyType, MappedType>>
-DistributedHashMap<KeyType, MappedType>::GetAllData() {
+unordered_map<KeyType, MappedType>::GetAllData() {
   std::vector<std::pair<KeyType, MappedType>> final_values =
       std::vector<std::pair<KeyType, MappedType>>();
   auto current_server = GetAllDataInServer();
@@ -184,7 +184,7 @@ DistributedHashMap<KeyType, MappedType>::GetAllData() {
 }
 template<typename KeyType, typename MappedType>
 std::vector<std::pair<KeyType, MappedType>>
-DistributedHashMap<KeyType, MappedType>::GetAllDataInServer() {
+unordered_map<KeyType, MappedType>::GetAllDataInServer() {
   std::vector<std::pair<KeyType, MappedType>> final_values =
       std::vector<std::pair<KeyType, MappedType>>();
   {
@@ -202,4 +202,4 @@ DistributedHashMap<KeyType, MappedType>::GetAllDataInServer() {
   }
   return final_values;
 }
-#endif  // INCLUDE_BASKET_HASHMAP_DISTRIBUTED_HASH_MAP_CPP_
+#endif  // INCLUDE_BASKET_UNORDERED_MAP_UNORDERED_MAP_CPP_

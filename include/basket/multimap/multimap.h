@@ -18,8 +18,8 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-#ifndef INCLUDE_BASKET_MULTIMAP_DISTRIBUTED_MULTI_MAP_H_
-#define INCLUDE_BASKET_MULTIMAP_DISTRIBUTED_MULTI_MAP_H_
+#ifndef INCLUDE_BASKET_MULTIMAP_MULTIMAP_H_
+#define INCLUDE_BASKET_MULTIMAP_MULTIMAP_H_
 
 /**
  * Include Headers
@@ -47,6 +47,7 @@
 #include <string>
 #include <vector>
 
+namespace basket {
 /**
  * This is a Distributed MultiMap Class. It uses shared memory + RPC + MPI to
  * achieve the data structure.
@@ -55,7 +56,7 @@
  */
 template<typename KeyType, typename MappedType, typename Compare =
          std::less<KeyType>>
-class DistributedMultiMap {
+class multimap {
  private:
   std::hash<KeyType> keyHash;
   /** Class Typedefs for ease of use **/
@@ -78,11 +79,11 @@ class DistributedMultiMap {
 
  public:
   /* Constructor to deallocate the shared memory*/
-  ~DistributedMultiMap();
+  ~multimap();
 
-  DistributedMultiMap();
-  explicit DistributedMultiMap(std::string name_, bool is_server_,
-                               uint16_t my_server_, int num_servers_);
+  multimap();
+  explicit multimap(std::string name_, bool is_server_,
+                    uint16_t my_server_, int num_servers_);
   bool Put(KeyType key, MappedType data);
   std::pair<bool, MappedType> Get(KeyType key);
 
@@ -95,6 +96,8 @@ class DistributedMultiMap {
   std::vector<std::pair<KeyType, MappedType>> GetAllDataInServer();
 };
 
-#include "distributed_multi_map.cpp"
+#include "multimap.cpp"
 
-#endif  // INCLUDE_BASKET_MULTIMAP_DISTRIBUTED_MULTI_MAP_H_
+}  // namespace basket
+
+#endif  // INCLUDE_BASKET_MULTIMAP_MULTIMAP_H_

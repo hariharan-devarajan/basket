@@ -35,7 +35,8 @@
 
 namespace bip = boost::interprocess;
 
-class GlobalSequence{
+namespace basket {
+class global_sequence {
  private:
   uint64_t* value;
   bool is_server;
@@ -48,12 +49,14 @@ class GlobalSequence{
   std::shared_ptr<RPC> rpc;
 
  public:
-  ~GlobalSequence();
-  GlobalSequence(std::string name_, bool is_server_, uint16_t my_server_,
+  ~global_sequence();
+  global_sequence(std::string name_, bool is_server_, uint16_t my_server_,
                  int num_servers_);
 
   uint64_t GetNextSequence();
   uint64_t GetNextSequenceServer(uint16_t server);
 };
+
+}  // namespace basket
 
 #endif  // INCLUDE_BASKET_SEQUENCER_GLOBAL_SEQUENCE_H_

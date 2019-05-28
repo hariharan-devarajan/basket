@@ -18,8 +18,8 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-#ifndef INCLUDE_BASKET_HASHMAP_DISTRIBUTED_HASH_MAP_H_
-#define INCLUDE_BASKET_HASHMAP_DISTRIBUTED_HASH_MAP_H_
+#ifndef INCLUDE_BASKET_MAP_MAP_H_
+#define INCLUDE_BASKET_MAP_MAP_H_
 
 /**
  * Include Headers
@@ -27,50 +27,47 @@
 
 #include <basket/communication/rpc_lib.h>
 #include <basket/common/singleton.h>
-#include <basket/common/typedefs.h>
+#include <basket/common/debug.h>
 /** MPI Headers**/
 #include <mpi.h>
 /** RPC Lib Headers**/
 #include <rpc/server.h>
 #include <rpc/client.h>
-#include <rpc/rpc_error.h>
 /** Boost Headers **/
 #include <boost/interprocess/managed_shared_memory.hpp>
+#include <boost/interprocess/containers/map.hpp>
 #include <boost/interprocess/allocators/allocator.hpp>
-#include <boost/unordered_map.hpp>
-#include <boost/functional/hash.hpp>
+#include <boost/interprocess/sync/interprocess_mutex.hpp>
+#include <boost/interprocess/sync/scoped_lock.hpp>
 #include <boost/algorithm/string.hpp>
 /** Standard C++ Headers**/
 #include <iostream>
 #include <functional>
 #include <utility>
-#include <stdexcept>
 #include <memory>
 #include <string>
 #include <vector>
 
-/** Namespaces Uses **/
-
-/** Global Typedefs **/
-
+namespace basket {
 /**
- * This is a Distributed HashMap Class. It uses shared memory + RPC + MPI to
+ * This is a Distributed Map Class. It uses shared memory + RPC + MPI to
  * achieve the data structure.
  *
- * @tparam MappedType, the value of the HashMap
+ * @tparam MappedType, the value of the Map
  */
-template<typename KeyType, typename MappedType>
-class DistributedHashMap {
+
+template<typename KeyType, typename MappedType, typename Compare =
+         std::less<KeyType>>
+class map {
  private:
   std::hash<KeyType> keyHash;
   /** Class Typedefs for ease of use **/
   typedef std::pair<const KeyType, MappedType> ValueType;
-  typedef boost::interprocess::allocator<ValueType, boost::interprocess::
-                                         managed_shared_memory::segment_manager>
+  typedef boost::interprocess::allocator<
+    ValueType, boost::interprocess::managed_shared_memory::segment_manager>
   ShmemAllocator;
-  typedef boost::unordered_map<KeyType, MappedType, std::hash<KeyType>,
-                               std::equal_to<KeyType>,
-                               ShmemAllocator> MyHashMap;
+  typedef boost::interprocess::map<KeyType, MappedType, Compare, ShmemAllocator>
+  MyMap;
   /** Class attributes**/
   int comm_size, my_rank, num_servers;
   uint16_t  my_server;
@@ -79,21 +76,29 @@ class DistributedHashMap {
   bool is_server;
   boost::interprocess::managed_shared_memory segment;
   std::string name, func_prefix;
-  MyHashMap *myHashMap;
+  MyMap *mymap;
   boost::interprocess::interprocess_mutex* mutex;
 
  public:
-  ~DistributedHashMap();
+  ~map();
 
-  explicit DistributedHashMap(std::string name_, bool is_server_,
-                              uint16_t my_server_, int num_servers_);
+  map();
+  explicit map(std::string name_, bool is_server_,
+                           uint16_t my_server_, int num_servers_);
   bool Put(KeyType key, MappedType data);
   std::pair<bool, MappedType> Get(KeyType key);
+
   std::pair<bool, MappedType> Erase(KeyType key);
+  std::vector<std::pair<KeyType, MappedType>> Contains(KeyType key);
+
   std::vector<std::pair<KeyType, MappedType>> GetAllData();
+
+  std::vector<std::pair<KeyType, MappedType>> ContainsInServer(KeyType key);
   std::vector<std::pair<KeyType, MappedType>> GetAllDataInServer();
 };
 
-#include "distributed_hash_map.cpp"
+#include "map.cpp"
 
-#endif  // INCLUDE_BASKET_HASHMAP_DISTRIBUTED_HASH_MAP_H_
+}  // namespace basket
+
+#endif  // INCLUDE_BASKET_MAP_MAP_H_

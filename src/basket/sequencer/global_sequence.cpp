@@ -18,22 +18,21 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-#ifndef SRC_BASKET_SEQUENCER_GLOBAL_SEQUENCE_CPP_
-#define SRC_BASKET_SEQUENCER_GLOBAL_SEQUENCE_CPP_
-
 #include <basket/sequencer/global_sequence.h>
 
-GlobalSequence::~GlobalSequence() {
+namespace basket {
+
+global_sequence::~global_sequence() {
   if (is_server) bip::shared_memory_object::remove(name.c_str());
 }
-GlobalSequence::GlobalSequence(std::string name_,
-                               bool is_server_,
-                               uint16_t my_server_,
-                               int num_servers_)
+global_sequence::global_sequence(std::string name_,
+                                 bool is_server_,
+                                 uint16_t my_server_,
+                                 int num_servers_)
     : is_server(is_server_), my_server(my_server_), num_servers(num_servers_),
       comm_size(1), my_rank(0), memory_allocated(1024ULL * 1024ULL * 128ULL),
       name(name_), segment(), func_prefix(name_) {
-  AutoTrace trace = AutoTrace("GlobalSequence", name_, is_server_, my_server_,
+  AutoTrace trace = AutoTrace("basket::global_sequence", name_, is_server_, my_server_,
                               num_servers_);
   MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
   MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
@@ -42,7 +41,7 @@ GlobalSequence::GlobalSequence(std::string name_,
                                     num_servers_);
   if (is_server) {
     std::function<uint64_t(void)> getNextSequence(std::bind(
-        &GlobalSequence::GetNextSequence, this));
+        &basket::global_sequence::GetNextSequence, this));
     rpc->bind(func_prefix+"_GetNextSequence", getNextSequence);
     bip::shared_memory_object::remove(name.c_str());
     segment = bip::managed_shared_memory(bip::create_only, name.c_str(),
@@ -65,12 +64,12 @@ GlobalSequence::GlobalSequence(std::string name_,
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-uint64_t GlobalSequence::GetNextSequence() {
+uint64_t global_sequence::GetNextSequence() {
   boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex>
       lock(*mutex);
   return ++*value;
 }
-uint64_t GlobalSequence::GetNextSequenceServer(uint16_t server) {
+uint64_t global_sequence::GetNextSequenceServer(uint16_t server) {
   if (my_server == server) {
     boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex>
         lock(*mutex);
@@ -78,4 +77,5 @@ uint64_t GlobalSequence::GetNextSequenceServer(uint16_t server) {
   }return
        rpc->call(server, func_prefix+"_GetNextSequence").as<uint64_t>();
 }
-#endif  // SRC_BASKET_SEQUENCER_GLOBAL_SEQUENCE_CPP_
+
+}  // namespace basket

@@ -18,28 +18,28 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-#ifndef INCLUDE_BASKET_PRIORITY_QUEUE_DISTRIBUTED_PRIORITY_QUEUE_CPP_
-#define INCLUDE_BASKET_PRIORITY_QUEUE_DISTRIBUTED_PRIORITY_QUEUE_CPP_
+#ifndef INCLUDE_BASKET_PRIORITY_QUEUE_PRIORITY_QUEUE_CPP_
+#define INCLUDE_BASKET_PRIORITY_QUEUE_PRIORITY_QUEUE_CPP_
 
 /* Constructor to deallocate the shared memory*/
 template<typename MappedType, typename Compare>
-DistributedPriorityQueue<MappedType, Compare>::~DistributedPriorityQueue() {
+priority_queue<MappedType, Compare>::~priority_queue() {
   if (is_server) bip::shared_memory_object::remove(name.c_str());
 }
 
 template<typename MappedType, typename Compare>
-DistributedPriorityQueue<MappedType,
-                         Compare>::DistributedPriorityQueue(std::string name_,
-                                                            bool is_server_,
-                                                            uint16_t my_server_,
-                                                            int num_servers_)
-                             : is_server(is_server_), my_server(my_server_),
-                               num_servers(num_servers_), comm_size(1),
-                               my_rank(0),
-                               memory_allocated(1024ULL * 1024ULL * 128ULL),
-                               name(name_), segment(),
-                               queue(), func_prefix(name_) {
-  AutoTrace trace = AutoTrace("DistributedPriorityQueue", name_, is_server_,
+priority_queue<MappedType,
+               Compare>::priority_queue(std::string name_,
+                                        bool is_server_,
+                                        uint16_t my_server_,
+                                        int num_servers_)
+                   : is_server(is_server_), my_server(my_server_),
+                     num_servers(num_servers_), comm_size(1),
+                     my_rank(0),
+                     memory_allocated(1024ULL * 1024ULL * 128ULL),
+                     name(name_), segment(),
+                     queue(), func_prefix(name_) {
+  AutoTrace trace = AutoTrace("basket::priority_queue", name_, is_server_,
                               my_server_, num_servers_);
   /* Initialize MPI rank and size of world */
   MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
@@ -57,21 +57,21 @@ DistributedPriorityQueue<MappedType,
     segment = bip::managed_shared_memory(bip::create_only, name.c_str(),
                                          memory_allocated);
     ShmemAllocator alloc_inst(segment.get_segment_manager());
-    /* Construct Hashmap in the shared memory space. */
+    /* Construct priority queue in the shared memory space. */
     queue = segment.construct<Queue>("Queue")(Compare(), alloc_inst);
     mutex = segment.construct<bip::interprocess_mutex>("mtx")();
     /* Create a RPC server and map the methods to it. */
     std::function<bool(MappedType, uint16_t)> pushFunc(
-        std::bind(&DistributedPriorityQueue<MappedType, Compare>::Push, this,
+        std::bind(&priority_queue<MappedType, Compare>::Push, this,
                   std::placeholders::_1, std::placeholders::_2));
     std::function<std::pair<bool, MappedType>(uint16_t)> popFunc(
-        std::bind(&DistributedPriorityQueue<MappedType, Compare>::Pop, this,
+        std::bind(&priority_queue<MappedType, Compare>::Pop, this,
                   std::placeholders::_1));
     std::function<std::pair<bool, MappedType>(uint16_t)> topFunc(
-        std::bind(&DistributedPriorityQueue<MappedType, Compare>::Top, this,
+        std::bind(&priority_queue<MappedType, Compare>::Top, this,
                   std::placeholders::_1));
     std::function<size_t(uint16_t)> sizeFunc(
-        std::bind(&DistributedPriorityQueue<MappedType, Compare>::Size, this,
+        std::bind(&priority_queue<MappedType, Compare>::Size, this,
                   std::placeholders::_1));
     rpc->bind(func_prefix+"_Push", pushFunc);
     rpc->bind(func_prefix+"_Pop", popFunc);
@@ -94,38 +94,39 @@ DistributedPriorityQueue<MappedType,
   MPI_Barrier(MPI_COMM_WORLD);
 }
 /**
- * Push the data into the queue. Uses key to decide the server to hash it to,
+ * Push the data into the priority queue. Uses key to decide the
+ * server to hash it to,
  * @param key, the key for put
  * @param data, the value for put
  * @return bool, true if Put was successful else false.
  */
 template<typename MappedType, typename Compare>
-bool DistributedPriorityQueue<MappedType, Compare>::Push(MappedType data,
-                                                         uint16_t key_int) {
+bool priority_queue<MappedType, Compare>::Push(MappedType data,
+                                               uint16_t key_int) {
   if (key_int == my_server) {
-    AutoTrace trace = AutoTrace("DistributedPriorityQueue::Push(local)",
+    AutoTrace trace = AutoTrace("basket::priority_queue::Push(local)",
                                 data, key_int);
     bip::scoped_lock<bip::interprocess_mutex> lock(*mutex);
     queue->push(data);
     return true;
   } else {
-    AutoTrace trace = AutoTrace("DistributedPriorityQueue::Push(remote)",
+    AutoTrace trace = AutoTrace("basket::priority_queue::Push(remote)",
                                 data, key_int);
     return rpc->call(key_int, func_prefix+"_Push", data).template as<bool>();
   }
 }
 /**
- * Get the data from the queue. Uses key_int to decide the server to hash it
- * to,
+ * Get the data from the priority queue. Uses key_int to decide the
+ * server to hash it to,
  * @param key_int, key_int to know which server
  * @return return a pair of bool and Value. If bool is true then data was
  * found and is present in value part else bool is set to false
  */
 template<typename MappedType, typename Compare>
 std::pair<bool, MappedType>
-DistributedPriorityQueue<MappedType, Compare>::Pop(uint16_t key_int) {
+priority_queue<MappedType, Compare>::Pop(uint16_t key_int) {
   if (key_int == my_server) {
-    AutoTrace trace = AutoTrace("DistributedPriorityQueue::Pop(local)",
+    AutoTrace trace = AutoTrace("basket::priority_queue::Pop(local)",
                                 key_int);
     bip::scoped_lock<bip::interprocess_mutex> lock(*mutex);
     if (queue->size() > 0) {
@@ -135,7 +136,7 @@ DistributedPriorityQueue<MappedType, Compare>::Pop(uint16_t key_int) {
     }
     return std::pair<bool, MappedType>(false, MappedType());
   } else {
-    AutoTrace trace = AutoTrace("DistributedPriorityQueue::Pop(remote)",
+    AutoTrace trace = AutoTrace("basket::priority_queue::Pop(remote)",
                                 key_int);
     return rpc->call(key_int, func_prefix+"_Pop").template
         as<std::pair<bool, MappedType>>();
@@ -143,17 +144,17 @@ DistributedPriorityQueue<MappedType, Compare>::Pop(uint16_t key_int) {
 }
 
 /**
- * Get the data from the queue. Uses key_int to decide the server to hash it
- * to,
+ * Get the data from the priority queue. Uses key_int to decide the
+ * server to hash it to,
  * @param key_int, key_int to know which server
  * @return return a pair of bool and Value. If bool is true then data was
  * found and is present in value part else bool is set to false
  */
 template<typename MappedType, typename Compare>
 std::pair<bool, MappedType>
-DistributedPriorityQueue<MappedType, Compare>::Top(uint16_t key_int) {
+priority_queue<MappedType, Compare>::Top(uint16_t key_int) {
   if (key_int == my_server) {
-    AutoTrace trace = AutoTrace("DistributedPriorityQueue::Top(local)",
+    AutoTrace trace = AutoTrace("basket::priority_queue::Top(local)",
                                 key_int);
     bip::scoped_lock<bip::interprocess_mutex> lock(*mutex);
     if (queue->size() > 0) {
@@ -162,7 +163,7 @@ DistributedPriorityQueue<MappedType, Compare>::Top(uint16_t key_int) {
     }
     return std::pair<bool, MappedType>(false, MappedType());;
   } else {
-    AutoTrace trace = AutoTrace("DistributedPriorityQueue::Top(remote)",
+    AutoTrace trace = AutoTrace("basket::priority_queue::Top(remote)",
                                 key_int);
     return rpc->call(key_int, func_prefix+"_Pop").template
         as<std::pair<bool, MappedType>>();
@@ -170,22 +171,23 @@ DistributedPriorityQueue<MappedType, Compare>::Top(uint16_t key_int) {
 }
 
 /**
- * Get the size of the queue. Uses key_int to decide the server to hash it to,
+ * Get the size of the priority queue. Uses key_int to decide the
+ * server to hash it to,
  * @param key_int, key_int to know which server
- * @return return a size of the queue
+ * @return return a size of the priority queue
  */
 template<typename MappedType, typename Compare>
-size_t DistributedPriorityQueue<MappedType, Compare>::Size(uint16_t key_int) {
+size_t priority_queue<MappedType, Compare>::Size(uint16_t key_int) {
   if (key_int == my_server) {
-    AutoTrace trace = AutoTrace("DistributedPriorityQueue::Size(local)",
+    AutoTrace trace = AutoTrace("basket::priority_queue::Size(local)",
                                 key_int);
     bip::scoped_lock<bip::interprocess_mutex> lock(*mutex);
     size_t value = queue->size();
     return value;
   } else {
-    AutoTrace trace = AutoTrace("DistributedPriorityQueue::Top(remote)",
+    AutoTrace trace = AutoTrace("basket::priority_queue::Top(remote)",
                                 key_int);
     return rpc->call(key_int, func_prefix+"_Size").template as<size_t>();
   }
 }
-#endif  // INCLUDE_BASKET_PRIORITY_QUEUE_DISTRIBUTED_PRIORITY_QUEUE_CPP_
+#endif  // INCLUDE_BASKET_PRIORITY_QUEUE_PRIORITY_QUEUE_CPP_

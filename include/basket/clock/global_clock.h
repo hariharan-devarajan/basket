@@ -37,7 +37,9 @@
 #include <string>
 
 namespace bip = boost::interprocess;
-class GlobalClock {
+
+namespace basket {
+class global_clock {
  private:
   typedef std::chrono::high_resolution_clock::time_point chrono_time;
   chrono_time *start;
@@ -51,8 +53,8 @@ class GlobalClock {
   std::shared_ptr<RPC> rpc;
 
  public:
-  ~GlobalClock();
-  GlobalClock(std::string name_,
+  ~global_clock();
+  global_clock(std::string name_,
               bool is_server_,
               uint16_t my_server_,
               int num_servers_);
@@ -60,4 +62,7 @@ class GlobalClock {
   HTime GetTime();
   HTime GetTimeServer(uint16_t server);
 };
+
+}  // namespace basket
+
 #endif  // INCLUDE_BASKET_CLOCK_GLOBAL_CLOCK_H_

@@ -18,16 +18,16 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-#ifndef INCLUDE_BASKET_MAP_DISTRIBUTED_MAP_H_
-#define INCLUDE_BASKET_MAP_DISTRIBUTED_MAP_H_
+#ifndef INCLUDE_BASKET_PRIORITY_QUEUE_PRIORITY_QUEUE_H_
+#define INCLUDE_BASKET_PRIORITY_QUEUE_PRIORITY_QUEUE_H_
 
 /**
  * Include Headers
  */
-
 #include <basket/communication/rpc_lib.h>
 #include <basket/common/singleton.h>
 #include <basket/common/debug.h>
+#include <basket/common/typedefs.h>
 /** MPI Headers**/
 #include <mpi.h>
 /** RPC Lib Headers**/
@@ -35,7 +35,6 @@
 #include <rpc/client.h>
 /** Boost Headers **/
 #include <boost/interprocess/managed_shared_memory.hpp>
-#include <boost/interprocess/containers/map.hpp>
 #include <boost/interprocess/allocators/allocator.hpp>
 #include <boost/interprocess/sync/interprocess_mutex.hpp>
 #include <boost/interprocess/sync/scoped_lock.hpp>
@@ -44,29 +43,34 @@
 #include <iostream>
 #include <functional>
 #include <utility>
-#include <memory>
+#include <queue>
 #include <string>
+#include <memory>
 #include <vector>
 
-/**
- * This is a Distributed Map Class. It uses shared memory + RPC + MPI to
- * achieve the data structure.
- *
- * @tparam MappedType, the value of the Map
- */
+/** Namespaces Uses **/
+namespace bip = boost::interprocess;
 
-template<typename KeyType, typename MappedType, typename Compare =
-         std::less<KeyType>>
-class DistributedMap {
+/** Global Typedefs **/
+
+namespace basket {
+/**
+ * This is a Distributed priority_queue Class. It uses shared memory + RPC + MPI
+ * to achieve the data structure.
+ *
+ * @tparam MappedType, the value of the priority_queue
+ */
+template<typename MappedType, typename Compare = std::less<MappedType>>
+class priority_queue {
  private:
-  std::hash<KeyType> keyHash;
   /** Class Typedefs for ease of use **/
-  typedef std::pair<const KeyType, MappedType> ValueType;
-  typedef boost::interprocess::allocator<
-    ValueType, boost::interprocess::managed_shared_memory::segment_manager>
+  typedef bip::allocator<MappedType,
+                         bip::managed_shared_memory::segment_manager>
   ShmemAllocator;
-  typedef boost::interprocess::map<KeyType, MappedType, Compare, ShmemAllocator>
-  MyMap;
+  typedef std::priority_queue<MappedType,
+                              std::vector<MappedType, ShmemAllocator>, Compare>
+  Queue;
+
   /** Class attributes**/
   int comm_size, my_rank, num_servers;
   uint16_t  my_server;
@@ -75,27 +79,22 @@ class DistributedMap {
   bool is_server;
   boost::interprocess::managed_shared_memory segment;
   std::string name, func_prefix;
-  MyMap *mymap;
+  Queue *queue;
   boost::interprocess::interprocess_mutex* mutex;
 
  public:
-  ~DistributedMap();
+  ~priority_queue();
 
-  DistributedMap();
-  explicit DistributedMap(std::string name_, bool is_server_,
+  explicit priority_queue(std::string name_, bool is_server_,
                           uint16_t my_server_, int num_servers_);
-  bool Put(KeyType key, MappedType data);
-  std::pair<bool, MappedType> Get(KeyType key);
-
-  std::pair<bool, MappedType> Erase(KeyType key);
-  std::vector<std::pair<KeyType, MappedType>> Contains(KeyType key);
-
-  std::vector<std::pair<KeyType, MappedType>> GetAllData();
-
-  std::vector<std::pair<KeyType, MappedType>> ContainsInServer(KeyType key);
-  std::vector<std::pair<KeyType, MappedType>> GetAllDataInServer();
+  bool Push(MappedType data, uint16_t key_int);
+  std::pair<bool, MappedType> Pop(uint16_t key_int);
+  std::pair<bool, MappedType> Top(uint16_t key_int);
+  size_t Size(uint16_t key_int);
 };
 
-#include "distributed_map.cpp"
+#include "priority_queue.cpp"
 
-#endif  // INCLUDE_BASKET_MAP_DISTRIBUTED_MAP_H_
+}  // namespace basket
+
+#endif  // INCLUDE_BASKET_PRIORITY_QUEUE_PRIORITY_QUEUE_H_

@@ -2,7 +2,9 @@
 
 # add_dependencies(DistributedHashMapTest basket)
 
-set(examples DistributedHashMapTest DistributedMapTest DistributedMessageQueueTest DistributedPriorityQueueTest ClockTest dq_test)
+set(examples simple_test)
+# DistributedHashMapTest DistributedMapTest DistributedMessageQueueTest DistributedPriorityQueueTest ClockTest
+
 # How do people test structures like these?
 foreach (example ${examples})
     add_executable (${example} ${example}.cpp)

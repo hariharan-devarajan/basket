@@ -18,27 +18,27 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-#ifndef INCLUDE_BASKET_MULTIMAP_DISTRIBUTED_MULTI_MAP_CPP_
-#define INCLUDE_BASKET_MULTIMAP_DISTRIBUTED_MULTI_MAP_CPP_
+#ifndef INCLUDE_BASKET_MULTIMAP_MULTIMAP_CPP_
+#define INCLUDE_BASKET_MULTIMAP_MULTIMAP_CPP_
 
 /* Constructor to deallocate the shared memory*/
 template<typename KeyType, typename MappedType, typename Compare>
-DistributedMultiMap<KeyType, MappedType, Compare>::~DistributedMultiMap() {
+multimap<KeyType, MappedType, Compare>::~multimap() {
   if (is_server) boost::interprocess::shared_memory_object::remove(
           name.c_str());
 }
 
 template<typename KeyType, typename MappedType, typename Compare>
-DistributedMultiMap<KeyType, MappedType,
-                    Compare>::DistributedMultiMap(std::string name_,
-                                                  bool is_server_,
-                                                  uint16_t my_server_,
-                                                  int num_servers_)
-                        : is_server(is_server_), my_server(my_server_),
-                          num_servers(num_servers_), comm_size(1), my_rank(0),
-                          memory_allocated(1024ULL * 1024ULL * 128ULL),
-                          name(name_), segment(), mymap(), func_prefix(name_) {
-  AutoTrace trace = AutoTrace("DistributedMultiMap", name_, is_server_,
+multimap<KeyType, MappedType,
+         Compare>::multimap(std::string name_,
+                            bool is_server_,
+                            uint16_t my_server_,
+                            int num_servers_)
+             : is_server(is_server_), my_server(my_server_),
+               num_servers(num_servers_), comm_size(1), my_rank(0),
+               memory_allocated(1024ULL * 1024ULL * 128ULL),
+               name(name_), segment(), mymap(), func_prefix(name_) {
+  AutoTrace trace = AutoTrace("basket::multimap", name_, is_server_,
                               my_server_, num_servers_);
   /* Initialize MPI rank and size of world */
   MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
@@ -62,21 +62,21 @@ DistributedMultiMap<KeyType, MappedType,
         "mtx")();
     /* Create a RPC server and map the methods to it. */
     std::function<bool(KeyType, MappedType)> putFunc(std::bind(
-        &DistributedMultiMap<KeyType, MappedType, Compare>::Put, this,
+        &multimap<KeyType, MappedType, Compare>::Put, this,
         std::placeholders::_1 , std::placeholders::_2));
     std::function<std::pair<bool, MappedType>(KeyType)> getFunc(std::bind(
-        &DistributedMultiMap<KeyType, MappedType, Compare>::Get, this,
+        &multimap<KeyType, MappedType, Compare>::Get, this,
         std::placeholders::_1));
     std::function<std::vector<std::pair<KeyType, MappedType>>(KeyType)>
-        containsInServerFunc(std::bind(&DistributedMultiMap<KeyType,
+        containsInServerFunc(std::bind(&multimap<KeyType,
                                        MappedType, Compare>::ContainsInServer,
                                        this, std::placeholders::_1));
     std::function<std::pair<bool, MappedType>(KeyType)> eraseFunc(std::bind(
-        &DistributedMultiMap<KeyType, MappedType, Compare>::Erase, this,
+        &multimap<KeyType, MappedType, Compare>::Erase, this,
         std::placeholders::_1));
     std::function<std::vector<std::pair<KeyType, MappedType>>(void)>
         getAllDataInServerFunc(std::bind(
-            &DistributedMultiMap<KeyType, MappedType,
+            &multimap<KeyType, MappedType,
             Compare>::GetAllDataInServer, this));
     rpc->bind(func_prefix+"_Put", putFunc);
     rpc->bind(func_prefix+"_Get", getFunc);
@@ -106,12 +106,12 @@ DistributedMultiMap<KeyType, MappedType,
  * @return bool, true if Put was successful else false.
  */
 template<typename KeyType, typename MappedType, typename Compare>
-bool DistributedMultiMap<KeyType, MappedType, Compare>::Put(KeyType key,
-                                                            MappedType data) {
+bool multimap<KeyType, MappedType, Compare>::Put(KeyType key,
+                                                 MappedType data) {
   size_t key_hash = keyHash(key);
   uint16_t key_int = static_cast<uint16_t>(key_hash % num_servers);
   if (key_int == my_server) {
-    AutoTrace trace = AutoTrace("DistributedMultiMap::Put(local)", key, data);
+    AutoTrace trace = AutoTrace("basket::multimap::Put(local)", key, data);
     boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex>
         lock(*mutex);
     typename MyMap::iterator iterator = mymap->find(key);
@@ -121,7 +121,7 @@ bool DistributedMultiMap<KeyType, MappedType, Compare>::Put(KeyType key,
     mymap->insert(std::pair<KeyType, MappedType>(key, data));
     return true;
   } else {
-    AutoTrace trace = AutoTrace("DistributedMultiMap::Put(remote)", key,
+    AutoTrace trace = AutoTrace("basket::multimap::Put(remote)", key,
                                 data);
     return rpc->call(key_int, func_prefix+"_Put", key,
                      data).template as<bool>();
@@ -136,11 +136,11 @@ bool DistributedMultiMap<KeyType, MappedType, Compare>::Put(KeyType key,
  */
 template<typename KeyType, typename MappedType, typename Compare>
 std::pair<bool, MappedType>
-DistributedMultiMap<KeyType, MappedType, Compare>::Get(KeyType key) {
+multimap<KeyType, MappedType, Compare>::Get(KeyType key) {
   size_t key_hash = keyHash(key);
   uint16_t key_int = key_hash % num_servers;
   if (key_int == my_server) {
-    AutoTrace trace = AutoTrace("DistributedMultiMap::Get(local)", key);
+    AutoTrace trace = AutoTrace("basket::multimap::Get(local)", key);
     boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex>
         lock(*mutex);
     typename MyMap::iterator iterator = mymap->find(key);
@@ -150,7 +150,7 @@ DistributedMultiMap<KeyType, MappedType, Compare>::Get(KeyType key) {
       return std::pair<bool, MappedType>(false, MappedType());
     }
   } else {
-    AutoTrace trace = AutoTrace("DistributedMultiMap::Get(remote)", key);
+    AutoTrace trace = AutoTrace("basket::multimap::Get(remote)", key);
     return rpc->call(key_int, func_prefix+"_Get", key).template
         as<std::pair<bool, MappedType>>();
   }
@@ -158,17 +158,17 @@ DistributedMultiMap<KeyType, MappedType, Compare>::Get(KeyType key) {
 
 template<typename KeyType, typename MappedType, typename Compare>
 std::pair<bool, MappedType>
-DistributedMultiMap<KeyType, MappedType, Compare>::Erase(KeyType key) {
+multimap<KeyType, MappedType, Compare>::Erase(KeyType key) {
   size_t key_hash = keyHash(key);
   uint16_t key_int = key_hash % num_servers;
   if (key_int == my_server) {
-    AutoTrace trace = AutoTrace("DistributedMultiMap::Erase(local)", key);
+    AutoTrace trace = AutoTrace("basket::multimap::Erase(local)", key);
     boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex>
         lock(*mutex);
     size_t s = mymap->erase(key);
     return std::pair<bool, MappedType>(s > 0, MappedType());
   } else {
-    AutoTrace trace = AutoTrace("DistributedMultiMap::Erase(remote)", key);
+    AutoTrace trace = AutoTrace("basket::multimap::Erase(remote)", key);
     return rpc->call(key_int, func_prefix+"_Erase",
                      key).template as<std::pair<bool, MappedType>>();
   }
@@ -183,8 +183,8 @@ DistributedMultiMap<KeyType, MappedType, Compare>::Erase(KeyType key) {
  */
 template<typename KeyType, typename MappedType, typename Compare>
 std::vector<std::pair<KeyType, MappedType>>
-DistributedMultiMap<KeyType, MappedType, Compare>::Contains(KeyType key) {
-  AutoTrace trace = AutoTrace("DistributedMultiMap::Contains", key);
+multimap<KeyType, MappedType, Compare>::Contains(KeyType key) {
+  AutoTrace trace = AutoTrace("basket::multimap::Contains", key);
   std::vector<std::pair<KeyType, MappedType>> final_values =
       std::vector<std::pair<KeyType, MappedType>>();
   auto current_server = ContainsInServer(key);
@@ -202,8 +202,8 @@ DistributedMultiMap<KeyType, MappedType, Compare>::Contains(KeyType key) {
 
 template<typename KeyType, typename MappedType, typename Compare>
 std::vector<std::pair<KeyType, MappedType>>
-DistributedMultiMap<KeyType, MappedType, Compare>::GetAllData() {
-  AutoTrace trace = AutoTrace("DistributedMultiMap::GetAllData");
+multimap<KeyType, MappedType, Compare>::GetAllData() {
+  AutoTrace trace = AutoTrace("basket::multimap::GetAllData");
   std::vector<std::pair<KeyType, MappedType>> final_values =
       std::vector<std::pair<KeyType, MappedType>>();
   auto current_server = GetAllDataInServer();
@@ -221,9 +221,9 @@ DistributedMultiMap<KeyType, MappedType, Compare>::GetAllData() {
 
 template<typename KeyType, typename MappedType, typename Compare>
 std::vector<std::pair<KeyType, MappedType>>
-DistributedMultiMap<KeyType, MappedType,
-                    Compare>::ContainsInServer(KeyType key) {
-  AutoTrace trace = AutoTrace("DistributedMultiMap::ContainsInServer", key);
+multimap<KeyType, MappedType,
+         Compare>::ContainsInServer(KeyType key) {
+  AutoTrace trace = AutoTrace("basket::multimap::ContainsInServer", key);
   std::vector<std::pair<KeyType, MappedType>> final_values =
       std::vector<std::pair<KeyType, MappedType>>();
   {
@@ -257,8 +257,8 @@ DistributedMultiMap<KeyType, MappedType,
 }
 template<typename KeyType, typename MappedType, typename Compare>
 std::vector<std::pair<KeyType, MappedType>>
-DistributedMultiMap<KeyType, MappedType, Compare>::GetAllDataInServer() {
-  AutoTrace trace = AutoTrace("DistributedMultiMap::GetAllDataInServer");
+multimap<KeyType, MappedType, Compare>::GetAllDataInServer() {
+  AutoTrace trace = AutoTrace("basket::multimap::GetAllDataInServer");
   std::vector<std::pair<KeyType, MappedType>> final_values =
       std::vector<std::pair<KeyType, MappedType>>();
   {
@@ -274,4 +274,4 @@ DistributedMultiMap<KeyType, MappedType, Compare>::GetAllDataInServer() {
   }
   return final_values;
 }
-#endif  // INCLUDE_BASKET_MULTIMAP_DISTRIBUTED_MULTI_MAP_CPP_
+#endif  // INCLUDE_BASKET_MULTIMAP_MULTIMAP_CPP_

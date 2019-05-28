@@ -20,11 +20,12 @@
 
 #include <basket/clock/global_clock.h>
 
+namespace basket {
 /*
  * Destructor removes shared memory from the server
  */
-GlobalClock::~GlobalClock() {
-  AutoTrace trace = AutoTrace("~GlobalClock", NULL);
+global_clock::~global_clock() {
+  AutoTrace trace = AutoTrace("basket::~global_clock", NULL);
   if (is_server) bip::shared_memory_object::remove(name.c_str());
 }
 
@@ -32,14 +33,14 @@ GlobalClock::~GlobalClock() {
  * Constructor gets the start time in a node for later use, binds RPC
  * calls, and sets up mutexes for later locking.
  */
-GlobalClock::GlobalClock(std::string name_,
-                         bool is_server_,
-                         uint16_t my_server_,
-                         int num_servers_)
+global_clock::global_clock(std::string name_,
+                           bool is_server_,
+                           uint16_t my_server_,
+                           int num_servers_)
     : is_server(is_server_), my_server(my_server_), num_servers(num_servers_),
       comm_size(1), my_rank(0), memory_allocated(1024ULL), name(name_),
       segment(), func_prefix(name_) {
-  AutoTrace trace = AutoTrace("GlobalClock", name_, is_server_, my_server_,
+  AutoTrace trace = AutoTrace("basket::global_clock", name_, is_server_, my_server_,
                               num_servers_);
   MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
   MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
@@ -48,7 +49,7 @@ GlobalClock::GlobalClock(std::string name_,
                                     num_servers_);
   if (is_server) {
     std::function<HTime(void)> getTimeFunction(
-        std::bind(&GlobalClock::GetTime, this));
+        std::bind(&global_clock::GetTime, this));
     rpc->bind(func_prefix+"_GetTime", getTimeFunction);
     bip::shared_memory_object::remove(name.c_str());
     segment = bip::managed_shared_memory(bip::create_only, name.c_str(),
@@ -77,8 +78,8 @@ GlobalClock::GlobalClock(std::string name_,
  * GetTime() returns the time locally within a node using chrono
  * high_resolution_clock
  */
-HTime GlobalClock::GetTime() {
-  AutoTrace trace = AutoTrace("GlobalClock::GetTime", NULL);
+HTime global_clock::GetTime() {
+  AutoTrace trace = AutoTrace("basket::global_clock::GetTime", NULL);
   boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex>
       lock(*mutex);
   auto t2 = std::chrono::high_resolution_clock::now();
@@ -91,8 +92,8 @@ HTime GlobalClock::GetTime() {
  * GetTimeServer() returns the time on the requested server using RPC calls, or
  * the local time if the server requested is the current client server
  */
-HTime GlobalClock::GetTimeServer(uint16_t server) {
-  AutoTrace trace = AutoTrace("GlobalClock::GetTimeServer", server);
+HTime global_clock::GetTimeServer(uint16_t server) {
+  AutoTrace trace = AutoTrace("basket::global_clock::GetTimeServer", server);
   if (my_server == server) {
     boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex>
         lock(*mutex);
@@ -102,3 +103,5 @@ HTime GlobalClock::GetTimeServer(uint16_t server) {
     return t;
   }return rpc->call(server, func_prefix+"_GetTime").as<HTime>();
 }
+
+}  // namespace basket

@@ -18,8 +18,8 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-#ifndef INCLUDE_BASKET_QUEUE_DISTRIBUTED_MESSAGE_QUEUE_H_
-#define INCLUDE_BASKET_QUEUE_DISTRIBUTED_MESSAGE_QUEUE_H_
+#ifndef INCLUDE_BASKET_QUEUE_QUEUE_H_
+#define INCLUDE_BASKET_QUEUE_QUEUE_H_
 
 /**
  * Include Headers
@@ -49,14 +49,16 @@
 /** Namespaces Uses **/
 namespace bip = boost::interprocess;
 
+
+namespace basket {
 /**
- * This is a Distributed MessageQueue Class. It uses shared memory +
+ * This is a Distributed Queue Class. It uses shared memory +
  * RPC + MPI to achieve the data structure.
  *
- * @tparam MappedType, the value of the MessageQueue
+ * @tparam MappedType, the value of the Queue
  */
 template<typename MappedType>
-class DistributedMessageQueue {
+class queue {
  private:
   /** Class Typedefs for ease of use **/
   typedef bip::allocator<MappedType,
@@ -72,22 +74,24 @@ class DistributedMessageQueue {
   bool is_server;
   boost::interprocess::managed_shared_memory segment;
   std::string name, func_prefix;
-  Queue *queue;
+  Queue *my_queue;
   boost::interprocess::interprocess_mutex* mutex;
 
  public:
-  ~DistributedMessageQueue();
+  ~queue();
 
-  explicit DistributedMessageQueue(std::string name_,
-                                   bool is_server_,
-                                   uint16_t my_server_,
-                                   int num_servers_);
+  explicit queue(std::string name_,
+                 bool is_server_,
+                 uint16_t my_server_,
+                 int num_servers_);
   bool Push(MappedType data, uint16_t key_int);
   std::pair<bool, MappedType> Pop(uint16_t key_int);
   bool WaitForElement(uint16_t key_int);
   size_t Size(uint16_t key_int);
 };
 
-#include "distributed_message_queue.cpp"
+#include "queue.cpp"
 
-#endif  // INCLUDE_BASKET_QUEUE_DISTRIBUTED_MESSAGE_QUEUE_H_
+}  // namespace basket
+
+#endif  // INCLUDE_BASKET_QUEUE_QUEUE_H_

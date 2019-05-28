@@ -15,13 +15,13 @@ set(BASKET_SRC  include/basket/common/singleton.h
                 src/basket/common/data_structures.cpp
                 include/basket/communication/rpc_lib.h
                 src/basket/communication/rpc_lib.cpp
-                include/basket/hashmap/distributed_hash_map.h
-                include/basket/map/distributed_map.h
-        include/basket/multimap/distributed_multi_map.h
+                include/basket/unordered_map/unordered_map.h
+                include/basket/map/map.h
+        include/basket/multimap/multimap.h
         include/basket/clock/global_clock.h
         src/basket/clock/global_clock.cpp
-        include/basket/queue/distributed_message_queue.h
-        include/basket/priority_queue/distributed_priority_queue.h
+        include/basket/queue/queue.h
+        include/basket/priority_queue/priority_queue.h
         include/basket/sequencer/global_sequence.h
         src/basket/sequencer/global_sequence.cpp)
 
