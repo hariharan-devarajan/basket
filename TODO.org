@@ -18,3 +18,5 @@
 ** TODO One test per structure
 * DONE cpplint
 ** Make sure source code fits Google C++ style by running cpplint.py on it
+* TODO rdma
+** MercuryRPC vs RPCLib
