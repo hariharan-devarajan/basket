@@ -51,3 +51,17 @@ assigned with modular arithmetic) and output the time at that rank and
 the time at each server accessed from that rank with
 GetTimeServer(). It uses various MPI barriers to ensure that output
 doesn't conflict with itself.
+
+### Testing on Ares cluster
+
+## Configure
+`mkdir ${HOME}/basket_build`
+`cd ${HOME}/basket_build`
+`${HOME}/software/install/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=/opt/ohpc/pub/compiler/gcc/7.3.0/bin/gcc -DCMAKE_CXX_COMPILER=/opt/ohpc/pub/compiler/gcc/7.3.0/bin/g++ "-DCMAKE_CXX_FLAGS=-I${HOME}/software/install/include -L${HOME}/software/install/lib" -G "CodeBlocks - Unix Makefiles" /tmp/tmp.bYNfITLGMr`
+
+## Compile
+`${HOME}/software/install/bin/cmake --build ./ --target all -- -j 8`
+
+## Run
+`cd ${HOME}/basket_build/test`
+`ctest -V`

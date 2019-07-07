@@ -1,21 +1,37 @@
 # target_link_libraries(DistributedHashMapTest ${CMAKE_BINARY_DIR}/libbasket.so)
 
-# add_dependencies(DistributedHashMapTest basket)
-
-set(examples simple_test)
+set(examples unordered_map_test map_test queue_test priority_queue_test)
 # DistributedHashMapTest DistributedMapTest DistributedMessageQueueTest DistributedPriorityQueueTest ClockTest
 
-# How do people test structures like these?
+add_custom_target(copy_hostfile)
+add_custom_command(
+        TARGET copy_hostfile
+        COMMAND ${CMAKE_COMMAND} -E copy
+        ${CMAKE_CURRENT_SOURCE_DIR}/hostfile
+        ${CMAKE_CURRENT_BINARY_DIR})
+
+# Compile all examples
 foreach (example ${examples})
-    add_executable (${example} ${example}.cpp)
+    add_executable (${example} ${example}.cpp util.h)
     add_dependencies(${example} basket)
+    add_dependencies(${example} copy_hostfile)
     target_include_directories(${example} PRIVATE "${CMAKE_BINARY_DIR}/")
-    set_target_properties(${example} PROPERTIES ENV TEST_ENV="LD_PRELOAD=-L${CMAKE_BINARY_DIR}/libbasket.so")
-    target_link_libraries(${example} ${LIB_FLAGS} -L${CMAKE_BINARY_DIR}/ -lbasket)
+    set_target_properties(${example} PROPERTIES ENVIRONMENT LD_PRELOAD=${CMAKE_BINARY_DIR}/libbasket.so)
+    target_link_libraries(${example} ${LIB_FLAGS} -L${CMAKE_BINARY_DIR}/ -lbasket -lmpi)
     set_target_properties (${example} PROPERTIES FOLDER test)
-    set (test_parameters "")
-    add_test(NAME ${example} COMMAND "$<TARGET_FILE:${example}>" ${test_parameters})
-    set_tests_properties(${example} PROPERTIES ENV TEST_ENV="LD_PRELOAD=${CMAKE_BINARY_DIR}/libbasket.so")
-    set_tests_properties(${example} PROPERTIES WILL_FAIL true)
-    target_link_libraries(${example} ${CMAKE_BINARY_DIR}/libbasket.so)
+endforeach()
+
+message(INFO ${CMAKE_BINARY_DIR}/libbasket.so)
+
+# Define MPI test case template
+function(mpi target mpi_procs example ranks_per_process num_requests)
+    set (test_parameters  -np ${mpi_procs} -f "${CMAKE_BINARY_DIR}/test/hostfile" "${CMAKE_BINARY_DIR}/test/${example}" ${ranks_per_process} ${num_request})
+    add_test(NAME ${target}_${example}_MPI_${mpi_procs}_${ranks_per_process}_${num_requests} COMMAND "mpirun" ${test_parameters})
+    set_tests_properties(${target}_${example}_MPI_${mpi_procs}_${ranks_per_process}_${num_requests} PROPERTIES ENVIRONMENT LD_PRELOAD=${CMAKE_BINARY_DIR}/libbasket.so)
+    set_tests_properties(${target}_${example}_MPI_${mpi_procs}_${ranks_per_process}_${num_requests} PROPERTIES WILL_FAIL true)
+endfunction()
+
+# Define MPI test case
+foreach (example ${examples})
+    mpi(ares 80 ${example} 5 1000)
 endforeach()

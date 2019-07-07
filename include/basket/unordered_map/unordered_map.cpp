@@ -107,23 +107,16 @@ unordered_map<KeyType, MappedType>::unordered_map(std::string name_,
 template<typename KeyType, typename MappedType>
 bool unordered_map<KeyType, MappedType>::Put(KeyType key,
                                              MappedType data) {
-  size_t key_hash = keyHash(key);
-  uint16_t key_int = static_cast<uint16_t>(key_hash % num_servers);
+    uint16_t key_int = (uint16_t)keyHash(key)% num_servers;
   if (key_int == my_server) {
-    boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex>
-        lock(*mutex);
-    typename MyHashMap::iterator iterator = myHashMap->find(key);
-    if (iterator != myHashMap->end()) {
-      myHashMap->erase(key);
-    }
-    myHashMap->insert(std::pair<KeyType, MappedType>(key, data));
+    boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex>lock(*mutex);
+    myHashMap->insert_or_assign(key, data);
     return true;
   } else {
     return rpc->call(key_int, func_prefix+"_Put", key,
                      data).template as<bool>();
   }
 }
-
 /**
  * Get the data into the unordered map. Uses key to decide the server to hash it to,
  * @param key, key to get

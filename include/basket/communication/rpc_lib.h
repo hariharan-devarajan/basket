@@ -63,7 +63,7 @@ class RPC {
       int num_servers_);
   template <typename F> void bind(std::string str, F func);
 
-  void run(size_t workers = 1);
+  void run(size_t workers = RPC_THREADS);
   template <typename... Args>
   RPCLIB_MSGPACK::object_handle call(uint16_t server_index,
                                      std::string const &func_name,

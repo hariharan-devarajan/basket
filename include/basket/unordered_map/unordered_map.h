@@ -25,9 +25,20 @@
  * Include Headers
  */
 
+/** Standard C++ Headers**/
+#include <iostream>
+#include <functional>
+#include <utility>
+#include <stdexcept>
+#include <memory>
+#include <string>
+#include <vector>
+
 #include <basket/communication/rpc_lib.h>
 #include <basket/common/singleton.h>
 #include <basket/common/typedefs.h>
+
+
 /** MPI Headers**/
 #include <mpi.h>
 /** RPC Lib Headers**/
@@ -37,17 +48,9 @@
 /** Boost Headers **/
 #include <boost/interprocess/managed_shared_memory.hpp>
 #include <boost/interprocess/allocators/allocator.hpp>
-#include <boost/unordered_map.hpp>
+#include <boost/unordered/unordered_map.hpp>
 #include <boost/functional/hash.hpp>
 #include <boost/algorithm/string.hpp>
-/** Standard C++ Headers**/
-#include <iostream>
-#include <functional>
-#include <utility>
-#include <stdexcept>
-#include <memory>
-#include <string>
-#include <vector>
 
 /** Namespaces Uses **/
 
@@ -69,7 +72,7 @@ class unordered_map {
   typedef boost::interprocess::allocator<ValueType, boost::interprocess::
                                          managed_shared_memory::segment_manager>
   ShmemAllocator;
-  typedef boost::unordered_map<KeyType, MappedType, std::hash<KeyType>,
+  typedef boost::unordered::unordered_map<KeyType, MappedType, std::hash<KeyType>,
                                std::equal_to<KeyType>,
                                ShmemAllocator> MyHashMap;
   /** Class attributes**/

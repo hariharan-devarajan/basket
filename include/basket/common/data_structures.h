@@ -66,7 +66,7 @@ typedef struct CharStruct {
   const size_t size() const {
     return strlen(value);
   }
-  /* equal operator for comparing two Matrix. */
+  /* equal operator for comparing two Chars. */
   bool operator==(const CharStruct &o) const {
     return strcmp(value, o.value) == 0;
   }

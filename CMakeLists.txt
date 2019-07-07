@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 
 project(basket VERSION 1.0.0 DESCRIPTION "Basket: A library for flexible distributed data containers")
 
+set(CMAKE_CXX_STANDARD 17)
 include(GNUInstallDirs)
 include_directories(src/basket)
 include_directories(src)

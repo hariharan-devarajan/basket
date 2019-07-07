@@ -21,6 +21,8 @@
 #ifndef INCLUDE_BASKET_COMMUNICATION_RPC_LIB_CPP_
 #define INCLUDE_BASKET_COMMUNICATION_RPC_LIB_CPP_
 
+#include <future>
+
 template <typename F> void RPC::bind(std::string str, F func) {
   server->bind(str, func);
 }

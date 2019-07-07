@@ -46,6 +46,7 @@
 #include <utility>
 #include <memory>
 #include <string>
+#include <map>
 #include <vector>
 
 namespace basket {

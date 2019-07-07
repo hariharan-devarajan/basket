@@ -110,13 +110,13 @@ bool map<KeyType, MappedType, Compare>::Put(KeyType key,
   uint16_t key_int = static_cast<uint16_t>(key_hash % num_servers);
   if (key_int == my_server) {
     AutoTrace trace = AutoTrace("basket::map::Put(local)", key, data);
-    boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex>
-        lock(*mutex);
-    typename MyMap::iterator iterator = mymap->find(key);
+    boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(*mutex);
+    mymap->insert_or_assign(key, data);
+    /*typename MyMap::iterator iterator = mymap->find(key);
     if (iterator != mymap->end()) {
       mymap->erase(iterator);
     }
-    mymap->insert(std::pair<KeyType, MappedType>(key, data));
+    mymap->insert(std::pair<KeyType, MappedType>(key, data));*/
     return true;
   } else {
     AutoTrace trace = AutoTrace("basket::map::Put(remote)", key, data);

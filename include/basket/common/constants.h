@@ -22,6 +22,7 @@
 #define INCLUDE_BASKET_COMMON_CONSTANTS_H_
 #include <stdint.h>
 
-const uint16_t RPC_PORT = 8000;
+const uint16_t RPC_PORT = 8080;
+const uint16_t RPC_THREADS = 1;
 
 #endif  // INCLUDE_BASKET_COMMON_CONSTANTS_H_
