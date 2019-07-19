@@ -40,9 +40,11 @@ int main (int argc,char* argv[])
     MPI_Comm_rank(MPI_COMM_WORLD,&my_rank);
     int ranks_per_server=comm_size,num_request=10000;
     bool debug=false;
+    bool server_on_node=false;
     if(argc > 1)    ranks_per_server = atoi(argv[1]);
     if(argc > 2)    num_request = atoi(argv[2]);
-    if(argc > 3)    debug = true;
+    if(argc > 3)    server_on_node = (bool)atoi(argv[3]);
+    if(argc > 4)    debug = (bool)atoi(argv[4]);
     if(comm_size/ranks_per_server < 2){
         perror("comm_size/ranks_per_server should be atleast 2 for this test\n");
         exit(-1);
@@ -60,8 +62,12 @@ int main (int argc,char* argv[])
     int my_server=my_rank / ranks_per_server;
     int num_servers=comm_size/ranks_per_server;
     const int array_size=1;
-    //printf("rank %d, is_server %d, my_server %d, num_servers %d\n",my_rank,is_server,my_server,num_servers);
-    basket::unordered_map<KeyType,int> map("test", is_server, my_server, num_servers, true);
+    int len;
+    char processor_name[MPI_MAX_PROCESSOR_NAME];
+    MPI_Get_processor_name(processor_name, &len);
+
+    printf("node %s, rank %d, is_server %d, my_server %d, num_servers %d\n",processor_name,my_rank,is_server,my_server,num_servers);
+    basket::unordered_map<KeyType,int> map("test", is_server, my_server, num_servers, server_on_node);
     int myints;
     Timer local_map_timer=Timer();
     /*Local map test*/

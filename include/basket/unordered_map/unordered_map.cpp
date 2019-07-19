@@ -84,7 +84,7 @@ unordered_map<KeyType, MappedType>::unordered_map(std::string name_,
     /* Make clients wait untill all servers reach here*/
     MPI_Barrier(MPI_COMM_WORLD);
     /* Map the clients to their respective memory pools */
-    if (!is_server) {
+    if (!is_server && server_on_node) {
         segment = boost::interprocess::managed_shared_memory(
             boost::interprocess::open_only, name.c_str());
         std::pair<MyHashMap *,
