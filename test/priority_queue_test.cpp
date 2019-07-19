@@ -57,7 +57,7 @@ int main (int argc,char* argv[])
     int num_servers=comm_size/ranks_per_server;
     const int array_size=1;
     //printf("rank %d, is_server %d, my_server %d, num_servers %d\n",my_rank,is_server,my_server,num_servers);
-    basket::priority_queue<KeyType> queue("test", is_server, my_server, num_servers);
+    basket::priority_queue<KeyType> queue("test", is_server, my_server, num_servers, true);
     int myints;
     Timer queue_push_timer=Timer();
     for(int i=0;i<num_request;i++){

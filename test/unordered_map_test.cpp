@@ -30,6 +30,7 @@
 #include <rpc/client.h>
 #include <basket/common/data_structures.h>
 
+// arguments: ranks_per_server, num_request, debug
 int main (int argc,char* argv[])
 {
     SetSignal();
@@ -52,12 +53,15 @@ int main (int argc,char* argv[])
         getchar();
     }
     MPI_Barrier(MPI_COMM_WORLD);
+
+    // every node should have 1 server
     bool is_server=(my_rank+1) % ranks_per_server == 0;
+
     int my_server=my_rank / ranks_per_server;
     int num_servers=comm_size/ranks_per_server;
     const int array_size=1;
     //printf("rank %d, is_server %d, my_server %d, num_servers %d\n",my_rank,is_server,my_server,num_servers);
-    basket::unordered_map<KeyType,int> map("test", is_server, my_server, num_servers);
+    basket::unordered_map<KeyType,int> map("test", is_server, my_server, num_servers, true);
     int myints;
     Timer local_map_timer=Timer();
     /*Local map test*/
@@ -80,28 +84,28 @@ int main (int argc,char* argv[])
     if(my_rank==0){
         printf("map_throughput: put %f, get %f\n",local_map_throughput,local_get_map_throughput);
     }
-    /*Timer remote_map_timer=Timer();
-    *//*Remote map test*//*
-    for(int i=0;i<num_request;i++){
-        size_t val=my_server+1;
-        remote_map_timer.resumeTime();
-        map.AsyncPut(KeyType(val),myints);
-        remote_map_timer.pauseTime();
-    }
-    double remote_map_throughput=num_request/remote_map_timer.getElapsedTime()*1000;
-    Timer remote_get_map_timer=Timer();
-    *//*Remote map test*//*
-    for(int i=0;i<num_request;i++){
-        size_t val=my_server+1;
-        remote_get_map_timer.resumeTime();
-        map.Get(KeyType(val));
-        remote_get_map_timer.pauseTime();
-    }
-    double remote_get_map_throughput=num_request/remote_get_map_timer.getElapsedTime()*1000;
-    if(my_rank==0){
-    *//*    printf("remote put map throughput: %f, remote get map throughput: %f\n",remote_map_throughput,remote_get_map_throughput);*//*
-        printf("\n");
-    }*/
+    // Timer remote_map_timer=Timer();
+    /*Remote map test*/
+    // for(int i=0;i<num_request;i++){
+    //     size_t val=my_server+1;
+    //     remote_map_timer.resumeTime();
+    //     map.Put(KeyType(val),myints);
+    //     remote_map_timer.pauseTime();
+    // }
+    // double remote_map_throughput=num_request/remote_map_timer.getElapsedTime()*1000;
+    // Timer remote_get_map_timer=Timer();
+    /*Remote map test*/
+    // for(int i=0;i<num_request;i++){
+    //     size_t val=my_server+1;
+    //     remote_get_map_timer.resumeTime();
+    //     map.Get(KeyType(val));
+    //     remote_get_map_timer.pauseTime();
+    // }
+    // double remote_get_map_throughput=num_request/remote_get_map_timer.getElapsedTime()*1000;
+    // if(my_rank==0){
+    //   printf("remote put map throughput: %f, remote get map throughput: %f\n",remote_map_throughput,remote_get_map_throughput);
+    //   printf("\n");
+    // }
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Finalize();
     return 1;

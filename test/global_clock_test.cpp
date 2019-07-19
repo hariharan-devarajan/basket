@@ -44,9 +44,10 @@ int main(int argc, char **argv) {
   }
   MPI_Barrier(MPI_COMM_WORLD);
 
-  GlobalClock *clock = new GlobalClock("ticktock", rank < num_servers,
-                                       rank % num_servers,
-                                       num_servers);
+  basket::global_clock *clock = new basket::global_clock("ticktock", rank < num_servers,
+                                                         rank % num_servers,
+                                                         num_servers,
+                                                         true);
 
   for (i = 0; i < size; i++) {
     if (i == rank) {

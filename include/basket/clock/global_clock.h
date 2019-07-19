@@ -40,27 +40,31 @@ namespace bip = boost::interprocess;
 
 namespace basket {
 class global_clock {
- private:
-  typedef std::chrono::high_resolution_clock::time_point chrono_time;
-  chrono_time *start;
-  bool is_server;
-  bip::interprocess_mutex* mutex;
-  really_long memory_allocated;
-  int my_rank, comm_size, num_servers;
-  uint16_t my_server;
-  bip::managed_shared_memory segment;
-  std::string name, func_prefix;
-  std::shared_ptr<RPC> rpc;
+  private:
+    typedef std::chrono::high_resolution_clock::time_point chrono_time;
+    chrono_time *start;
+    bool is_server;
+    bip::interprocess_mutex* mutex;
+    really_long memory_allocated;
+    int my_rank, comm_size, num_servers;
+    uint16_t my_server;
+    bip::managed_shared_memory segment;
+    std::string name, func_prefix;
+    std::shared_ptr<RPC> rpc;
+    bool server_on_node;
 
- public:
-  ~global_clock();
-  global_clock(std::string name_,
-              bool is_server_,
-              uint16_t my_server_,
-              int num_servers_);
+    HTime LocalGetTime();
 
-  HTime GetTime();
-  HTime GetTimeServer(uint16_t server);
+  public:
+    ~global_clock();
+    global_clock(std::string name_,
+                 bool is_server_,
+                 uint16_t my_server_,
+                 int num_servers_,
+                 bool server_on_node_);
+
+    HTime GetTime();
+    HTime GetTimeServer(uint16_t server);
 };
 
 }  // namespace basket

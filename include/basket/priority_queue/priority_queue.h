@@ -62,35 +62,42 @@ namespace basket {
  */
 template<typename MappedType, typename Compare = std::less<MappedType>>
 class priority_queue {
- private:
-  /** Class Typedefs for ease of use **/
-  typedef bip::allocator<MappedType,
-                         bip::managed_shared_memory::segment_manager>
-  ShmemAllocator;
-  typedef std::priority_queue<MappedType,
-                              std::vector<MappedType, ShmemAllocator>, Compare>
-  Queue;
+  private:
+    /** Class Typedefs for ease of use **/
+    typedef bip::allocator<MappedType,
+                           bip::managed_shared_memory::segment_manager>
+    ShmemAllocator;
+    typedef std::priority_queue<MappedType,
+                                std::vector<MappedType, ShmemAllocator>, Compare>
+    Queue;
 
-  /** Class attributes**/
-  int comm_size, my_rank, num_servers;
-  uint16_t  my_server;
-  std::shared_ptr<RPC> rpc;
-  really_long memory_allocated;
-  bool is_server;
-  boost::interprocess::managed_shared_memory segment;
-  std::string name, func_prefix;
-  Queue *queue;
-  boost::interprocess::interprocess_mutex* mutex;
+    /** Class attributes**/
+    int comm_size, my_rank, num_servers;
+    uint16_t  my_server;
+    std::shared_ptr<RPC> rpc;
+    really_long memory_allocated;
+    bool is_server;
+    boost::interprocess::managed_shared_memory segment;
+    std::string name, func_prefix;
+    Queue *queue;
+    boost::interprocess::interprocess_mutex* mutex;
+    bool server_on_node;
 
- public:
-  ~priority_queue();
+    bool LocalPush(MappedType data, uint16_t key_int);
+    std::pair<bool, MappedType> LocalPop(uint16_t key_int);
+    std::pair<bool, MappedType> LocalTop(uint16_t key_int);
+    size_t LocalSize(uint16_t key_int);
 
-  explicit priority_queue(std::string name_, bool is_server_,
-                          uint16_t my_server_, int num_servers_);
-  bool Push(MappedType data, uint16_t key_int);
-  std::pair<bool, MappedType> Pop(uint16_t key_int);
-  std::pair<bool, MappedType> Top(uint16_t key_int);
-  size_t Size(uint16_t key_int);
+  public:
+    ~priority_queue();
+
+    explicit priority_queue(std::string name_, bool is_server_,
+                            uint16_t my_server_, int num_servers_,
+                            bool server_on_node_);
+    bool Push(MappedType data, uint16_t key_int);
+    std::pair<bool, MappedType> Pop(uint16_t key_int);
+    std::pair<bool, MappedType> Top(uint16_t key_int);
+    size_t Size(uint16_t key_int);
 };
 
 #include "priority_queue.cpp"

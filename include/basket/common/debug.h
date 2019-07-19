@@ -44,15 +44,15 @@
  * @param sig
  */
 inline void handler(int sig) {
-  void *array[10];
-  size_t size;
-  // get void*'s for all entries on the stack
-  size = backtrace(array, 300);
-  int rank, comm_size;
-  // print out all the frames to stderr
-  fprintf(stderr, "Error: signal %d\n", sig);
-  backtrace_symbols_fd(array, size, STDERR_FILENO);
-  exit(0);
+    void *array[10];
+    size_t size;
+    // get void*'s for all entries on the stack
+    size = backtrace(array, 300);
+    int rank, comm_size;
+    // print out all the frames to stderr
+    fprintf(stderr, "Error: signal %d\n", sig);
+    backtrace_symbols_fd(array, size, STDERR_FILENO);
+    exit(0);
 }
 /**
  * various macros to print variables and messages.
@@ -60,22 +60,22 @@ inline void handler(int sig) {
 
 #ifdef BASKET_DEBUG
 #define DBGVAR(var)                                             \
-  std::cout << "DBG: " << __FILE__ << "(" << __LINE__ << ") "   \
-  << #var << " = [" << (var) << "]" << std::endl
+    std::cout << "DBG: " << __FILE__ << "(" << __LINE__ << ") " \
+    << #var << " = [" << (var) << "]" << std::endl
 
 #define DBGVAR2(var1, var2)                                     \
-  std::cout << "DBG: " << __FILE__ << "(" << __LINE__ << ") "   \
-  << #var1 << " = [" << (var1) << "]"                           \
-  << #var2 << " = [" << (var2) << "]"  << std::endl
+    std::cout << "DBG: " << __FILE__ << "(" << __LINE__ << ") " \
+    << #var1 << " = [" << (var1) << "]"                         \
+    << #var2 << " = [" << (var2) << "]"  << std::endl
 #define DBGVAR3(var1, var2, var3)                               \
-  std::cout << "DBG: " << __FILE__ << "(" << __LINE__ << ") "   \
-  << #var1 << " = [" << (var1) << "]"                           \
-  << #var2 << " = [" << (var2) << "]"                           \
-  << #var3 << " = [" << (var3) << "]"  << std::endl
+    std::cout << "DBG: " << __FILE__ << "(" << __LINE__ << ") " \
+    << #var1 << " = [" << (var1) << "]"                         \
+    << #var2 << " = [" << (var2) << "]"                         \
+    << #var3 << " = [" << (var3) << "]"  << std::endl
 
 #define DBGMSG(msg)                                             \
-  std::cout << "DBG: " << __FILE__ << "(" << __LINE__ << ") "   \
-  << msg << std::endl
+    std::cout << "DBG: " << __FILE__ << "(" << __LINE__ << ") " \
+    << msg << std::endl
 #else
 #define DBGVAR(var)
 #define DBGVAR2(var1, var2)
@@ -95,24 +95,24 @@ inline void handler(int sig) {
 #include <sstream>
 
 class Timer {
- public:
-  Timer():elapsed_time(0) {}
-  void resumeTime() {
-    t1 = std::chrono::high_resolution_clock::now();
-  }
-  double pauseTime() {
-    auto t2 = std::chrono::high_resolution_clock::now();
-    elapsed_time +=
-        std::chrono::duration_cast<std::chrono::nanoseconds>(
-            t2 - t1).count()/1000000.0;
-    return elapsed_time;
-  }
-  double getElapsedTime() {
-    return elapsed_time;
-  }
- private:
-  std::chrono::high_resolution_clock::time_point t1;
-  double elapsed_time;
+  public:
+    Timer():elapsed_time(0) {}
+    void resumeTime() {
+        t1 = std::chrono::high_resolution_clock::now();
+    }
+    double pauseTime() {
+        auto t2 = std::chrono::high_resolution_clock::now();
+        elapsed_time +=
+                std::chrono::duration_cast<std::chrono::nanoseconds>(
+                    t2 - t1).count()/1000000.0;
+        return elapsed_time;
+    }
+    double getElapsedTime() {
+        return elapsed_time;
+    }
+  private:
+    std::chrono::high_resolution_clock::time_point t1;
+    double elapsed_time;
 };
 /**
  * Implement Auto tracing Mechanism.
@@ -127,7 +127,7 @@ class AutoTrace
     Timer timer;
     static int rank,item;
 
-public:
+  public:
     template <typename... Args>
     AutoTrace(std::string string,Args... args):m_line(string)
     {
@@ -151,8 +151,8 @@ public:
         if(args_size == 0) stream << "Void";
         else{
             static_for<args_size>( [&](auto w){
-                    stream << std::get<w.n>(args_obj) << ", ";
-            });
+                                       stream << std::get<w.n>(args_obj) << ", ";
+                                   });
         }
         stream << ");";
 #endif
@@ -188,7 +188,7 @@ public:
         cout << stream.str();
 #endif
     }
-private:
+  private:
     string m_line;
 };
 

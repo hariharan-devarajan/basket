@@ -47,31 +47,31 @@ ShmemAllocator;
 typedef bip::vector<CharStruct, ShmemAllocator> MyVector;
 
 class RPC {
- private:
-  bool isInitialized, is_server;
-  int my_rank, comm_size, num_servers;
-  uint16_t server_port, my_server;
-  std::string name;
-  std::shared_ptr<rpc::server> server;
-  MyVector* server_list;
-  really_long memory_allocated;
-  boost::interprocess::managed_shared_memory segment;
+  private:
+    bool isInitialized, is_server;
+    int my_rank, comm_size, num_servers;
+    uint16_t server_port, my_server;
+    std::string name;
+    std::shared_ptr<rpc::server> server;
+    MyVector* server_list;
+    really_long memory_allocated;
+    boost::interprocess::managed_shared_memory segment;
 
- public:
-  ~RPC();
-  RPC(std::string name_, bool is_server_, uint16_t my_server_,
-      int num_servers_);
-  template <typename F> void bind(std::string str, F func);
+  public:
+    ~RPC();
+    RPC(std::string name_, bool is_server_, uint16_t my_server_,
+        int num_servers_);
+    template <typename F> void bind(std::string str, F func);
 
-  void run(size_t workers = RPC_THREADS);
-  template <typename... Args>
-  RPCLIB_MSGPACK::object_handle call(uint16_t server_index,
-                                     std::string const &func_name,
-                                     Args... args);
-  template <typename... Args>
-  std::future<RPCLIB_MSGPACK::object_handle> async_call(
-      uint16_t server_index, std::string const &func_name,
-      Args... args);
+    void run(size_t workers = RPC_THREADS);
+    template <typename... Args>
+    RPCLIB_MSGPACK::object_handle call(uint16_t server_index,
+                                       std::string const &func_name,
+                                       Args... args);
+    template <typename... Args>
+    std::future<RPCLIB_MSGPACK::object_handle> async_call(
+        uint16_t server_index, std::string const &func_name,
+        Args... args);
 };
 
 #include "rpc_lib.cpp"

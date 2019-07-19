@@ -57,7 +57,7 @@ int main (int argc,char* argv[])
     int num_servers=comm_size/ranks_per_server;
     const int array_size=1;
     //printf("rank %d, is_server %d, my_server %d, num_servers %d\n",my_rank,is_server,my_server,num_servers);
-    basket::map<KeyType,int> map("test", is_server, my_server, num_servers);
+    basket::map<KeyType,int> map("test", is_server, my_server, num_servers, true);
     int myints;
     Timer local_map_timer=Timer();
     /*Local map test*/

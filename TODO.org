@@ -58,3 +58,5 @@
 **** Autotracer
 *** TODO Partial update on unordered_map
 * TODO Make all methods asynchronous (call and wait)
+* TODO Persistence
+** NVM-enabled data structures

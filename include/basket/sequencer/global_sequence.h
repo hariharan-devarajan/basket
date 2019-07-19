@@ -37,24 +37,27 @@ namespace bip = boost::interprocess;
 
 namespace basket {
 class global_sequence {
- private:
-  uint64_t* value;
-  bool is_server;
-  bip::interprocess_mutex* mutex;
-  int my_rank, comm_size, num_servers;
-  uint16_t my_server;
-  really_long memory_allocated;
-  bip::managed_shared_memory segment;
-  std::string name, func_prefix;
-  std::shared_ptr<RPC> rpc;
+  private:
+    uint64_t* value;
+    bool is_server;
+    bip::interprocess_mutex* mutex;
+    int my_rank, comm_size, num_servers;
+    uint16_t my_server;
+    really_long memory_allocated;
+    bip::managed_shared_memory segment;
+    std::string name, func_prefix;
+    std::shared_ptr<RPC> rpc;
+    bool server_on_node;
 
- public:
-  ~global_sequence();
-  global_sequence(std::string name_, bool is_server_, uint16_t my_server_,
-                 int num_servers_);
+    uint64_t LocalGetNextSequence();
 
-  uint64_t GetNextSequence();
-  uint64_t GetNextSequenceServer(uint16_t server);
+  public:
+    ~global_sequence();
+    global_sequence(std::string name_, bool is_server_, uint16_t my_server_,
+                    int num_servers_, bool server_on_node_);
+
+    uint64_t GetNextSequence();
+    uint64_t GetNextSequenceServer(uint16_t server);
 };
 
 }  // namespace basket

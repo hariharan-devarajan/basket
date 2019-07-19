@@ -1,7 +1,7 @@
 # target_link_libraries(DistributedHashMapTest ${CMAKE_BINARY_DIR}/libbasket.so)
 
-set(examples unordered_map_test map_test queue_test priority_queue_test)
-# DistributedHashMapTest DistributedMapTest DistributedMessageQueueTest DistributedPriorityQueueTest ClockTest
+set(examples unordered_map_test map_test queue_test priority_queue_test global_clock_test)
+# multimap_test global_sequence_test
 
 add_custom_target(copy_hostfile)
 add_custom_command(

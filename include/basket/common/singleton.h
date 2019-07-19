@@ -42,35 +42,35 @@
  */
 template<typename T>
 class Singleton {
- public:
-  /**
-   * Members of Singleton Class
-   */
-  /**
-   * Uses unique pointer to build a static global instance of variable.
-   * @tparam T
-   * @return instance of T
-   */
-  template <typename... Args>
-  static std::shared_ptr<T> GetInstance(Args... args) {
-    if (instance == nullptr)
-      instance = std::shared_ptr<T>(new T(std::forward<Args>(args)...));
-    return instance;
-  }
+  public:
+    /**
+     * Members of Singleton Class
+     */
+    /**
+     * Uses unique pointer to build a static global instance of variable.
+     * @tparam T
+     * @return instance of T
+     */
+    template <typename... Args>
+    static std::shared_ptr<T> GetInstance(Args... args) {
+        if (instance == nullptr)
+            instance = std::shared_ptr<T>(new T(std::forward<Args>(args)...));
+        return instance;
+    }
 
-  /**
-   * Operators
-   */
-  Singleton& operator= (const Singleton) = delete; /* deleting = operatos*/
-  /**
-   * Constructor
-   */
- public:
-  Singleton(const Singleton&) = delete; /* deleting copy constructor. */
+    /**
+     * Operators
+     */
+    Singleton& operator= (const Singleton) = delete; /* deleting = operatos*/
+    /**
+     * Constructor
+     */
+  public:
+    Singleton(const Singleton&) = delete; /* deleting copy constructor. */
 
- protected:
-  static std::shared_ptr<T> instance;
-  Singleton() {} /* hidden default constructor. */
+  protected:
+    static std::shared_ptr<T> instance;
+    Singleton() {} /* hidden default constructor. */
 };
 
 template<typename T>
