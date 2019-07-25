@@ -39,8 +39,15 @@ public:
   std::string VERBS_DOMAIN;
   
   ConfigurationManager():
-    RPC_PORT(8080), RPC_THREADS(1), RPC_IMPLEMENTATION(RPCLIB),
-    TCP_CONF("bmi+tcp"), VERBS_CONF("verbs"), VERBS_DOMAIN("mlx5_0") {
+    RPC_PORT(8080), RPC_THREADS(1),
+#if defined(BASKET_ENABLE_RPCLIB)
+    RPC_IMPLEMENTATION(RPCLIB),
+#elif defined(BASKET_ENABLE_THALLIUM_TCP)
+    RPC_IMPLEMENTATION(THALLIUM_TCP),
+#elif defined(BASKET_ENABLE_THALLIUM_ROCE)
+          RPC_IMPLEMENTATION(THALLIUM_ROCE),
+#endif
+    TCP_CONF("tcp"), VERBS_CONF("verbs"), VERBS_DOMAIN("mlx5_0") {
         AutoTrace trace = AutoTrace("ConfigurationManager");
         MPI_Comm_size(MPI_COMM_WORLD, &COMM_SIZE);
         MPI_Comm_rank(MPI_COMM_WORLD, &MPI_RANK);

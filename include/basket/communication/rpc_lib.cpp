@@ -81,7 +81,8 @@ Response RPC::call(uint16_t server_index,
 	std::string lookup_str = CONF->TCP_CONF + "://" + std::string(ip) + ":" + 
 	  std::to_string(port);
 	tl::endpoint server_endpoint = thallium_engine->lookup(lookup_str);
-	return remote_procedure.on(server_endpoint)(std::forward<Args>(args)...);
+	auto response = remote_procedure.on(server_endpoint)(std::forward<Args>(args)...);
+	return response;
 	break;
       }
 #endif

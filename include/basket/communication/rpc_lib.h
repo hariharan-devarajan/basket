@@ -82,12 +82,22 @@ class RPC {
     bool isInitialized, is_server;
     int my_rank, comm_size, num_servers;
     uint16_t server_port, my_server;
+    std::string processor_name;
     std::string name;
 #ifdef BASKET_ENABLE_RPCLIB
     std::shared_ptr<rpc::server> rpclib_server;
 #endif
 #if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
     std::shared_ptr<tl::engine> thallium_engine;
+    std::string engine_init_str;
+    /*std::promise<void> thallium_exit_signal;
+
+    void runThalliumServer(std::future<void> futureObj){
+
+        while(futureObj.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout){}
+        thallium_engine->finalize();
+    }*/
+
 #endif
     MyVector* server_list;
     really_long memory_allocated;
