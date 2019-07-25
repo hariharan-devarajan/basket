@@ -34,7 +34,8 @@ unordered_map<KeyType, MappedType>::unordered_map(std::string name_,
                                                   bool is_server_,
                                                   uint16_t my_server_,
                                                   int num_servers_,
-                                                  bool server_on_node_)
+                                                  bool server_on_node_,
+						  std::string processor_name_)
         : is_server(is_server_), my_server(my_server_), num_servers(num_servers_),
           comm_size(1), my_rank(0), memory_allocated(1024ULL * 1024ULL * 128ULL),
           name(name_), segment(), myHashMap(), func_prefix(name_),
@@ -47,7 +48,7 @@ unordered_map<KeyType, MappedType>::unordered_map(std::string name_,
     this->name += "_" + std::to_string(my_server);
     /* if current rank is a server */
     rpc = Singleton<RPC>::GetInstance("RPC_SERVER_LIST", is_server_, my_server_,
-                                      num_servers_);
+                                      num_servers_, processor_name_);
     if (is_server) {
         /* Delete existing instance of shared memory space*/
         boost::interprocess::shared_memory_object::remove(name.c_str());
@@ -62,6 +63,9 @@ unordered_map<KeyType, MappedType>::unordered_map(std::string name_,
             128, std::hash<KeyType>(), std::equal_to<KeyType>(),
             segment.get_allocator<ValueType>());
         /* Create a RPC server and map the methods to it. */
+  switch (CONF->RPC_IMPLEMENTATION) {
+#ifdef BASKET_ENABLE_RPCLIB
+  case RPCLIB: {
         std::function<bool(KeyType, MappedType)> putFunc(
             std::bind(&unordered_map<KeyType, MappedType>::LocalPut, this,
                       std::placeholders::_1, std::placeholders::_2));
@@ -75,10 +79,45 @@ unordered_map<KeyType, MappedType>::unordered_map(std::string name_,
                 getAllDataInServerFunc(std::bind(
                     &unordered_map<KeyType, MappedType>::LocalGetAllDataInServer,
                     this));
+
         rpc->bind(func_prefix+"_Put", putFunc);
         rpc->bind(func_prefix+"_Get", getFunc);
         rpc->bind(func_prefix+"_Erase", eraseFunc);
         rpc->bind(func_prefix+"_GetAllData", getAllDataInServerFunc);
+	break;
+  }
+#endif
+#ifdef BASKET_ENABLE_THALLIUM_TCP
+  case THALLIUM_TCP:
+#endif
+#ifdef BASKET_ENABLE_THALLIUM_ROCE
+  case THALLIUM_ROCE:
+#endif
+#if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
+    {
+     std::function<void(const tl::request &, KeyType, MappedType)> putFunc(
+            std::bind(&unordered_map<KeyType, MappedType>::ThalliumLocalPut, this,
+                      std::placeholders::_1, std::placeholders::_2,
+		      std::placeholders::_3));
+        std::function<void(const tl::request &, KeyType)> getFunc(
+            std::bind(&unordered_map<KeyType, MappedType>::ThalliumLocalGet, this,
+                      std::placeholders::_1, std::placeholders::_2));
+        std::function<void(const tl::request &, KeyType)> eraseFunc(
+            std::bind(&unordered_map<KeyType, MappedType>::ThalliumLocalErase, this,
+                      std::placeholders::_1, std::placeholders::_2));
+        std::function<void(const tl::request &)>
+                getAllDataInServerFunc(std::bind(
+                    &unordered_map<KeyType, MappedType>::ThalliumLocalGetAllDataInServer,
+                    this, std::placeholders::_1));
+
+        rpc->bind(func_prefix+"_Put", putFunc);
+        rpc->bind(func_prefix+"_Get", getFunc);
+        rpc->bind(func_prefix+"_Erase", eraseFunc);
+        rpc->bind(func_prefix+"_GetAllData", getAllDataInServerFunc);
+	break;
+    }
+#endif
+  }
         // srv->suppress_exceptions(true);
     }
     /* Make clients wait untill all servers reach here*/
@@ -127,8 +166,17 @@ bool unordered_map<KeyType, MappedType>::Put(KeyType key,
     if (key_int == my_server && server_on_node) {
         return LocalPut(key, data);
     } else {
-        return rpc->call(key_int, func_prefix+"_Put", key,
-                         data).template as<bool>();
+        // std::vector<std::pair<void*,std::size_t>> segments(2);
+        // segments[0].first = &key;
+        // segments[0].second = sizeof(KeyType);
+        // segments[1].first = &data;
+        // segments[1].second = sizeof(MappedType);
+        // tl::bulk myBulk = client->expose(segments, tl::bulk_mode::read_only);
+        // return rpc->call(key_int, func_prefix+"_Put", myBulk).template as<bool>();
+
+      return RPC_CALL_WRAPPER("_Put", key_int, bool,
+			      key, data);
+      // return rpc->call(key_int, func_prefix+"_Put", key, data).template as<bool>();
     }
 }
 
@@ -165,8 +213,11 @@ unordered_map<KeyType, MappedType>::Get(KeyType key) {
     if (key_int == my_server && server_on_node) {
         return LocalGet(key);
     } else {
-        return rpc->call(key_int, func_prefix+"_Get",
-                         key).template as<std::pair<bool, MappedType>>();
+      typedef std::pair<bool, MappedType> ret_type;
+      return RPC_CALL_WRAPPER("_Get", key_int, ret_type,
+			      key);
+      // rpc->call(key_int, func_prefix+"_Get",
+      //                key).template as<std::pair<bool, MappedType>>();
     }
 }
 
@@ -187,8 +238,11 @@ unordered_map<KeyType, MappedType>::Erase(KeyType key) {
     if (key_int == my_server && server_on_node) {
         return LocalErase(key);
     } else {
-        return rpc->call(key_int, func_prefix+"_Erase",
-                         key).template as<std::pair<bool, MappedType>>();
+      typedef std::pair<bool, MappedType> ret_type;
+      return RPC_CALL_WRAPPER("_Erase", key_int, ret_type,
+			      key);
+      // return rpc->call(key_int, func_prefix+"_Erase",
+      //                  key).template as<std::pair<bool, MappedType>>();
     }
 }
 
@@ -202,10 +256,10 @@ unordered_map<KeyType, MappedType>::GetAllData() {
                         current_server.end());
     for (int i = 0; i < num_servers; ++i) {
         if (i != my_server) {
-            auto server = rpc->call(
-                i, func_prefix+"_GetAllData").template
-                    as<std::vector<std::pair<KeyType, MappedType>>>();
-            final_values.insert(final_values.end(), server.begin(), server.end());
+	  
+	  typedef std::vector<std::pair<KeyType, MappedType> > ret_type;
+	  auto server = RPC_CALL_WRAPPER1("_GetAllData",i, ret_type);
+	  final_values.insert(final_values.end(), server.begin(), server.end());
         }
     }
     return final_values;
@@ -239,9 +293,13 @@ unordered_map<KeyType, MappedType>::GetAllDataInServer() {
         return LocalGetAllDataInServer();
     }
     else {
-        return rpc->call(
-            my_server, func_prefix+"_GetAllData").template
-                as<std::vector<std::pair<KeyType, MappedType>>>();
+      typedef std::vector<std::pair<KeyType, MappedType> > ret_type;
+      auto my_server_i=my_server;
+      return RPC_CALL_WRAPPER1("_GetAllData", my_server_i, ret_type);
+      // return rpc->call(
+      // 		       my_server, func_prefix+"_GetAllData").template
+      // 	as<std::vector<std::pair<KeyType, MappedType>>>();
     }
 }
+
 #endif  // INCLUDE_BASKET_UNORDERED_MAP_UNORDERED_MAP_CPP_

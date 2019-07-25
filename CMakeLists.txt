@@ -3,12 +3,20 @@ cmake_minimum_required(VERSION 3.10)
 project(basket VERSION 1.0.0 DESCRIPTION "Basket: A library for flexible distributed data containers")
 
 set(CMAKE_CXX_STANDARD 17)
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBASKET_ENABLE_RPCLIB")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBASKET_ENABLE_THALLIUM_TCP")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBASKET_ENABLE_THALLIUM_ROCE")
+
 include(GNUInstallDirs)
 include_directories(src/basket)
 include_directories(src)
 include_directories(include)
 set(BASKET_SRC  include/basket/common/singleton.h
                 include/basket/common/debug.h
+		include/basket/common/enumerations.h
+		include/basket/common/macros.h
+		include/basket/common/configuration_manager.h
                 src/basket/common/debug.cpp
                 include/basket/common/constants.h
                 include/basket/common/typedefs.h
@@ -17,14 +25,15 @@ set(BASKET_SRC  include/basket/common/singleton.h
                 include/basket/communication/rpc_lib.h
                 src/basket/communication/rpc_lib.cpp
                 include/basket/unordered_map/unordered_map.h
-                include/basket/map/map.h
-        include/basket/multimap/multimap.h
-        include/basket/clock/global_clock.h
-        src/basket/clock/global_clock.cpp
-        include/basket/queue/queue.h
-        include/basket/priority_queue/priority_queue.h
-        include/basket/sequencer/global_sequence.h
-        src/basket/sequencer/global_sequence.cpp)
+                # include/basket/map/map.h
+        # include/basket/multimap/multimap.h
+        # include/basket/clock/global_clock.h
+        # src/basket/clock/global_clock.cpp
+        # include/basket/queue/queue.h
+        # include/basket/priority_queue/priority_queue.h
+        # include/basket/sequencer/global_sequence.h
+        # src/basket/sequencer/global_sequence.cpp
+	)
 
 add_library(${PROJECT_NAME} SHARED ${BASKET_SRC})
 
@@ -40,7 +49,9 @@ configure_file(basket.pc.in basket.pc @ONLY)
 
 target_include_directories(${PROJECT_NAME} PRIVATE .)
 
-set(LIB_FLAGS -lrpc -lmpi -lpthread -lrt -lboost_filesystem)
+set(RPC_LIB_FLAGS -lrpc ${RPC_LIB_FLAGS})
+set(RPC_LIB_FLAGS -lthallium -lmercury -lmercury_util -lmargo -labt ${RPC_LIB_FLAGS})
+set(LIB_FLAGS ${RPC_LIB_FLAGS} -lmpi -lpthread -lrt -lboost_filesystem)
 target_link_libraries(basket ${LIB_FLAGS})
 
 install(TARGETS ${PROJECT_NAME}

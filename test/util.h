@@ -9,7 +9,9 @@ struct KeyType{
     size_t a;
     KeyType():a(0){}
     KeyType(size_t a_):a(a_){}
+
     MSGPACK_DEFINE(a);
+
     /* equal operator for comparing two Matrix. */
     bool operator==(const KeyType &o) const {
         return a == o.a;
@@ -23,6 +25,11 @@ struct KeyType{
     }
     bool Contains(const KeyType &o) const {
         return a==o.a;
+    }
+    
+  template<typename A>
+    void serialize(A& ar) const {
+        ar & a;
     }
 };
 namespace std {

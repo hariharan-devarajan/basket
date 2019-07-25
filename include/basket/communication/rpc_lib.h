@@ -21,14 +21,43 @@
 #ifndef INCLUDE_BASKET_COMMUNICATION_RPC_LIB_H_
 #define INCLUDE_BASKET_COMMUNICATION_RPC_LIB_H_
 
-
 #include <basket/common/constants.h>
-#include <basket/common/typedefs.h>
 #include <basket/common/data_structures.h>
 #include <basket/common/debug.h>
-#include <rpc/server.h>
+#include <basket/common/macros.h>
+#include <basket/common/singleton.h>
+#include <basket/common/typedefs.h>
 #include <mpi.h>
+#include <rpc/server.h>
 #include <rpc/client.h>
+
+#include <netdb.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
+#include <thallium.hpp>
+#include <thallium/serialization/serialize.hpp>
+#include <thallium/serialization/buffer_input_archive.hpp>
+#include <thallium/serialization/buffer_output_archive.hpp>
+#include <thallium/serialization/stl/array.hpp>
+#include <thallium/serialization/stl/complex.hpp>
+#include <thallium/serialization/stl/deque.hpp>
+#include <thallium/serialization/stl/forward_list.hpp>
+#include <thallium/serialization/stl/list.hpp>
+#include <thallium/serialization/stl/map.hpp>
+#include <thallium/serialization/stl/multimap.hpp>
+#include <thallium/serialization/stl/multiset.hpp>
+#include <thallium/serialization/stl/pair.hpp>
+#include <thallium/serialization/stl/set.hpp>
+#include <thallium/serialization/stl/string.hpp>
+#include <thallium/serialization/stl/tuple.hpp>
+#include <thallium/serialization/stl/unordered_map.hpp>
+#include <thallium/serialization/stl/unordered_multimap.hpp>
+#include <thallium/serialization/stl/unordered_multiset.hpp>
+#include <thallium/serialization/stl/unordered_set.hpp>
+#include <thallium/serialization/stl/vector.hpp>
+
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/interprocess/managed_shared_memory.hpp>
@@ -41,6 +70,8 @@
 #include <vector>
 
 namespace bip = boost::interprocess;
+namespace tl = thallium;
+
 /* typedefs */
 typedef bip::allocator<CharStruct, bip::managed_shared_memory::segment_manager>
 ShmemAllocator;
@@ -52,26 +83,35 @@ class RPC {
     int my_rank, comm_size, num_servers;
     uint16_t server_port, my_server;
     std::string name;
-    std::shared_ptr<rpc::server> server;
+#ifdef BASKET_ENABLE_RPCLIB
+    std::shared_ptr<rpc::server> rpclib_server;
+#endif
+#if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
+    std::shared_ptr<tl::engine> thallium_engine;
+#endif
     MyVector* server_list;
     really_long memory_allocated;
     boost::interprocess::managed_shared_memory segment;
 
   public:
-    ~RPC();
-    RPC(std::string name_, bool is_server_, uint16_t my_server_,
-        int num_servers_);
-    template <typename F> void bind(std::string str, F func);
+  ~RPC();
 
-    void run(size_t workers = RPC_THREADS);
-    template <typename... Args>
-    RPCLIB_MSGPACK::object_handle call(uint16_t server_index,
-                                       std::string const &func_name,
-                                       Args... args);
-    template <typename... Args>
-    std::future<RPCLIB_MSGPACK::object_handle> async_call(
-        uint16_t server_index, std::string const &func_name,
-        Args... args);
+  RPC(std::string name_, bool is_server_, uint16_t my_server_,
+      int num_servers_, std::string processor_name_ = "");
+
+  template <typename F>
+  void bind(std::string str, F func);
+
+  void run(size_t workers = RPC_THREADS);
+
+  /**
+   * Response should be RPCLIB_MSGPACK::object_handle for rpclib and
+   * tl::packed_response for thallium/mercury
+   */
+  template <typename Response, typename... Args>
+    Response call(uint16_t server_index,
+		  std::string const &func_name,
+		  Args... args);
 };
 
 #include "rpc_lib.cpp"
