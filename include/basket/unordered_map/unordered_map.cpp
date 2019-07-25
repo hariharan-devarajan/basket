@@ -166,17 +166,8 @@ bool unordered_map<KeyType, MappedType>::Put(KeyType key,
     if (key_int == my_server && server_on_node) {
         return LocalPut(key, data);
     } else {
-        // std::vector<std::pair<void*,std::size_t>> segments(2);
-        // segments[0].first = &key;
-        // segments[0].second = sizeof(KeyType);
-        // segments[1].first = &data;
-        // segments[1].second = sizeof(MappedType);
-        // tl::bulk myBulk = client->expose(segments, tl::bulk_mode::read_only);
-        // return rpc->call(key_int, func_prefix+"_Put", myBulk).template as<bool>();
-
       return RPC_CALL_WRAPPER("_Put", key_int, bool,
 			      key, data);
-      // return rpc->call(key_int, func_prefix+"_Put", key, data).template as<bool>();
     }
 }
 
