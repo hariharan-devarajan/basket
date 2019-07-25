@@ -82,17 +82,16 @@ int main (int argc,char* argv[])
     std::string node_name = proc_name.substr(0, split_loc);
     std::string extra_info = proc_name.substr(split_loc+1, string::npos);
     proc_name = node_name + "-40g." + extra_info;*/
-    std::string my_values = printRandomString(num_of_int);
-    for(int i=0;i<num_of_int;i++) my_values.push_back(0);
+    int my_values=0;
     if(debug){
         printf("node %s, rank %d, is_server %d, my_server %d, num_servers %d\n",proc_name.c_str(),my_rank,is_server,my_server,num_servers);
     }
 
     {
-        basket::unordered_map<KeyType, std::string> map("test", is_server, my_server, num_servers,
+        basket::unordered_map<KeyType, int> map("test", is_server, my_server, num_servers,
                                                         server_on_node || is_server, proc_name);
 
-        int size_of_data = sizeof(KeyType) + sizeof(int) * my_values.size();
+        int size_of_data = sizeof(KeyType) + sizeof(int);// * my_values.size();
         double local_map_bandwidth;
         double local_get_map_bw;
         Timer local_put_map_timer = Timer();
