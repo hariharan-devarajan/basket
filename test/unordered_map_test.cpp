@@ -60,75 +60,90 @@ int main (int argc,char* argv[])
     // every node should have 1 server
     bool is_server=(my_rank+1) % ranks_per_server == 0;
 
-    int my_server=my_rank / ranks_per_server;
     int num_servers=comm_size/ranks_per_server;
+    int my_server = my_rank / ranks_per_server;
+    // int my_server=((my_rank + 2) / ranks_per_server) % num_servers;
+    // if (is_server) {
+    //     my_server = my_rank / ranks_per_server;
+    // }
     const int array_size=1;
     int len;
     char processor_name[MPI_MAX_PROCESSOR_NAME];
     MPI_Get_processor_name(processor_name, &len);
 
-    std::string proc_name(processor_name);
+    std::string proc_name = std::string(processor_name);
     int split_loc = proc_name.find('.');
     std::string node_name = proc_name.substr(0, split_loc);
     std::string extra_info = proc_name.substr(split_loc+1, string::npos);
     proc_name = node_name + "-40g." + extra_info;
 
-    printf("node %s, rank %d, is_server %d, my_server %d, num_servers %d\n",proc_name.c_str(),my_rank,is_server,my_server,num_servers);
+    //printf("node %s, rank %d, is_server %d, my_server %d, num_servers %d\n",proc_name.c_str(),my_rank,is_server,my_server,num_servers);
 
-    basket::unordered_map<KeyType,int> map("test", is_server, my_server, num_servers, server_on_node, proc_name);
+    basket::unordered_map<KeyType,int> map("test", is_server, my_server, num_servers, server_on_node || is_server, proc_name);
+
     int myints;
-    // if (server_on_node) {
-      Timer local_map_timer=Timer();
-      /*Local map test*/
-      for(int i=0;i<num_request;i++){
+    double local_map_throughput;
+    double local_get_map_throughput;
+    Timer local_map_timer=Timer();
+    /*Local map test*/
+    for(int i=0;i<num_request;i++){
         size_t val=my_server+i*num_servers*my_rank;
         local_map_timer.resumeTime();
-	// std::cout << "Put(" << val << ", " << myints << ")" << std::endl;
         map.Put(KeyType(val),myints);
         local_map_timer.pauseTime();
-      }
-      double local_map_throughput=num_request/local_map_timer.getElapsedTime()*1000*ranks_per_server;
-      Timer local_get_map_timer=Timer();
-      /*Local map test*/
-      for(int i=0;i<num_request;i++){
+    }
+    local_map_throughput=num_request/local_map_timer.getElapsedTime()*1000*ranks_per_server;
+    Timer local_get_map_timer=Timer();
+    /*Local map test*/
+    for(int i=0;i<num_request;i++){
         size_t val=my_server+i*num_servers*my_rank;
         local_get_map_timer.resumeTime();
-	// std::cout << "Get(" << val << ")" << std::endl;
-        map.Get(KeyType(val));
+        auto ret = map.Get(KeyType(val));
         local_get_map_timer.pauseTime();
-      }
-      double local_get_map_throughput=num_request/local_get_map_timer.getElapsedTime()*1000*ranks_per_server;
+    }
+    local_get_map_throughput=num_request/local_get_map_timer.getElapsedTime()*1000*ranks_per_server;
+    double get_time_sum,put_time_sum;
+    
+    MPI_Reduce(&local_map_throughput, &put_time_sum, 1,
+               MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&local_get_map_throughput, &get_time_sum, 1,
+               MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    int size_of_data=sizeof(KeyType)+sizeof(myints);
+    if(my_rank==0){
+        printf("local map_throughput:\t put %f,\t get %f\n",
+               put_time_sum * size_of_data / comm_size/(1024*1024),
+               get_time_sum * size_of_data / comm_size/(1024*1024));
+    }
 
-      if(my_rank==0){
-        printf("map_throughput: put %f, get %f\n",local_map_throughput,local_get_map_throughput);
-      }
+    Timer remote_map_timer=Timer();
+    /*Remote map test*/
+    for(int i=0;i<num_request;i++){
+        size_t val=my_server+i*num_servers*my_rank+1;
+        remote_map_timer.resumeTime();
+        map.Put(KeyType(val),myints);
+        remote_map_timer.pauseTime();
+    }
+    double remote_map_throughput=num_request/remote_map_timer.getElapsedTime()*1000;
+    Timer remote_get_map_timer=Timer();
+    /*Remote map test*/
+    for(int i=0;i<num_request;i++){
+        size_t val=my_server+i*num_servers*my_rank+1;
+        remote_get_map_timer.resumeTime();
+        auto ret = map.Get(KeyType(val));
+        remote_get_map_timer.pauseTime();
+    }
+    double remote_get_map_throughput=num_request/remote_get_map_timer.getElapsedTime()*1000;
+     MPI_Reduce(&remote_map_throughput, &put_time_sum, 1,
+                MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
-    // } else {
-    //   Timer remote_map_timer=Timer();
-    //   /*Remote map test*/
-    //   for(int i=0;i<num_request;i++){
-    //     size_t val=my_server+1;
-    //     remote_map_timer.resumeTime();
-    // 	std::cout << "Put(" << val << ", " << myints << ")" << std::endl;
-    //     map.Put(KeyType(val),myints);
-    //     remote_map_timer.pauseTime();
-    //   }
-    //   double remote_map_throughput=num_request/remote_map_timer.getElapsedTime()*1000;
-    //   Timer remote_get_map_timer=Timer();
-    //   /*Remote map test*/
-    //   for(int i=0;i<num_request;i++){
-    //     size_t val=my_server+1;
-    //     remote_get_map_timer.resumeTime();
-    // 	std::cout << "Get(" << val << std::endl;
-    //     map.Get(KeyType(val));
-    //     remote_get_map_timer.pauseTime();
-    //   }
-    //   double remote_get_map_throughput=num_request/remote_get_map_timer.getElapsedTime()*1000;
-    //   if(my_rank==0){
-    // 	printf("remote put map throughput: %f, remote get map throughput: %f\n",remote_map_throughput,remote_get_map_throughput);
-    // 	printf("\n");
-    //   }
-    // }
+     MPI_Reduce(&remote_get_map_throughput, &get_time_sum, 1,
+                MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    size_of_data=sizeof(KeyType)+sizeof(myints);
+    if(my_rank==0){
+        printf("remote map_throughput:\t put: %f,\t get: %f\n",
+               put_time_sum * size_of_data / comm_size/(1024*1024),
+               get_time_sum * size_of_data / comm_size/(1024*1024));
+    }
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Finalize();
     return 1;
