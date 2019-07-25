@@ -95,7 +95,7 @@ class RPC {
     void runThalliumServer(std::future<void> futureObj){
 
         while(futureObj.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout){}
-        thallium_engine->finalize();
+        thallium_engine->wait_for_finalize();
     }*/
 
 #endif
