@@ -49,8 +49,6 @@ class global_sequence {
     std::shared_ptr<RPC> rpc;
     bool server_on_node;
 
-    uint64_t LocalGetNextSequence();
-
   public:
     ~global_sequence();
     global_sequence(std::string name_, bool is_server_, uint16_t my_server_,
@@ -58,6 +56,8 @@ class global_sequence {
 
     uint64_t GetNextSequence();
     uint64_t GetNextSequenceServer(uint16_t server);
+
+    uint64_t LocalGetNextSequence();
 };
 
 }  // namespace basket

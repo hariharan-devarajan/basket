@@ -83,11 +83,6 @@ class priority_queue {
     boost::interprocess::interprocess_mutex* mutex;
     bool server_on_node;
 
-    bool LocalPush(MappedType data, uint16_t key_int);
-    std::pair<bool, MappedType> LocalPop(uint16_t key_int);
-    std::pair<bool, MappedType> LocalTop(uint16_t key_int);
-    size_t LocalSize(uint16_t key_int);
-
   public:
     ~priority_queue();
 
@@ -98,6 +93,11 @@ class priority_queue {
     std::pair<bool, MappedType> Pop(uint16_t key_int);
     std::pair<bool, MappedType> Top(uint16_t key_int);
     size_t Size(uint16_t key_int);
+
+    bool LocalPush(MappedType data, uint16_t key_int);
+    std::pair<bool, MappedType> LocalPop(uint16_t key_int);
+    std::pair<bool, MappedType> LocalTop(uint16_t key_int);
+    size_t LocalSize(uint16_t key_int);
 };
 
 #include "priority_queue.cpp"

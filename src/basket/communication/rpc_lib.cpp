@@ -113,7 +113,7 @@ RPC::RPC(std::string name_, bool is_server_, uint16_t my_server_,
         }
 
         MPI_Barrier(MPI_COMM_WORLD);
-        if (!server) {
+        if (!is_server) {
             segment = bip::managed_shared_memory(bip::open_only, name.c_str());
             std::pair<MyVector *, bip::managed_shared_memory::size_type> res;
             res = segment.find<MyVector>("MyVector");

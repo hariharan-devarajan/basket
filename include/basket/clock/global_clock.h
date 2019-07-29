@@ -53,8 +53,6 @@ class global_clock {
     std::shared_ptr<RPC> rpc;
     bool server_on_node;
 
-    HTime LocalGetTime();
-
   public:
     ~global_clock();
     global_clock(std::string name_,
@@ -65,6 +63,8 @@ class global_clock {
 
     HTime GetTime();
     HTime GetTimeServer(uint16_t server);
+
+    HTime LocalGetTime();
 };
 
 }  // namespace basket

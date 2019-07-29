@@ -81,12 +81,6 @@ class map {
     boost::interprocess::interprocess_mutex* mutex;
     bool server_on_node;
 
-    bool LocalPut(KeyType key, MappedType data);
-    std::pair<bool, MappedType> LocalGet(KeyType key);
-    std::pair<bool, MappedType> LocalErase(KeyType key);
-    std::vector<std::pair<KeyType, MappedType>> LocalGetAllDataInServer();
-    std::vector<std::pair<KeyType, MappedType>> LocalContainsInServer(KeyType key);
-
   public:
     ~map();
 
@@ -104,6 +98,12 @@ class map {
 
     std::vector<std::pair<KeyType, MappedType>> ContainsInServer(KeyType key);
     std::vector<std::pair<KeyType, MappedType>> GetAllDataInServer();
+
+    bool LocalPut(KeyType key, MappedType data);
+    std::pair<bool, MappedType> LocalGet(KeyType key);
+    std::pair<bool, MappedType> LocalErase(KeyType key);
+    std::vector<std::pair<KeyType, MappedType>> LocalGetAllDataInServer();
+    std::vector<std::pair<KeyType, MappedType>> LocalContainsInServer(KeyType key);
 };
 
 #include "map.cpp"

@@ -78,11 +78,6 @@ class queue {
     boost::interprocess::interprocess_mutex* mutex;
     bool server_on_node;
 
-    bool LocalPush(MappedType data, uint16_t key_int);
-    std::pair<bool, MappedType> LocalPop(uint16_t key_int);
-    bool LocalWaitForElement(uint16_t key_int);
-    size_t LocalSize(uint16_t key_int);
-
   public:
     ~queue();
 
@@ -95,6 +90,12 @@ class queue {
     std::pair<bool, MappedType> Pop(uint16_t key_int);
     bool WaitForElement(uint16_t key_int);
     size_t Size(uint16_t key_int);
+
+    bool LocalPush(MappedType data, uint16_t key_int);
+    std::pair<bool, MappedType> LocalPop(uint16_t key_int);
+    bool LocalWaitForElement(uint16_t key_int);
+    size_t LocalSize(uint16_t key_int);
+
 };
 
 #include "queue.cpp"
