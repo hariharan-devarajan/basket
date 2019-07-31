@@ -146,14 +146,12 @@ RPC::RPC(std::string name_, bool is_server_, uint16_t my_server_,
 #endif
 #ifdef BASKET_ENABLE_THALLIUM_ROCE
                 case THALLIUM_ROCE: {
-                  std::string engine_init_str = CONF->VERBS_CONF + "://" +
-                CONF->VERBS_DOMAIN + "://" +
-                std::string(processor_name) +
-                ":" +
-                std::to_string(server_port+my_server_);
-                  thallium_engine = Singleton<tl::engine>::GetInstance(engine_init_str,
-                                           THALLIUM_SERVER_MODE);
-                  break;
+                    engine_init_str = CONF->VERBS_CONF + "://" +
+                            CONF->VERBS_DOMAIN + "://" +
+                            std::string(processor_name) +
+                            ":" +
+                            std::to_string(server_port+my_server_);
+                    break;
                 }
 #endif
             }
@@ -207,32 +205,34 @@ RPC::RPC(std::string name_, bool is_server_, uint16_t my_server_,
         isInitialized = true;
         MPI_Barrier(MPI_COMM_WORLD);
         run();
+        MPI_Barrier(MPI_COMM_WORLD);
     }
 }
 
 void RPC::run(size_t workers) {
     AutoTrace trace = AutoTrace("RPC::run", workers);
     if (is_server){
-    switch (CONF->RPC_IMPLEMENTATION) {
+        switch (CONF->RPC_IMPLEMENTATION) {
 #ifdef BASKET_ENABLE_RPCLIB
-        case RPCLIB: {
+            case RPCLIB: {
 
-              rpclib_server->async_run(workers);
-          break;
-        }
+                rpclib_server->async_run(workers);
+                break;
+            }
 #endif
 #ifdef BASKET_ENABLE_THALLIUM_TCP
-        case THALLIUM_TCP:
+            case THALLIUM_TCP:
 #endif
 #ifdef BASKET_ENABLE_THALLIUM_ROCE
             case THALLIUM_ROCE:
 #endif
 #if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
-        {
-            thallium_engine = Singleton<tl::engine>::GetInstance(engine_init_str, THALLIUM_SERVER_MODE,true,RPC_THREADS);
-            break;
-        }
+                {
+
+                    thallium_engine = Singleton<tl::engine>::GetInstance(engine_init_str, THALLIUM_SERVER_MODE,true,RPC_THREADS);
+                    break;
+                }
 #endif
-    }
+        }
     }
 }

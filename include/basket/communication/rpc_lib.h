@@ -114,6 +114,13 @@ class RPC {
 
   void run(size_t workers = RPC_THREADS);
 
+#ifdef BASKET_ENABLE_THALLIUM_ROCE
+    template<typename MappedType>
+    MappedType prep_rdma_server(tl::endpoint endpoint, tl::bulk &bulk_handle);
+
+    template<typename MappedType>
+    tl::bulk prep_rdma_client(MappedType &data);
+#endif
   /**
    * Response should be RPCLIB_MSGPACK::object_handle for rpclib and
    * tl::packed_response for thallium/mercury

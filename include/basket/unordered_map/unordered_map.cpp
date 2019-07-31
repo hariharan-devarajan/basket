@@ -95,10 +95,15 @@ unordered_map<KeyType, MappedType>::unordered_map(std::string name_,
 #endif
 #if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
     {
-     std::function<void(const tl::request &, KeyType, MappedType)> putFunc(
+
+     // std::function<void(const tl::request &, KeyType, MappedType)> putFunc(
+     //        std::bind(&unordered_map<KeyType, MappedType>::ThalliumLocalPut, this,
+     //                  std::placeholders::_1, std::placeholders::_2,
+     //                  std::placeholders::_3));
+        std::function<void(const tl::request &, tl::bulk &, KeyType)> putFunc(
             std::bind(&unordered_map<KeyType, MappedType>::ThalliumLocalPut, this,
                       std::placeholders::_1, std::placeholders::_2,
-		      std::placeholders::_3));
+                      std::placeholders::_3));
         std::function<void(const tl::request &, KeyType)> getFunc(
             std::bind(&unordered_map<KeyType, MappedType>::ThalliumLocalGet, this,
                       std::placeholders::_1, std::placeholders::_2));
@@ -149,9 +154,9 @@ template<typename KeyType, typename MappedType>
 bool unordered_map<KeyType, MappedType>::LocalPut(KeyType key,
                                                   MappedType data) {
     uint16_t key_int = (uint16_t)keyHash(key)% num_servers;
-    boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex>lock(*mutex);
-    myHashMap->insert_or_assign(key, data);
-    return true;
+    // boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex>lock(*mutex);
+    auto retval = myHashMap->insert_or_assign(key, data);
+    return retval.second;
 }
 /**
  * Put the data into the unordered map. Uses key to decide the server to hash it to,
@@ -166,8 +171,14 @@ bool unordered_map<KeyType, MappedType>::Put(KeyType key,
     if (key_int == my_server && server_on_node) {
         return LocalPut(key, data);
     } else {
-      return RPC_CALL_WRAPPER("_Put", key_int, bool,
-			      key, data);
+        // #ifdef BASKET_ENABLE_THALLIUM_ROCE
+        // tl::bulk bulk_handle = rpc->prep_rdma_client<MappedType>(data);
+        // return RPC_CALL_WRAPPER("_Put", key_int, bool,
+        //                         bulk_handle, key);
+        // #endif
+
+        return RPC_CALL_WRAPPER("_Put", key_int, bool,
+                                key, data);
     }
 }
 
@@ -204,9 +215,19 @@ unordered_map<KeyType, MappedType>::Get(KeyType key) {
     if (key_int == my_server && server_on_node) {
         return LocalGet(key);
     } else {
+
+        // #ifdef BASKET_ENABLE_THALLIUM_ROCE
+        // auto rpc_result = rpc->call<tl::packed_response>( key_int, func_prefix + "_Get" , key).template as< std::pair<tl::endpoint, tl::bulk> >();
+
+        // // NOTE for me tomorrow: This fails because we can't serialize the std::pair<tl::endpoint, tl::bulk> structure. I can try creating a unique struct, but this would take time.
+        // auto final_result = rpc->prep_rdma_server<std::string>(rpc_result.first, rpc_result.second);
+        // return std::make_pair(true, final_result);
+        // #ENDIF
+
       typedef std::pair<bool, MappedType> ret_type;
-      return RPC_CALL_WRAPPER("_Get", key_int, ret_type,
-			      key);
+       return RPC_CALL_WRAPPER("_Get", key_int, ret_type,
+                                     key);
+        
       // rpc->call(key_int, func_prefix+"_Get",
       //                key).template as<std::pair<bool, MappedType>>();
     }

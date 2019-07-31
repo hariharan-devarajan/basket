@@ -4,9 +4,10 @@ project(basket VERSION 1.0.0 DESCRIPTION "Basket: A library for flexible distrib
 
 set(CMAKE_CXX_STANDARD 17)
 
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBASKET_ENABLE_RPCLIB")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBASKET_ENABLE_THALLIUM_TCP")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBASKET_ENABLE_RPCLIB")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBASKET_ENABLE_THALLIUM_TCP")
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBASKET_ENABLE_THALLIUM_ROCE")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
 
 include(GNUInstallDirs)
 include_directories(src/basket)
@@ -52,6 +53,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE .)
 set(RPC_LIB_FLAGS -lrpc ${RPC_LIB_FLAGS})
 set(RPC_LIB_FLAGS -lthallium -lmercury -lmercury_util -lmargo -labt ${RPC_LIB_FLAGS})
 set(LIB_FLAGS ${RPC_LIB_FLAGS} -lmpi -lpthread -lrt -lboost_filesystem)
+# set(LIB_FLAGS ${LIB_FLAGS} -lev -L/home/kbateman/install/lib/ -L/home/kbateman/install/lib64/ -lhiredis -lredox)
 target_link_libraries(basket ${LIB_FLAGS})
 
 install(TARGETS ${PROJECT_NAME}

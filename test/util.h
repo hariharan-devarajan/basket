@@ -6,6 +6,7 @@
 #define BASKET_UTIL_H
 
 #include <boost/interprocess/containers/string.hpp>
+#include <stdlib.h>
 
 namespace bip=boost::interprocess;
 
@@ -36,6 +37,76 @@ struct KeyType{
         ar & a;
     }
 };
+
+// 1,4,16,1000,4000,16000,250000,1000000,4000000,16000000
+
+struct MappedType{
+    // char a[62500];
+    // double a[62500];
+    // std::array<double, 62500> a;
+    std::string a;
+
+    MappedType() {
+        a = "";
+        a.resize(1000000, 'c');
+        // for (long i = 0; i < 62500; i++) {
+        //     a[i] = 1.1;
+        // }
+    }
+
+    MappedType(std::string a_) {
+        a = a_;
+        // for (long i = 0; i < 62500; i++) {
+        //     a[i] = a_[i];
+        // }
+    }
+
+    MSGPACK_DEFINE(a);
+
+    /* equal operator for comparing two Matrix. */
+    bool operator==(const MappedType &o) const {
+        if (a == o.a) {
+            return false;
+        }
+        // for (long i = 0; i < 62500; i++) {
+            // if (a[i] != o.a[i]) {
+            //     return false;
+            // }
+        // }
+        return true;
+    }
+    MappedType& operator=( const MappedType& other ) {
+        a = other.a;
+        // for (long i = 0; i < 62500; i++) {
+        //     a[i] = other.a[i];
+        // }
+        return *this;
+    }
+    // bool operator<(const MappedType &o) const {
+    //     for (long i = 0; i < 62500; i++) {
+    //         if (a[i] < o.a[i]) {
+    //             return true;
+    //         }
+    //     }
+    //     return false;
+    // }
+    // bool Contains(const MappedType &o) const {
+    //     for (long i = 0; i < 62500; i++) {
+    //         if (a[i] != o.a[i]) {
+    //             return false;
+    //         }
+    //     }
+    //     return true;
+    // }
+    
+  template<typename A>
+  void serialize(A& ar) const {
+      ar & a;
+      // for (long i = 0; i < 62500; i++) {
+      //     ar & a[i];
+      // }
+  }
+};
 const int MAX = 26;
 std::string printRandomString(int n)
 {
@@ -54,7 +125,7 @@ std::string printRandomString(int n)
 namespace std {
     template<>
     struct hash<KeyType> {
-        size_t operator()(const KeyType &k) const {
+        int operator()(const KeyType &k) const {
             return k.a;
         }
     };
