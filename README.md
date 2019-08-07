@@ -55,9 +55,11 @@ doesn't conflict with itself.
 ### Testing on Ares cluster
 
 ## Configure
-`mkdir ${HOME}/basket_build`
-`cd ${HOME}/basket_build`
-`${HOME}/software/install/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=/opt/ohpc/pub/compiler/gcc/7.3.0/bin/gcc -DCMAKE_CXX_COMPILER=/opt/ohpc/pub/compiler/gcc/7.3.0/bin/g++ "-DCMAKE_CXX_FLAGS=-I${HOME}/software/install/include -L${HOME}/software/install/lib" -G "CodeBlocks - Unix Makefiles" ${SRC_DIR}`
+```bash
+$ mkdir ${HOME}/basket_build
+$ cd ${HOME}/basket_build
+${HOME}/software/install/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=/opt/ohpc/pub/compiler/gcc/7.3.0/bin/gcc -DCMAKE_CXX_COMPILER=/opt/ohpc/pub/compiler/gcc/7.3.0/bin/g++ "-DCMAKE_CXX_FLAGS=-I${HOME}/software/install/include -L${HOME}/software/install/lib" -G "CodeBlocks - Unix Makefiles" ${SRC_DIR}
+```
 
 where ${SRC_DIR} = source directory (e.g. /tmp/tmp.bYNfITLGMr)
 
