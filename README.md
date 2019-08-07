@@ -8,14 +8,23 @@ message queue. There's also a global clock and a sequencer.
 ## Compilation
 
 The Basket Library compiles with cmake, so the general procedure is
-`cmake .`
-`make`
-`sudo make install`
 
-If you want to install somewhere besides /usr/local, then use
-`cmake -DCMAKE_INSTALL_PREFIX:PATH=/wherever .`
-`make`
-`make install`
+```bash
+cd basket
+mkdir build
+cmake ..
+make
+sudo make install
+```
+If you want to install somewhere besides `/usr/local`, then use
+
+```bash
+cd basket
+mkdir build
+cmake -DCMAKE_INSTALL_PREFIX:PATH=/wherever ..
+make
+make install
+```
 
 ### Dependencies
 - mpi
@@ -55,17 +64,38 @@ doesn't conflict with itself.
 ### Testing on Ares cluster
 
 ## Configure
+
 ```bash
-$ mkdir ${HOME}/basket_build
-$ cd ${HOME}/basket_build
-${HOME}/software/install/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=/opt/ohpc/pub/compiler/gcc/7.3.0/bin/gcc -DCMAKE_CXX_COMPILER=/opt/ohpc/pub/compiler/gcc/7.3.0/bin/g++ "-DCMAKE_CXX_FLAGS=-I${HOME}/software/install/include -L${HOME}/software/install/lib" -G "CodeBlocks - Unix Makefiles" ${SRC_DIR}
+$ mkdir $HOME/basket_build
+$ cd $HOME/basket_build
+$ $HOME/software/install/bin/cmake \
+-DCMAKE_BUILD_TYPE=Debug \
+-DCMAKE_C_COMPILER=/opt/ohpc/pub/compiler/gcc/7.3.0/bin/gcc \
+-DCMAKE_CXX_COMPILER=/opt/ohpc/pub/compiler/gcc/7.3.0/bin/g++ \
+"-DCMAKE_CXX_FLAGS=-I${HOME}/software/install/include -L${HOME}/software/install/lib"\
+-G "CodeBlocks - Unix Makefiles" $SRC_DIR
 ```
 
-where ${SRC_DIR} = source directory (e.g. /tmp/tmp.bYNfITLGMr)
+where $SRC_DIR = source directory (e.g. /tmp/tmp.bYNfITLGMr)
 
 ## Compile
-`${HOME}/software/install/bin/cmake --build ./ --target all -- -j 8`
+
+```bash
+$ $HOME/software/install/bin/cmake --build ./ --target all -- -j 8
+```
 
 ## Run
-`cd ${HOME}/basket_build/test`
-`ctest -V`
+
+```bash
+$ cd $HOME/basket_build/test
+$ ctest -V
+```
+## Patching Mercury 1.0.1 to work with RoCE
+
+For Basket to work with Mercury 1.0.1 with RoCE, it needs a patched version of Mercury.
+Assuming that Mercury 1.0.1 has been extracted to `./mercury-1.0.1` run our patch `mercury-1.0.1-RoCE.patch` as such 
+
+```bash
+$ patch  -p0 <  mercury-1.0.1-RoCE.patch
+```
+
