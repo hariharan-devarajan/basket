@@ -93,7 +93,7 @@ $ ctest -V
 ## Patching Mercury 1.0.1 to work with RoCE
 
 For Basket to work with Mercury 1.0.1 with RoCE, it needs a patched version of Mercury.
-Assuming that Mercury 1.0.1 has been extracted to `./mercury-1.0.1` run our patch `mercury-1.0.1-RoCE.patch` as such 
+Assuming that Mercury 1.0.1 has been extracted to `./mercury-1.0.1` run our patch `mercury-1.0.1-RoCE.patch` in the `RoCE_Patch` folder as such 
 
 ```bash
 $ patch  -p0 <  mercury-1.0.1-RoCE.patch
