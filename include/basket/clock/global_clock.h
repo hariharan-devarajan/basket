@@ -63,6 +63,7 @@ class global_clock {
                  std::string processor_name_ = "");
 
     HTime GetTime();
+
     HTime GetTimeServer(uint16_t &server);
 
     HTime LocalGetTime();
@@ -70,7 +71,7 @@ class global_clock {
 #if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
     THALLIUM_DEFINE1(LocalGetTime)
 #endif
-    
+
 };
 
 }  // namespace basket
