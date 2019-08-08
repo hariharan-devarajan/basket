@@ -29,7 +29,6 @@
 #include <execinfo.h>
 #include <chrono>
 #include <unordered_map>
-#include <rpc/client.h>
 #include <basket/common/data_structures.h>
 #include <basket/unordered_map/unordered_map.h>
 
@@ -79,7 +78,7 @@ int main (int argc,char* argv[])
     bool server_on_node=false;
     if(argc > 1)    ranks_per_server = atoi(argv[1]);
     if(argc > 2)    num_request = atoi(argv[2]);
-    if(argc > 3)    size_of_request = atol(argv[3]);
+    if(argc > 3)    size_of_request = (long)atol(argv[3]);
     if(argc > 4)    server_on_node = (bool)atoi(argv[4]);
     if(argc > 5)    debug = (bool)atoi(argv[5]);
 
@@ -112,21 +111,22 @@ int main (int argc,char* argv[])
     std::string extra_info = proc_name.substr(split_loc+1, string::npos);
     proc_name = node_name + "-40g." + extra_info;
 
-    const int array_size=1000;
     size_t size_of_elem = sizeof(int);
 
     printf("rank %d, is_server %d, my_server %d, num_servers %d\n",my_rank,is_server,my_server,num_servers);
+
+    const int array_size=TEST_REQUEST_SIZE;
+
+    if (size_of_request != array_size) {
+        printf("Please set TEST_REQUEST_SIZE in include/basket/common/constants.h instead. Testing with %d\n", array_size);
+    }
+
+    std::array<int,array_size> my_vals=std::array<int,array_size>();
 
     basket::unordered_map<KeyType,std::array<int, array_size>> map("test_map", is_server, my_server, num_servers, server_on_node || is_server, proc_name);
 
     std::unordered_map<KeyType,std::array<int, array_size>> lmap=std::unordered_map<KeyType,std::array<int, array_size>>();
 
-    // MPI_Comm node_comm;
-    // MPI_Comm_split(MPI_COMM_WORLD, my_node, my_rank, &node_comm);
-
-    // int node_rank;
-    // MPI_Comm_rank(node_comm, &node_rank);
-    
     MPI_Comm client_comm;
     MPI_Comm_split(MPI_COMM_WORLD, !is_server, my_rank, &client_comm);
     int client_comm_size;
@@ -135,7 +135,6 @@ int main (int argc,char* argv[])
     if (!is_server) {
         Timer llocal_map_timer=Timer();
         std::hash<KeyType> keyHash;
-        std::array<int,array_size> my_vals=std::array<int,array_size>();
         /*Local std::map test*/
         for(int i=0;i<num_request;i++){
             size_t val=my_server;
@@ -195,7 +194,8 @@ int main (int argc,char* argv[])
                        MPI_DOUBLE, MPI_SUM, 0, client_comm);
             MPI_Reduce(&local_get_map_throughput, &local_get_tp_result, 1,
                        MPI_DOUBLE, MPI_SUM, 0, client_comm);
-            // local_put_tp_result /= client_comm_size;
+            local_put_tp_result /= client_comm_size;
+            local_get_tp_result /= client_comm_size;
         }
         else {
             local_put_tp_result = local_map_throughput;

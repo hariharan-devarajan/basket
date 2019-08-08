@@ -30,10 +30,15 @@
 /** MPI Headers**/
 #include <mpi.h>
 /** RPC Lib Headers**/
+#ifdef BASKET_ENABLE_RPCLIB
 #include <rpc/server.h>
 #include <rpc/client.h>
+#include <rpc/rpc_error.h>
+#endif
 /** Thallium Headers **/
+#if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
 #include <thallium.hpp>
+#endif
 
 /** Boost Headers **/
 #include <boost/interprocess/managed_shared_memory.hpp>

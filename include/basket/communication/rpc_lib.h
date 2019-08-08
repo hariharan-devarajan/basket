@@ -28,14 +28,15 @@
 #include <basket/common/singleton.h>
 #include <basket/common/typedefs.h>
 #include <mpi.h>
+
+/** RPC Lib Headers**/
+#ifdef BASKET_ENABLE_RPCLIB
 #include <rpc/server.h>
 #include <rpc/client.h>
-
-#include <netdb.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-
+#include <rpc/rpc_error.h>
+#endif
+/** Thallium Headers **/
+#if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
 #include <thallium.hpp>
 #include <thallium/serialization/serialize.hpp>
 #include <thallium/serialization/buffer_input_archive.hpp>
@@ -57,6 +58,12 @@
 #include <thallium/serialization/stl/unordered_multiset.hpp>
 #include <thallium/serialization/stl/unordered_set.hpp>
 #include <thallium/serialization/stl/vector.hpp>
+#endif
+
+#include <netdb.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
@@ -70,8 +77,9 @@
 #include <vector>
 
 namespace bip = boost::interprocess;
+#if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
 namespace tl = thallium;
-
+#endif
 /* typedefs */
 typedef bip::allocator<CharStruct, bip::managed_shared_memory::segment_manager>
 ShmemAllocator;

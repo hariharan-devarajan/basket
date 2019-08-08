@@ -34,23 +34,5 @@ endfunction()
 
 # Define MPI test case
 foreach (example ${examples})
-    mpi(ares 80 ${example} 40 1000 4 1 0)
-
-    mpi(ares 80 ${example} 40 1000 16 1 0)
-
-    mpi(ares 80 ${example} 40 1000 64 1 0)
-
-    mpi(ares 80 ${example} 40 1000 4000 1 0)
-
-    mpi(ares 80 ${example} 40 1000 16000 1 0)
-
-    mpi(ares 80 ${example} 40 1000 1000000 1 0)
-
-    # Large tests can take a long time
-
-    mpi(ares 80 ${example} 40 1000 4000000 1 0)
-
-    mpi(ares 80 ${example} 40 1000 16000000 1 0)
-
-    mpi(ares 80 ${example} 40 100 64000000 1 0)
+    mpi(ares 4 ${example} 2 1000 1000 1 0)
 endforeach()

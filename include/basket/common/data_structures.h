@@ -34,7 +34,11 @@
 
 #include <boost/interprocess/containers/string.hpp>
 #include <boost/interprocess/containers/vector.hpp>
+
+#ifdef BASKET_ENABLE_RPCLIB
 #include <rpc/msgpack.hpp>
+#endif
+
 #include <string>
 #include <vector>
 #include <cstdint>
@@ -81,6 +85,7 @@ struct hash<CharStruct> {
 };
 }
 
+#ifdef BASKET_ENABLE_RPCLIB
 namespace clmdep_msgpack {
 MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) {
     namespace adaptor {
@@ -124,7 +129,7 @@ MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) {
     }  // namespace adaptor
 }
 }  // namespace clmdep_msgpack
-
+#endif
 
 /**
  * Outstream conversions
