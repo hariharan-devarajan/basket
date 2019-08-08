@@ -84,6 +84,7 @@ class RPC {
     uint16_t server_port, my_server;
     std::string processor_name;
     std::string name;
+    bool server_on_node;
 #ifdef BASKET_ENABLE_RPCLIB
     std::shared_ptr<rpc::server> rpclib_server;
 #endif
@@ -107,7 +108,8 @@ class RPC {
   ~RPC();
 
   RPC(std::string name_, bool is_server_, uint16_t my_server_,
-      int num_servers_, std::string processor_name_ = "");
+      int num_servers_, bool server_on_node_,
+      std::string processor_name_ = "");
 
   template <typename F>
   void bind(std::string str, F func);

@@ -25,15 +25,32 @@ endforeach()
 message(INFO ${CMAKE_BINARY_DIR}/libbasket.so)
 
 # Define MPI test case template
-function(mpi target mpi_procs example ranks_per_process num_requests server_on_node debug)
-    set (test_parameters  -np ${mpi_procs} -f "${CMAKE_BINARY_DIR}/test/hostfile" "${CMAKE_BINARY_DIR}/test/${example}" ${ranks_per_process} ${num_requests} ${server_on_node} ${debug})
-    add_test(NAME ${target}_${example}_MPI_${mpi_procs}_${ranks_per_process}_${num_requests}_${server_on_node}_${debug} COMMAND "mpirun" ${test_parameters})
-    set_tests_properties(${target}_${example}_MPI_${mpi_procs}_${ranks_per_process}_${num_requests}_${server_on_node}_${debug} PROPERTIES ENVIRONMENT LD_PRELOAD=${CMAKE_BINARY_DIR}/libbasket.so)
-    set_tests_properties(${target}_${example}_MPI_${mpi_procs}_${ranks_per_process}_${num_requests}_${server_on_node}_${debug} PROPERTIES WILL_FAIL true)
+function(mpi target mpi_procs example ranks_per_process num_requests size_of_request server_on_node debug)
+    set (test_parameters  -np ${mpi_procs} -f "${CMAKE_BINARY_DIR}/test/hostfile" "${CMAKE_BINARY_DIR}/test/${example}" ${ranks_per_process} ${num_requests} ${size_of_request} ${server_on_node} ${debug})
+    add_test(NAME ${target}_${example}_MPI_${mpi_procs}_${ranks_per_process}_${num_requests}_${size_of_request}_${server_on_node}_${debug} COMMAND "mpirun" ${test_parameters})
+    set_tests_properties(${target}_${example}_MPI_${mpi_procs}_${ranks_per_process}_${num_requests}_${size_of_request}_${server_on_node}_${debug} PROPERTIES ENVIRONMENT LD_PRELOAD=${CMAKE_BINARY_DIR}/libbasket.so)
+    set_tests_properties(${target}_${example}_MPI_${mpi_procs}_${ranks_per_process}_${num_requests}_${size_of_request}_${server_on_node}_${debug} PROPERTIES WILL_FAIL true)
 endfunction()
 
 # Define MPI test case
 foreach (example ${examples})
-    mpi(ares 4 ${example} 2 1000 0 0)
-    mpi(ares 4 ${example} 2 1000 1 0)
+    mpi(ares 80 ${example} 40 1000 4 1 0)
+
+    mpi(ares 80 ${example} 40 1000 16 1 0)
+
+    mpi(ares 80 ${example} 40 1000 64 1 0)
+
+    mpi(ares 80 ${example} 40 1000 4000 1 0)
+
+    mpi(ares 80 ${example} 40 1000 16000 1 0)
+
+    mpi(ares 80 ${example} 40 1000 1000000 1 0)
+
+    # Large tests can take a long time
+
+    mpi(ares 80 ${example} 40 1000 4000000 1 0)
+
+    mpi(ares 80 ${example} 40 1000 16000000 1 0)
+
+    mpi(ares 80 ${example} 40 100 64000000 1 0)
 endforeach()

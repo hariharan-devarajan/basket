@@ -49,15 +49,21 @@ class global_sequence {
     std::shared_ptr<RPC> rpc;
     bool server_on_node;
 
-    uint64_t LocalGetNextSequence();
-
   public:
     ~global_sequence();
     global_sequence(std::string name_, bool is_server_, uint16_t my_server_,
-                    int num_servers_, bool server_on_node_);
+                    int num_servers_, bool server_on_node_,
+                    std::string processor_name_ = "");
 
     uint64_t GetNextSequence();
-    uint64_t GetNextSequenceServer(uint16_t server);
+    uint64_t GetNextSequenceServer(uint16_t &server);
+
+    uint64_t LocalGetNextSequence();
+
+#if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
+    THALLIUM_DEFINE1(LocalGetNextSequence)
+#endif
+
 };
 
 }  // namespace basket

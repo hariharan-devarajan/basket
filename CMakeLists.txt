@@ -26,14 +26,14 @@ set(BASKET_SRC  include/basket/common/singleton.h
                 include/basket/communication/rpc_lib.h
                 src/basket/communication/rpc_lib.cpp
                 include/basket/unordered_map/unordered_map.h
-                # include/basket/map/map.h
-        # include/basket/multimap/multimap.h
-        # include/basket/clock/global_clock.h
-        # src/basket/clock/global_clock.cpp
-        # include/basket/queue/queue.h
-        # include/basket/priority_queue/priority_queue.h
-        # include/basket/sequencer/global_sequence.h
-        # src/basket/sequencer/global_sequence.cpp
+                include/basket/map/map.h
+                include/basket/multimap/multimap.h
+                include/basket/clock/global_clock.h
+                src/basket/clock/global_clock.cpp
+                include/basket/queue/queue.h
+                include/basket/priority_queue/priority_queue.h
+                include/basket/sequencer/global_sequence.h
+                src/basket/sequencer/global_sequence.cpp
 	)
 
 add_library(${PROJECT_NAME} SHARED ${BASKET_SRC})
@@ -53,7 +53,13 @@ target_include_directories(${PROJECT_NAME} PRIVATE .)
 set(RPC_LIB_FLAGS -lrpc ${RPC_LIB_FLAGS})
 set(RPC_LIB_FLAGS -lthallium -lmercury -lmercury_util -lmargo -labt ${RPC_LIB_FLAGS})
 set(LIB_FLAGS ${RPC_LIB_FLAGS} -lmpi -lpthread -lrt -lboost_filesystem)
-# set(LIB_FLAGS ${LIB_FLAGS} -lev -L/home/kbateman/install/lib/ -L/home/kbateman/install/lib64/ -lhiredis -lredox)
+
+# libs for NATS tests
+#set(LIB_FLAGS ${LIB_FLAGS} -lnats)
+
+# libs for Redis tests
+#set(LIB_FLAGS ${LIB_FLAGS} -lev -L/home/kbateman/install/lib/ -L/home/kbateman/install/lib64/ -lhiredis -lredox)
+
 target_link_libraries(basket ${LIB_FLAGS})
 
 install(TARGETS ${PROJECT_NAME}

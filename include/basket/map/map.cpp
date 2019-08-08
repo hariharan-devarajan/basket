@@ -33,13 +33,14 @@ map<KeyType, MappedType, Compare>::map(std::string name_,
                                        bool is_server_,
                                        uint16_t my_server_,
                                        int num_servers_,
-                                       bool server_on_node_)
+                                       bool server_on_node_,
+                                       std::string processor_name_)
         : is_server(is_server_), my_server(my_server_), num_servers(num_servers_),
           comm_size(1), my_rank(0), memory_allocated(1024ULL * 1024ULL * 128ULL),
           name(name_), segment(), mymap(), func_prefix(name_),
           server_on_node(server_on_node_) {
     AutoTrace trace = AutoTrace("basket::map", name_, is_server_, my_server_,
-                                num_servers_, server_on_node_);
+                                num_servers_, server_on_node_, processor_name_);
     /* Initialize MPI rank and size of world */
     MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
@@ -48,7 +49,8 @@ map<KeyType, MappedType, Compare>::map(std::string name_,
     this->name += "_" + std::to_string(my_server);
     /* if current rank is a server */
     rpc = Singleton<RPC>::GetInstance("RPC_SERVER_LIST", is_server_, my_server_,
-                                      num_servers_);
+                                      num_servers_, server_on_node_,
+                                      processor_name_);
     if (is_server) {
         /* Delete existing instance of shared memory space*/
         boost::interprocess::shared_memory_object::remove(name.c_str());
@@ -61,35 +63,80 @@ map<KeyType, MappedType, Compare>::map(std::string name_,
         mutex = segment.construct<boost::interprocess::interprocess_mutex>(
             "mtx")();
         /* Create a RPC server and map the methods to it. */
-        std::function<bool(KeyType, MappedType)> putFunc(
-            std::bind(&map<KeyType, MappedType, Compare>::LocalPut,
-                      this, std::placeholders::_1 , std::placeholders::_2));
-        std::function<std::pair<bool, MappedType>(KeyType)> getFunc(
-            std::bind(&map<KeyType, MappedType, Compare>::LocalGet, this,
-                      std::placeholders::_1));
-        std::function<std::vector<std::pair<KeyType, MappedType>>(KeyType)>
-                containsInServerFunc(std::bind(&map<KeyType, MappedType,
-                                               Compare>::LocalContainsInServer, this,
-                                               std::placeholders::_1));
-        std::function<std::pair<bool, MappedType>(KeyType)> eraseFunc(std::bind(
-            &map<KeyType, MappedType, Compare>::LocalErase, this,
-            std::placeholders::_1));
-        std::function<std::vector<std::pair<KeyType, MappedType>>(void)>
-                getAllDataInServerFunc(std::bind(&map<KeyType, MappedType,
-                                                 Compare>::LocalGetAllDataInServer, this));
-        rpc->bind(func_prefix+"_Put", putFunc);
-        rpc->bind(func_prefix+"_Get", getFunc);
-        rpc->bind(func_prefix+"_Erase", eraseFunc);
-        rpc->bind(func_prefix+"_GetAllData", getAllDataInServerFunc);
-        rpc->bind(func_prefix+"_Contains", containsInServerFunc);
+        switch (CONF->RPC_IMPLEMENTATION) {
+#ifdef BASKET_ENABLE_RPCLIB
+            case RPCLIB: {
+                std::function<bool(KeyType &, MappedType &)> putFunc(
+                    std::bind(&map<KeyType, MappedType, Compare>::LocalPut, this,
+                              std::placeholders::_1, std::placeholders::_2));
+                std::function<std::pair<bool, MappedType>(KeyType &)> getFunc(
+                    std::bind(&map<KeyType, MappedType, Compare>::LocalGet, this,
+                              std::placeholders::_1));
+                std::function<std::pair<bool, MappedType>(KeyType &)> eraseFunc(
+                    std::bind(&map<KeyType, MappedType, Compare>::LocalErase, this,
+                              std::placeholders::_1));
+                std::function<std::vector<std::pair<KeyType, MappedType>>(void)>
+                        getAllDataInServerFunc(std::bind(
+                            &map<KeyType, MappedType, Compare>::LocalGetAllDataInServer,
+                            this));
+                std::function<std::vector<std::pair<KeyType, MappedType>>(KeyType &)>
+                        containsInServerFunc(std::bind(&map<KeyType, MappedType,
+                                                       Compare>::LocalContainsInServer, this,
+                                                       std::placeholders::_1));
+
+                rpc->bind(func_prefix+"_Put", putFunc);
+                rpc->bind(func_prefix+"_Get", getFunc);
+                rpc->bind(func_prefix+"_Erase", eraseFunc);
+                rpc->bind(func_prefix+"_GetAllData", getAllDataInServerFunc);
+                rpc->bind(func_prefix+"_Contains", containsInServerFunc);
+                break;
+            }
+#endif
+#ifdef BASKET_ENABLE_THALLIUM_TCP
+            case THALLIUM_TCP:
+#endif
+#ifdef BASKET_ENABLE_THALLIUM_ROCE
+            case THALLIUM_ROCE:
+#endif
+#if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
+                {
+
+                    std::function<void(const tl::request &, KeyType &, MappedType &)> putFunc(
+                        std::bind(&map<KeyType, MappedType, Compare>::ThalliumLocalPut, this,
+                                  std::placeholders::_1, std::placeholders::_2,
+                                  std::placeholders::_3));
+                    std::function<void(const tl::request &, KeyType &)> getFunc(
+                        std::bind(&map<KeyType, MappedType, Compare>::ThalliumLocalGet, this,
+                                  std::placeholders::_1, std::placeholders::_2));
+                    std::function<void(const tl::request &, KeyType &)> eraseFunc(
+                        std::bind(&map<KeyType, MappedType, Compare>::ThalliumLocalErase, this,
+                                  std::placeholders::_1, std::placeholders::_2));
+                    std::function<void(const tl::request &)>
+                            getAllDataInServerFunc(std::bind(
+                                &map<KeyType, MappedType, Compare>::ThalliumLocalGetAllDataInServer,
+                                this, std::placeholders::_1));
+                    std::function<void(const tl::request &, KeyType &)>
+                            containsInServerFunc(std::bind(&map<KeyType, MappedType,
+                                                           Compare>::ThalliumLocalContainsInServer, this,
+                                                           std::placeholders::_1));
+
+                    rpc->bind(func_prefix+"_Put", putFunc);
+                    rpc->bind(func_prefix+"_Get", getFunc);
+                    rpc->bind(func_prefix+"_Erase", eraseFunc);
+                    rpc->bind(func_prefix+"_GetAllData", getAllDataInServerFunc);
+                    rpc->bind(func_prefix+"_Contains", containsInServerFunc);
+                    break;
+                }
+#endif
+        }
     }
     MPI_Barrier(MPI_COMM_WORLD);
     /* Map the clients to their respective memory pools */
-    if (!is_server) {
+    if (!is_server && server_on_node) {
         segment = boost::interprocess::managed_shared_memory(
             boost::interprocess::open_only, name.c_str());
         std::pair<MyMap*,
-                  boost::interprocess:: managed_shared_memory::size_type> res;
+                  boost::interprocess::managed_shared_memory::size_type> res;
         res = segment.find<MyMap> (name.c_str());
         mymap = res.first;
         std::pair<boost::interprocess::interprocess_mutex *,
@@ -107,8 +154,8 @@ map<KeyType, MappedType, Compare>::map(std::string name_,
  * @return bool, true if Put was successful else false.
  */
 template<typename KeyType, typename MappedType, typename Compare>
-bool map<KeyType, MappedType, Compare>::LocalPut(KeyType key,
-                                                 MappedType data) {
+bool map<KeyType, MappedType, Compare>::LocalPut(KeyType &key,
+                                                 MappedType &data) {
     AutoTrace trace = AutoTrace("basket::map::Put(local)", key, data);
     boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(*mutex);
     mymap->insert_or_assign(key, data);
@@ -127,16 +174,16 @@ bool map<KeyType, MappedType, Compare>::LocalPut(KeyType key,
  * @return bool, true if Put was successful else false.
  */
 template<typename KeyType, typename MappedType, typename Compare>
-bool map<KeyType, MappedType, Compare>::Put(KeyType key,
-                                            MappedType data) {
+bool map<KeyType, MappedType, Compare>::Put(KeyType &key,
+                                            MappedType &data) {
     size_t key_hash = keyHash(key);
     uint16_t key_int = static_cast<uint16_t>(key_hash % num_servers);
     if (key_int == my_server && server_on_node) {
         return LocalPut(key, data);
     } else {
         AutoTrace trace = AutoTrace("basket::map::Put(remote)", key, data);
-        return rpc->call(key_int, func_prefix+"_Put", key,
-                         data).template as<bool>();
+        return RPC_CALL_WRAPPER("_Put", key_int, bool,
+                                key, data);
     }
 }
 
@@ -148,7 +195,7 @@ bool map<KeyType, MappedType, Compare>::Put(KeyType key,
  */
 template<typename KeyType, typename MappedType, typename Compare>
 std::pair<bool, MappedType>
-map<KeyType, MappedType, Compare>::LocalGet(KeyType key) {
+map<KeyType, MappedType, Compare>::LocalGet(KeyType &key) {
     AutoTrace trace = AutoTrace("basket::map::Get(local)", key);
     boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex>
             lock(*mutex);
@@ -168,21 +215,22 @@ map<KeyType, MappedType, Compare>::LocalGet(KeyType key) {
  */
 template<typename KeyType, typename MappedType, typename Compare>
 std::pair<bool, MappedType>
-map<KeyType, MappedType, Compare>::Get(KeyType key) {
+map<KeyType, MappedType, Compare>::Get(KeyType &key) {
     size_t key_hash = keyHash(key);
     uint16_t key_int = key_hash % num_servers;
     if (key_int == my_server && server_on_node) {
         return LocalGet(key);
     } else {
         AutoTrace trace = AutoTrace("basket::map::Get(remote)", key);
-        return rpc->call(key_int, func_prefix+"_Get",
-                         key).template as<std::pair<bool, MappedType>>();
+        typedef std::pair<bool, MappedType> ret_type;
+        return RPC_CALL_WRAPPER("_Get", key_int, ret_type,
+                                key);
     }
 }
 
 template<typename KeyType, typename MappedType, typename Compare>
 std::pair<bool, MappedType>
-map<KeyType, MappedType, Compare>::LocalErase(KeyType key) {
+map<KeyType, MappedType, Compare>::LocalErase(KeyType &key) {
     AutoTrace trace = AutoTrace("basket::map::Erase(local)", key);
     boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex>
             lock(*mutex);
@@ -192,15 +240,15 @@ map<KeyType, MappedType, Compare>::LocalErase(KeyType key) {
 
 template<typename KeyType, typename MappedType, typename Compare>
 std::pair<bool, MappedType>
-map<KeyType, MappedType, Compare>::Erase(KeyType key) {
+map<KeyType, MappedType, Compare>::Erase(KeyType &key) {
     size_t key_hash = keyHash(key);
     uint16_t key_int = key_hash % num_servers;
     if (key_int == my_server && server_on_node) {
         return LocalErase(key);
     } else {
         AutoTrace trace = AutoTrace("basket::map::Erase(remote)", key);
-        return rpc->call(key_int, func_prefix+"_Erase",
-                         key).template as<std::pair<bool, MappedType>>();
+        typedef std::pair<bool, MappedType> ret_type;
+        return RPC_CALL_WRAPPER("_Erase", key_int, ret_type, key);
     }
 }
 
@@ -212,7 +260,7 @@ map<KeyType, MappedType, Compare>::Erase(KeyType key) {
  */
 template<typename KeyType, typename MappedType, typename Compare>
 std::vector<std::pair<KeyType, MappedType>>
-map<KeyType, MappedType, Compare>::Contains(KeyType key) {
+map<KeyType, MappedType, Compare>::Contains(KeyType &key) {
     AutoTrace trace = AutoTrace("basket::map::Contains", key);
     std::vector<std::pair<KeyType, MappedType>> final_values =
             std::vector<std::pair<KeyType, MappedType>>();
@@ -221,8 +269,11 @@ map<KeyType, MappedType, Compare>::Contains(KeyType key) {
                         current_server.end());
     for (int i = 0; i < num_servers; ++i) {
         if (i != my_server) {
-            auto server = rpc->call(i, func_prefix+"_Contains", key).template
-                    as<std::vector<std::pair<KeyType, MappedType>>>();
+            typedef std::vector<std::pair<KeyType, MappedType>> ret_type;
+            auto server = RPC_CALL_WRAPPER("_Contains", i, ret_type,
+                                           key);
+            // auto server = rpc->call(i, func_prefix+"_Contains", key).template
+            //         as<std::vector<std::pair<KeyType, MappedType>>>();
             final_values.insert(final_values.end(), server.begin(), server.end());
         }
     }
@@ -240,8 +291,8 @@ map<KeyType, MappedType, Compare>::GetAllData() {
                         current_server.end());
     for (int i = 0; i < num_servers ; ++i) {
         if (i != my_server) {
-            auto server = rpc->call(i, func_prefix+"_GetAllData").template
-                    as<std::vector<std::pair<KeyType, MappedType>>>();
+            typedef std::vector<std::pair<KeyType, MappedType> > ret_type;
+            auto server = RPC_CALL_WRAPPER1("_GetAllData", i, ret_type);
             final_values.insert(final_values.end(), server.begin(), server.end());
         }
     }
@@ -250,7 +301,7 @@ map<KeyType, MappedType, Compare>::GetAllData() {
 
 template<typename KeyType, typename MappedType, typename Compare>
 std::vector<std::pair<KeyType, MappedType>>
-map<KeyType, MappedType, Compare>::LocalContainsInServer(KeyType key) {
+map<KeyType, MappedType, Compare>::LocalContainsInServer(KeyType &key) {
     AutoTrace trace = AutoTrace("basket::map::ContainsInServer", key);
     std::vector<std::pair<KeyType, MappedType>> final_values =
             std::vector<std::pair<KeyType, MappedType>>();
@@ -286,13 +337,15 @@ map<KeyType, MappedType, Compare>::LocalContainsInServer(KeyType key) {
 
 template<typename KeyType, typename MappedType, typename Compare>
 std::vector<std::pair<KeyType, MappedType>>
-map<KeyType, MappedType, Compare>::ContainsInServer(KeyType key) {
+map<KeyType, MappedType, Compare>::ContainsInServer(KeyType &key) {
     if (server_on_node) {
         return LocalContainsInServer(key);
     }
     else {
-        return rpc->call(my_server, func_prefix+"_Contains", key).template
-                as<std::vector<std::pair<KeyType, MappedType>>>();
+        typedef std::vector<std::pair<KeyType, MappedType> > ret_type;
+        auto my_server_i = my_server;
+        return RPC_CALL_WRAPPER("_Contains", my_server_i, ret_type,
+                                key);
     }
 }
 
@@ -323,9 +376,9 @@ map<KeyType, MappedType, Compare>::GetAllDataInServer() {
         return LocalGetAllDataInServer();
     }
     else {
-        return rpc->call(
-            my_server, func_prefix+"_GetAllData").template
-                as<std::vector<std::pair<KeyType, MappedType>>>();
-    }
+        typedef std::vector<std::pair<KeyType, MappedType> > ret_type;
+        auto my_server_i = my_server;
+        return RPC_CALL_WRAPPER1("_GetAllData", my_server_i, ret_type);
+   }
 }
 #endif  // INCLUDE_BASKET_MAP_MAP_CPP_

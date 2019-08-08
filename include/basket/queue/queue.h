@@ -32,6 +32,9 @@
 /** RPC Lib Headers**/
 #include <rpc/server.h>
 #include <rpc/client.h>
+/** Thallium Headers **/
+#include <thallium.hpp>
+
 /** Boost Headers **/
 #include <boost/interprocess/managed_shared_memory.hpp>
 #include <boost/interprocess/containers/deque.hpp>
@@ -78,11 +81,6 @@ class queue {
     boost::interprocess::interprocess_mutex* mutex;
     bool server_on_node;
 
-    bool LocalPush(MappedType data, uint16_t key_int);
-    std::pair<bool, MappedType> LocalPop(uint16_t key_int);
-    bool LocalWaitForElement(uint16_t key_int);
-    size_t LocalSize(uint16_t key_int);
-
   public:
     ~queue();
 
@@ -90,11 +88,25 @@ class queue {
                    bool is_server_,
                    uint16_t my_server_,
                    int num_servers_,
-                   bool server_on_node_);
-    bool Push(MappedType data, uint16_t key_int);
-    std::pair<bool, MappedType> Pop(uint16_t key_int);
-    bool WaitForElement(uint16_t key_int);
-    size_t Size(uint16_t key_int);
+                   bool server_on_node_,
+                   std::string processor_name_ = "");
+
+    bool LocalPush(MappedType &data);
+    std::pair<bool, MappedType> LocalPop();
+    bool LocalWaitForElement();
+    size_t LocalSize();
+
+#if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
+    THALLIUM_DEFINE(LocalPush, (data), MappedType &data)
+    THALLIUM_DEFINE1(LocalPop)
+    THALLIUM_DEFINE1(LocalWaitForElement)
+    THALLIUM_DEFINE1(LocalSize)
+#endif    
+
+    bool Push(MappedType &data, uint16_t &key_int);
+    std::pair<bool, MappedType> Pop(uint16_t &key_int);
+    bool WaitForElement(uint16_t &key_int);
+    size_t Size(uint16_t &key_int);
 };
 
 #include "queue.cpp"

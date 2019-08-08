@@ -33,6 +33,9 @@
 /** RPC Lib Headers**/
 #include <rpc/server.h>
 #include <rpc/client.h>
+/** Thallium Headers **/
+#include <thallium.hpp>
+
 /** Boost Headers **/
 #include <boost/interprocess/managed_shared_memory.hpp>
 #include <boost/interprocess/containers/map.hpp>
@@ -81,28 +84,38 @@ class map {
     boost::interprocess::interprocess_mutex* mutex;
     bool server_on_node;
 
-    bool LocalPut(KeyType key, MappedType data);
-    std::pair<bool, MappedType> LocalGet(KeyType key);
-    std::pair<bool, MappedType> LocalErase(KeyType key);
-    std::vector<std::pair<KeyType, MappedType>> LocalGetAllDataInServer();
-    std::vector<std::pair<KeyType, MappedType>> LocalContainsInServer(KeyType key);
-
   public:
     ~map();
 
     map();
     explicit map(std::string name_, bool is_server_,
                  uint16_t my_server_, int num_servers_,
-                 bool server_on_node_);
-    bool Put(KeyType key, MappedType data);
-    std::pair<bool, MappedType> Get(KeyType key);
+                 bool server_on_node_,
+                 std::string processor_name_ = "");
 
-    std::pair<bool, MappedType> Erase(KeyType key);
-    std::vector<std::pair<KeyType, MappedType>> Contains(KeyType key);
+    bool LocalPut(KeyType &key, MappedType &data);
+    std::pair<bool, MappedType> LocalGet(KeyType &key);
+    std::pair<bool, MappedType> LocalErase(KeyType &key);
+    std::vector<std::pair<KeyType, MappedType>> LocalGetAllDataInServer();
+    std::vector<std::pair<KeyType, MappedType>> LocalContainsInServer(KeyType &key);
+
+#if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
+    THALLIUM_DEFINE(LocalPut, (key,data), KeyType &key, MappedType &data)
+    THALLIUM_DEFINE(LocalGet, (key), KeyType &key)
+    THALLIUM_DEFINE(LocalErase, (key), KeyType &key)
+    THALLIUM_DEFINE(LocalContainsInServer, (key), KeyType &key)
+    THALLIUM_DEFINE1(LocalGetAllDataInServer)
+#endif
+    
+    bool Put(KeyType &key, MappedType &data);
+    std::pair<bool, MappedType> Get(KeyType &key);
+
+    std::pair<bool, MappedType> Erase(KeyType &key);
+    std::vector<std::pair<KeyType, MappedType>> Contains(KeyType &key);
 
     std::vector<std::pair<KeyType, MappedType>> GetAllData();
 
-    std::vector<std::pair<KeyType, MappedType>> ContainsInServer(KeyType key);
+    std::vector<std::pair<KeyType, MappedType>> ContainsInServer(KeyType &key);
     std::vector<std::pair<KeyType, MappedType>> GetAllDataInServer();
 };
 

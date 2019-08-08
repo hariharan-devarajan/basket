@@ -29,22 +29,49 @@ global_sequence::global_sequence(std::string name_,
                                  bool is_server_,
                                  uint16_t my_server_,
                                  int num_servers_,
-                                 bool server_on_node_)
+                                 bool server_on_node_,
+                                 std::string processor_name_)
         : is_server(is_server_), my_server(my_server_), num_servers(num_servers_),
           comm_size(1), my_rank(0), memory_allocated(1024ULL * 1024ULL * 128ULL),
           name(name_), segment(), func_prefix(name_),
           server_on_node(server_on_node_) {
     AutoTrace trace = AutoTrace("basket::global_sequence", name_, is_server_, my_server_,
-                                num_servers_);
+                                num_servers_, server_on_node_, processor_name_);
     MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
     name = name+"_"+std::to_string(my_server);
     rpc = Singleton<RPC>::GetInstance("RPC_SERVER_LIST", is_server_, my_server_,
-                                      num_servers_);
+                                      num_servers_, server_on_node_, processor_name_);
     if (is_server) {
-        std::function<uint64_t(void)> getNextSequence(std::bind(
-            &basket::global_sequence::LocalGetNextSequence, this));
-        rpc->bind(func_prefix+"_GetNextSequence", getNextSequence);
+
+        
+
+        switch (CONF->RPC_IMPLEMENTATION) {
+#ifdef BASKET_ENABLE_RPCLIB
+            case RPCLIB: {
+                std::function<uint64_t(void)> getNextSequence(std::bind(
+                    &basket::global_sequence::LocalGetNextSequence, this));
+                rpc->bind(func_prefix+"_GetNextSequence", getNextSequence);
+                break;
+            }
+#endif
+#ifdef BASKET_ENABLE_THALLIUM_TCP
+            case THALLIUM_TCP:
+#endif
+#ifdef BASKET_ENABLE_THALLIUM_ROCE
+            case THALLIUM_ROCE:
+#endif
+#if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
+                {
+                    std::function<void(const tl::request &)> getNextSequence(std::bind(
+                        &basket::global_sequence::ThalliumLocalGetNextSequence, this,
+                        std::placeholders::_1));
+                    rpc->bind(func_prefix+"_GetNextSequence", getNextSequence);
+                    break;
+                }
+#endif
+        }
+
         bip::shared_memory_object::remove(name.c_str());
         segment = bip::managed_shared_memory(bip::create_only, name.c_str(),
                                              65536);
@@ -53,7 +80,7 @@ global_sequence::global_sequence(std::string name_,
             "mtx")();
     }
     MPI_Barrier(MPI_COMM_WORLD);
-    if (!is_server) {
+    if (!is_server && server_on_node) {
         segment = bip::managed_shared_memory(bip::open_only, name.c_str());
         std::pair<uint64_t*, bip::managed_shared_memory::size_type> res;
         res = segment.find<uint64_t> (name.c_str());
@@ -77,16 +104,17 @@ uint64_t global_sequence::GetNextSequence() {
         return LocalGetNextSequence();
     }
     else {
-        return rpc->call(my_server, func_prefix+"_GetNextSequence").as<uint64_t>();
+        auto my_server_i = my_server;
+        return RPC_CALL_WRAPPER1("_GetNextSequence", my_server_i, uint64_t);
     }
 }
 
-uint64_t global_sequence::GetNextSequenceServer(uint16_t server) {
+uint64_t global_sequence::GetNextSequenceServer(uint16_t &server) {
     if (my_server == server && server_on_node) {
         return LocalGetNextSequence();
     }
     else {
-        return rpc->call(server, func_prefix+"_GetNextSequence").as<uint64_t>();
+        return RPC_CALL_WRAPPER1("_GetNextSequence", server, uint64_t);
     }
 }
 

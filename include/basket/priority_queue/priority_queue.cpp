@@ -33,7 +33,8 @@ priority_queue<MappedType,
                                         bool is_server_,
                                         uint16_t my_server_,
                                         int num_servers_,
-                                        bool server_on_node_)
+                                        bool server_on_node_,
+                                        std::string processor_name_)
                        : is_server(is_server_), my_server(my_server_),
                          num_servers(num_servers_), comm_size(1),
                          my_rank(0),
@@ -42,7 +43,8 @@ priority_queue<MappedType,
                          queue(), func_prefix(name_),
                          server_on_node(server_on_node_) {
     AutoTrace trace = AutoTrace("basket::priority_queue", name_, is_server_,
-                                my_server_, num_servers_);
+                                my_server_, num_servers_, server_on_node_,
+                                processor_name_);
     /* Initialize MPI rank and size of world */
     MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
@@ -51,7 +53,7 @@ priority_queue<MappedType,
     this->name += "_" + std::to_string(my_server);
     /* if current rank is a server */
     rpc = Singleton<RPC>::GetInstance("RPC_SERVER_LIST", is_server_, my_server_,
-                                      num_servers_);
+                                      num_servers_, server_on_node_, processor_name_);
     if (is_server) {
         /* Delete existing instance of shared memory space*/
         bip::shared_memory_object::remove(name.c_str());
@@ -63,27 +65,64 @@ priority_queue<MappedType,
         queue = segment.construct<Queue>("Queue")(Compare(), alloc_inst);
         mutex = segment.construct<bip::interprocess_mutex>("mtx")();
         /* Create a RPC server and map the methods to it. */
-        std::function<bool(MappedType, uint16_t)> pushFunc(
-            std::bind(&priority_queue<MappedType, Compare>::LocalPush, this,
-                      std::placeholders::_1, std::placeholders::_2));
-        std::function<std::pair<bool, MappedType>(uint16_t)> popFunc(
-            std::bind(&priority_queue<MappedType, Compare>::LocalPop, this,
-                      std::placeholders::_1));
-        std::function<std::pair<bool, MappedType>(uint16_t)> topFunc(
-            std::bind(&priority_queue<MappedType, Compare>::LocalTop, this,
-                      std::placeholders::_1));
-        std::function<size_t(uint16_t)> sizeFunc(
-            std::bind(&priority_queue<MappedType, Compare>::LocalSize, this,
-                      std::placeholders::_1));
-        rpc->bind(func_prefix+"_Push", pushFunc);
-        rpc->bind(func_prefix+"_Pop", popFunc);
-        rpc->bind(func_prefix+"_Top", topFunc);
-        rpc->bind(func_prefix+"_Size", sizeFunc);
+                switch (CONF->RPC_IMPLEMENTATION) {
+#ifdef BASKET_ENABLE_RPCLIB
+            case RPCLIB: {
+                std::function<bool(MappedType &)> pushFunc(
+                    std::bind(&basket::priority_queue<MappedType,
+                              Compare>::LocalPush, this,
+                              std::placeholders::_1));
+                std::function<std::pair<bool, MappedType>(void)> popFunc(std::bind(
+                    &basket::priority_queue<MappedType,
+                    Compare>::LocalPop, this));
+                std::function<size_t(void)> sizeFunc(std::bind(
+                    &basket::priority_queue<MappedType,
+                    Compare>::LocalSize, this));
+                std::function<std::pair<bool, MappedType>(void)> topFunc(std::bind(
+                    &basket::priority_queue<MappedType,
+                    Compare>::LocalTop, this));
+                rpc->bind(func_prefix+"_Push", pushFunc);
+                rpc->bind(func_prefix+"_Pop", popFunc);
+                rpc->bind(func_prefix+"_Top", topFunc);
+                rpc->bind(func_prefix+"_Size", sizeFunc);
+                break;
+            }
+#endif
+#ifdef BASKET_ENABLE_THALLIUM_TCP
+            case THALLIUM_TCP:
+#endif
+#ifdef BASKET_ENABLE_THALLIUM_ROCE
+            case THALLIUM_ROCE:
+#endif
+#if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
+                {
+                    std::function<void(const tl::request &, MappedType &)> pushFunc(
+                        std::bind(&basket::priority_queue<MappedType,
+                                  Compare>::ThalliumLocalPush, this,
+                                  std::placeholders::_1, std::placeholders::_2));
+                    std::function<void(const tl::request &)> popFunc(std::bind(
+                        &basket::priority_queue<MappedType,
+                        Compare>::ThalliumLocalPop, this, std::placeholders::_1));
+                    std::function<void(const tl::request &)> sizeFunc(std::bind(
+                        &basket::priority_queue<MappedType,
+                        Compare>::ThalliumLocalSize, this, std::placeholders::_1));
+                    std::function<void(const tl::request &)> topFunc(std::bind(
+                        &basket::priority_queue<MappedType,
+                        Compare>::ThalliumLocalTop, this,
+                        std::placeholders::_1));
+                    rpc->bind(func_prefix+"_Push", pushFunc);
+                    rpc->bind(func_prefix+"_Pop", popFunc);
+                    rpc->bind(func_prefix+"_Top", topFunc);
+                    rpc->bind(func_prefix+"_Size", sizeFunc);
+                    break;
+                }
+#endif
+        }
     }
     /* Make clients wait untill all servers reach here*/
     MPI_Barrier(MPI_COMM_WORLD);
     /* Map the clients to their respective memory pools */
-    if (!is_server) {
+    if (!is_server && server_on_node) {
         segment = bip::managed_shared_memory(bip::open_only, name.c_str());
         std::pair<Queue*, bip::managed_shared_memory::size_type> res;
         res = segment.find<Queue> ("Queue");
@@ -103,10 +142,9 @@ priority_queue<MappedType,
  * @return bool, true if Put was successful else false.
  */
 template<typename MappedType, typename Compare>
-bool priority_queue<MappedType, Compare>::LocalPush(MappedType data,
-                                                    uint16_t key_int) {
+bool priority_queue<MappedType, Compare>::LocalPush(MappedType &data) {
     AutoTrace trace = AutoTrace("basket::priority_queue::Push(local)",
-                                data, key_int);
+                                data);
     bip::scoped_lock<bip::interprocess_mutex> lock(*mutex);
     queue->push(data);
     return true;
@@ -120,14 +158,15 @@ bool priority_queue<MappedType, Compare>::LocalPush(MappedType data,
  * @return bool, true if Put was successful else false.
  */
 template<typename MappedType, typename Compare>
-bool priority_queue<MappedType, Compare>::Push(MappedType data,
-                                               uint16_t key_int) {
+bool priority_queue<MappedType, Compare>::Push(MappedType &data,
+                                               uint16_t &key_int) {
     if (key_int == my_server && server_on_node) {
-        return LocalPush(data, key_int);
+        return LocalPush(data);
     } else {
         AutoTrace trace = AutoTrace("basket::priority_queue::Push(remote)",
                                     data, key_int);
-        return rpc->call(key_int, func_prefix+"_Push", data).template as<bool>();
+        return RPC_CALL_WRAPPER("_Push", key_int, bool,
+                                data);
     }
 }
 
@@ -139,9 +178,8 @@ bool priority_queue<MappedType, Compare>::Push(MappedType data,
  */
 template<typename MappedType, typename Compare>
 std::pair<bool, MappedType>
-priority_queue<MappedType, Compare>::LocalPop(uint16_t key_int) {
-    AutoTrace trace = AutoTrace("basket::priority_queue::Pop(local)",
-                                key_int);
+priority_queue<MappedType, Compare>::LocalPop() {
+    AutoTrace trace = AutoTrace("basket::priority_queue::Pop(local)");
     bip::scoped_lock<bip::interprocess_mutex> lock(*mutex);
     if (queue->size() > 0) {
         MappedType value = queue->top();
@@ -160,14 +198,14 @@ priority_queue<MappedType, Compare>::LocalPop(uint16_t key_int) {
  */
 template<typename MappedType, typename Compare>
 std::pair<bool, MappedType>
-priority_queue<MappedType, Compare>::Pop(uint16_t key_int) {
+priority_queue<MappedType, Compare>::Pop(uint16_t &key_int) {
     if (key_int == my_server && server_on_node) {
-        return LocalPop(key_int);
+        return LocalPop();
     } else {
         AutoTrace trace = AutoTrace("basket::priority_queue::Pop(remote)",
                                     key_int);
-        return rpc->call(key_int, func_prefix+"_Pop").template
-                as<std::pair<bool, MappedType>>();
+        typedef std::pair<bool, MappedType> ret_type;
+        return RPC_CALL_WRAPPER1("_Pop", key_int, ret_type); 
     }
 }
 
@@ -179,9 +217,8 @@ priority_queue<MappedType, Compare>::Pop(uint16_t key_int) {
  */
 template<typename MappedType, typename Compare>
 std::pair<bool, MappedType>
-priority_queue<MappedType, Compare>::LocalTop(uint16_t key_int) {
-    AutoTrace trace = AutoTrace("basket::priority_queue::Top(local)",
-                                key_int);
+priority_queue<MappedType, Compare>::LocalTop() {
+    AutoTrace trace = AutoTrace("basket::priority_queue::Top(local)");
     bip::scoped_lock<bip::interprocess_mutex> lock(*mutex);
     if (queue->size() > 0) {
         MappedType value = queue->top();
@@ -199,14 +236,14 @@ priority_queue<MappedType, Compare>::LocalTop(uint16_t key_int) {
  */
 template<typename MappedType, typename Compare>
 std::pair<bool, MappedType>
-priority_queue<MappedType, Compare>::Top(uint16_t key_int) {
+priority_queue<MappedType, Compare>::Top(uint16_t &key_int) {
     if (key_int == my_server && server_on_node) {
-        return LocalTop(key_int);
+        return LocalTop();
     } else {
         AutoTrace trace = AutoTrace("basket::priority_queue::Top(remote)",
                                     key_int);
-        return rpc->call(key_int, func_prefix+"_Pop").template
-                as<std::pair<bool, MappedType>>();
+        typedef std::pair<bool, MappedType> ret_type;
+        return RPC_CALL_WRAPPER1("_Top", key_int, ret_type);
     }
 }
 
@@ -216,9 +253,8 @@ priority_queue<MappedType, Compare>::Top(uint16_t key_int) {
  * @return return a size of the priority queue
  */
 template<typename MappedType, typename Compare>
-size_t priority_queue<MappedType, Compare>::LocalSize(uint16_t key_int) {
-    AutoTrace trace = AutoTrace("basket::priority_queue::Size(local)",
-                                key_int);
+size_t priority_queue<MappedType, Compare>::LocalSize() {
+    AutoTrace trace = AutoTrace("basket::priority_queue::Size(local)");
     bip::scoped_lock<bip::interprocess_mutex> lock(*mutex);
     size_t value = queue->size();
     return value;
@@ -231,13 +267,13 @@ size_t priority_queue<MappedType, Compare>::LocalSize(uint16_t key_int) {
  * @return return a size of the priority queue
  */
 template<typename MappedType, typename Compare>
-size_t priority_queue<MappedType, Compare>::Size(uint16_t key_int) {
+size_t priority_queue<MappedType, Compare>::Size(uint16_t &key_int) {
     if (key_int == my_server && server_on_node) {
-        return LocalSize(key_int);
+        return LocalSize();
     } else {
         AutoTrace trace = AutoTrace("basket::priority_queue::Top(remote)",
                                     key_int);
-        return rpc->call(key_int, func_prefix+"_Size").template as<size_t>();
+        return RPC_CALL_WRAPPER1("_Size", key_int, size_t);
     }
 }
 #endif  // INCLUDE_BASKET_PRIORITY_QUEUE_PRIORITY_QUEUE_CPP_

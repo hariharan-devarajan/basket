@@ -28,14 +28,16 @@ queue<MappedType>::queue(std::string name_,
                          bool is_server_,
                          uint16_t my_server_,
                          int num_servers_,
-                         bool server_on_node_)
+                         bool server_on_node_,
+                         std::string processor_name_)
         : is_server(is_server_), my_server(my_server_), num_servers(num_servers_),
           comm_size(1), my_rank(0), memory_allocated(1024ULL * 1024ULL * 128ULL),
           name(name_), segment(),
           my_queue(), func_prefix(name_),
           server_on_node(server_on_node_) {
     AutoTrace trace = AutoTrace("basket::queue(local)", name_,
-                                is_server_, my_server_, num_servers_);
+                                is_server_, my_server_, num_servers_,
+                                server_on_node_, processor_name_);
     /* Initialize MPI rank and size of world */
     MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
@@ -43,7 +45,7 @@ queue<MappedType>::queue(std::string name_,
        spawned on one node*/
     this->name += "_" + std::to_string(my_server);
     rpc = Singleton<RPC>::GetInstance("RPC_SERVER_LIST", is_server_, my_server_,
-                                      num_servers_);
+                                      num_servers_, server_on_node_, processor_name_);
     if (is_server) {
         /* Delete existing instance of shared memory space*/
         bip::shared_memory_object::remove(name.c_str());
@@ -55,25 +57,56 @@ queue<MappedType>::queue(std::string name_,
         my_queue = segment.construct<Queue>("Queue")(alloc_inst);
         mutex = segment.construct<bip::interprocess_mutex>("mtx")();
         /* Create a RPC server and map the methods to it. */
-        std::function<bool(MappedType, uint16_t)> pushFunc(
-            std::bind(&basket::queue<MappedType>::LocalPush, this,
-                      std::placeholders::_1, std::placeholders::_2));
-        std::function<std::pair<bool, MappedType>(uint16_t)> popFunc(std::bind(
-            &queue::LocalPop, this, std::placeholders::_1));
-        std::function<size_t(uint16_t)> sizeFunc(std::bind(
-            &queue::LocalSize, this, std::placeholders::_1));
-        std::function<bool(uint16_t)> waitForElementFunc(std::bind(
-            &queue::LocalWaitForElement, this,
-            std::placeholders::_1));
-        rpc->bind(func_prefix+"_Push", pushFunc);
-        rpc->bind(func_prefix+"_Pop", popFunc);
-        rpc->bind(func_prefix+"_WaitForElement", waitForElementFunc);
-        rpc->bind(func_prefix+"_Size", sizeFunc);
+        switch (CONF->RPC_IMPLEMENTATION) {
+#ifdef BASKET_ENABLE_RPCLIB
+            case RPCLIB: {
+                std::function<bool(MappedType &)> pushFunc(
+                    std::bind(&basket::queue<MappedType>::LocalPush, this,
+                              std::placeholders::_1));
+                std::function<std::pair<bool, MappedType>(void)> popFunc(std::bind(
+                    &basket::queue<MappedType>::LocalPop, this));
+                std::function<size_t(void)> sizeFunc(std::bind(
+                    &basket::queue<MappedType>::LocalSize, this));
+                std::function<bool(void)> waitForElementFunc(std::bind(
+                    &basket::queue<MappedType>::LocalWaitForElement, this));
+                rpc->bind(func_prefix+"_Push", pushFunc);
+                rpc->bind(func_prefix+"_Pop", popFunc);
+                rpc->bind(func_prefix+"_WaitForElement", waitForElementFunc);
+                rpc->bind(func_prefix+"_Size", sizeFunc);
+                break;
+            }
+#endif
+#ifdef BASKET_ENABLE_THALLIUM_TCP
+            case THALLIUM_TCP:
+#endif
+#ifdef BASKET_ENABLE_THALLIUM_ROCE
+            case THALLIUM_ROCE:
+#endif
+#if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
+                {
+                    std::function<void(const tl::request &, MappedType &)> pushFunc(
+                        std::bind(&basket::queue<MappedType>::ThalliumLocalPush, this,
+                                  std::placeholders::_1, std::placeholders::_2));
+                    std::function<void(const tl::request &)> popFunc(std::bind(
+                        &basket::queue<MappedType>::ThalliumLocalPop, this, std::placeholders::_1));
+                    std::function<void(const tl::request &)> sizeFunc(std::bind(
+                        &basket::queue<MappedType>::ThalliumLocalSize, this, std::placeholders::_1));
+                    std::function<void(const tl::request &)> waitForElementFunc(std::bind(
+                        &basket::queue<MappedType>::ThalliumLocalWaitForElement, this,
+                        std::placeholders::_1));
+                    rpc->bind(func_prefix+"_Push", pushFunc);
+                    rpc->bind(func_prefix+"_Pop", popFunc);
+                    rpc->bind(func_prefix+"_WaitForElement", waitForElementFunc);
+                    rpc->bind(func_prefix+"_Size", sizeFunc);
+                    break;
+                }
+#endif
+        }
     }
     /* Make clients wait until all servers reach here*/
     MPI_Barrier(MPI_COMM_WORLD);
     /* Map the clients to their respective memory pools */
-    if (!is_server) {
+    if (!is_server && server_on_node) {
         segment = bip::managed_shared_memory(bip::open_only, name.c_str());
         std::pair<Queue*, bip::managed_shared_memory::size_type> res;
         res = segment.find<Queue> ("Queue");
@@ -93,10 +126,8 @@ queue<MappedType>::queue(std::string name_,
  * @return bool, true if Put was successful else false.
  */
 template<typename MappedType>
-bool queue<MappedType>::LocalPush(MappedType data,
-                                  uint16_t key_int) {
-    AutoTrace trace = AutoTrace("basket::queue::Push(local)", data,
-                                key_int);
+bool queue<MappedType>::LocalPush(MappedType &data) {
+    AutoTrace trace = AutoTrace("basket::queue::Push(local)", data);
     bip::scoped_lock<bip::interprocess_mutex> lock(*mutex);
     my_queue->push_back(std::move(data));
     return true;
@@ -109,14 +140,15 @@ bool queue<MappedType>::LocalPush(MappedType data,
  * @return bool, true if Put was successful else false.
  */
 template<typename MappedType>
-bool queue<MappedType>::Push(MappedType data,
-                             uint16_t key_int) {
+bool queue<MappedType>::Push(MappedType &data,
+                             uint16_t &key_int) {
     if (key_int == my_server && server_on_node) {
-        return LocalPush(data, key_int);
+        return LocalPush(data);
     } else {
         AutoTrace trace = AutoTrace("basket::queue::Push(remote)", data,
                                     key_int);
-        return rpc->call(key_int, func_prefix+"_Push", data).template as<bool>();
+        return RPC_CALL_WRAPPER("_Push", key_int, bool,
+                                data);
     }
 }
 
@@ -128,9 +160,8 @@ bool queue<MappedType>::Push(MappedType data,
  */
 template<typename MappedType>
 std::pair<bool, MappedType>
-queue<MappedType>::LocalPop(uint16_t key_int) {
-    AutoTrace trace = AutoTrace("basket::queue::Pop(local)",
-                                key_int);
+queue<MappedType>::LocalPop() {
+    AutoTrace trace = AutoTrace("basket::queue::Pop(local)");
     bip::scoped_lock<bip::interprocess_mutex> lock(*mutex);
     if (my_queue->size() > 0) {
         MappedType value = my_queue->front();
@@ -149,39 +180,37 @@ queue<MappedType>::LocalPop(uint16_t key_int) {
  */
 template<typename MappedType>
 std::pair<bool, MappedType>
-queue<MappedType>::Pop(uint16_t key_int) {
+queue<MappedType>::Pop(uint16_t &key_int) {
     if (key_int == my_server && server_on_node) {
-        return LocalPop(key_int);
+        return LocalPop();
     } else {
         AutoTrace trace = AutoTrace("basket::queue::Pop(remote)",
                                     key_int);
-        return rpc->call(key_int, func_prefix+"_Pop").template
-                as<std::pair<bool, MappedType>>();
+        typedef std::pair<bool, MappedType> ret_type;
+        return RPC_CALL_WRAPPER1("_Pop", key_int, ret_type);
     }
 }
 
 template<typename MappedType>
-bool queue<MappedType>::LocalWaitForElement(uint16_t key_int) {
-    AutoTrace trace = AutoTrace(
-        "basket::queue::WaitForElement(local)", key_int);
+bool queue<MappedType>::LocalWaitForElement() {
+    AutoTrace trace = AutoTrace("basket::queue::WaitForElement(local)");
     int count = 0;
     while (my_queue->size() == 0) {
         usleep(10);
-        if (count == 0) printf("Server %d, No Events in Queue\n", key_int);
+        if (count == 0) printf("Server %d, No Events in Queue\n", my_rank);
         count++;
     }
     return true;
 }
 
 template<typename MappedType>
-bool queue<MappedType>::WaitForElement(uint16_t key_int) {
+bool queue<MappedType>::WaitForElement(uint16_t &key_int) {
     if (key_int == my_server && server_on_node) {
-        return LocalWaitForElement(key_int);
+        return LocalWaitForElement();
     } else {
         AutoTrace trace = AutoTrace(
             "basket::queue::WaitForElement(remote)", key_int);
-        return rpc->call(key_int, func_prefix+"_WaitForElement").template
-                as<bool>();
+        return RPC_CALL_WRAPPER1("_WaitForElement", key_int, bool);
     }
 }
 
@@ -191,9 +220,8 @@ bool queue<MappedType>::WaitForElement(uint16_t key_int) {
  * @return return a size of the queue
  */
 template<typename MappedType>
-size_t queue<MappedType>::LocalSize(uint16_t key_int) {
-    AutoTrace trace = AutoTrace("basket::queue::Size(local)",
-                                key_int);
+size_t queue<MappedType>::LocalSize() {
+    AutoTrace trace = AutoTrace("basket::queue::Size(local)");
     bip::scoped_lock<bip::interprocess_mutex> lock(*mutex);
     size_t value = my_queue->size();
     return value;
@@ -205,13 +233,13 @@ size_t queue<MappedType>::LocalSize(uint16_t key_int) {
  * @return return a size of the queue
  */
 template<typename MappedType>
-size_t queue<MappedType>::Size(uint16_t key_int) {
+size_t queue<MappedType>::Size(uint16_t &key_int) {
     if (key_int == my_server && server_on_node) {
-        return LocalSize(key_int);
+        return LocalSize();
     } else {
         AutoTrace trace = AutoTrace("basket::queue::Size(remote)",
                                     key_int);
-        return rpc->call(key_int, func_prefix+"_Size").template as<size_t>();
+        return RPC_CALL_WRAPPER1("_Size", key_int, size_t);
     }
 }
 // template class queue<int>;

@@ -119,13 +119,13 @@ Response RPC::call(uint16_t server_index,
             std::string lookup_str = CONF->VERBS_CONF + "://" + std::string(ip) + ":" + 
                     std::to_string(port);
             tl::endpoint server_endpoint = thallium_client->lookup(lookup_str);
-            if (func_name == "test_Get") {
-                tl::bulk bulk_handle = remote_procedure.on(server_endpoint)(std::forward<Args>(args)...);
-                return std::make_pair(lookup_str, bulk_handle);
-            }
-            else {
+            // if (func_name == "test_Get") {
+            //     tl::bulk bulk_handle = remote_procedure.on(server_endpoint)(std::forward<Args>(args)...);
+            //     return std::make_pair(lookup_str, bulk_handle);
+            // }
+            // else {
                 return remote_procedure.on(server_endpoint)(std::forward<Args>(args)...);
-            }
+            // }
             break;
         }
 #endif
@@ -133,14 +133,15 @@ Response RPC::call(uint16_t server_index,
 }
 
 #ifdef BASKET_ENABLE_THALLIUM_ROCE
+// These are still experimental for using RDMA bulk transfers
 template<typename MappedType>
-MappedType RPC::prep_rdma_server(const tl::endpoint endpoint, tl::bulk &bulk_handle) {
+MappedType RPC::prep_rdma_server(tl::endpoint endpoint, tl::bulk &bulk_handle) {
     // MappedType buffer;
     std::string buffer;
-    buffer.resize(1000000000, 'a');
+    buffer.resize(1000000, 'a');
     std::vector<std::pair<void *, size_t>> segments(1);
     segments[0].first = (void *)(&buffer[0]);
-    segments[0].second = 1000000000 + 1;
+    segments[0].second = 1000000 + 1;
     tl::bulk local = thallium_engine->expose(segments, tl::bulk_mode::write_only);
     bulk_handle.on(endpoint) >> local;
     return buffer;
@@ -151,7 +152,7 @@ tl::bulk RPC::prep_rdma_client(MappedType &data) {
     MappedType my_buffer = data;
     std::vector<std::pair<void *, std::size_t>> segments(1);
     segments[0].first = (void *)&my_buffer[0];
-    segments[0].second = 1000000000 + 1;
+    segments[0].second = 1000000 + 1;
     return thallium_engine->expose(segments, tl::bulk_mode::read_only);
 }
 #endif

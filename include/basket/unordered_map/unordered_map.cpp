@@ -35,11 +35,15 @@ unordered_map<KeyType, MappedType>::unordered_map(std::string name_,
                                                   uint16_t my_server_,
                                                   int num_servers_,
                                                   bool server_on_node_,
-						  std::string processor_name_)
+                                                  std::string processor_name_)
         : is_server(is_server_), my_server(my_server_), num_servers(num_servers_),
           comm_size(1), my_rank(0), memory_allocated(1024ULL * 1024ULL * 128ULL),
           name(name_), segment(), myHashMap(), func_prefix(name_),
           server_on_node(server_on_node_) {
+    AutoTrace trace = AutoTrace("basket::unordered_map", name_, is_server_,
+                                my_server_, num_servers_, server_on_node_,
+                                processor_name_);
+
     /* Initialize MPI rank and size of world */
     MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
@@ -48,7 +52,7 @@ unordered_map<KeyType, MappedType>::unordered_map(std::string name_,
     this->name += "_" + std::to_string(my_server);
     /* if current rank is a server */
     rpc = Singleton<RPC>::GetInstance("RPC_SERVER_LIST", is_server_, my_server_,
-                                      num_servers_, processor_name_);
+                                      num_servers_, server_on_node_, processor_name_);
     if (is_server) {
         /* Delete existing instance of shared memory space*/
         boost::interprocess::shared_memory_object::remove(name.c_str());
@@ -66,13 +70,13 @@ unordered_map<KeyType, MappedType>::unordered_map(std::string name_,
   switch (CONF->RPC_IMPLEMENTATION) {
 #ifdef BASKET_ENABLE_RPCLIB
   case RPCLIB: {
-        std::function<bool(KeyType, MappedType)> putFunc(
+        std::function<bool(KeyType &, MappedType &)> putFunc(
             std::bind(&unordered_map<KeyType, MappedType>::LocalPut, this,
                       std::placeholders::_1, std::placeholders::_2));
-        std::function<std::pair<bool, MappedType>(KeyType)> getFunc(
+        std::function<std::pair<bool, MappedType>(KeyType &)> getFunc(
             std::bind(&unordered_map<KeyType, MappedType>::LocalGet, this,
                       std::placeholders::_1));
-        std::function<std::pair<bool, MappedType>(KeyType)> eraseFunc(
+        std::function<std::pair<bool, MappedType>(KeyType &)> eraseFunc(
             std::bind(&unordered_map<KeyType, MappedType>::LocalErase, this,
                       std::placeholders::_1));
         std::function<std::vector<std::pair<KeyType, MappedType>>(void)>
@@ -96,18 +100,18 @@ unordered_map<KeyType, MappedType>::unordered_map(std::string name_,
 #if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
     {
 
-     // std::function<void(const tl::request &, KeyType, MappedType)> putFunc(
-     //        std::bind(&unordered_map<KeyType, MappedType>::ThalliumLocalPut, this,
-     //                  std::placeholders::_1, std::placeholders::_2,
-     //                  std::placeholders::_3));
-        std::function<void(const tl::request &, tl::bulk &, KeyType)> putFunc(
+     std::function<void(const tl::request &, KeyType &, MappedType &)> putFunc(
             std::bind(&unordered_map<KeyType, MappedType>::ThalliumLocalPut, this,
                       std::placeholders::_1, std::placeholders::_2,
                       std::placeholders::_3));
-        std::function<void(const tl::request &, KeyType)> getFunc(
+        // std::function<void(const tl::request &, tl::bulk &, KeyType &)> putFunc(
+        //     std::bind(&unordered_map<KeyType, MappedType>::ThalliumLocalPut, this,
+        //               std::placeholders::_1, std::placeholders::_2,
+        //               std::placeholders::_3));
+        std::function<void(const tl::request &, KeyType &)> getFunc(
             std::bind(&unordered_map<KeyType, MappedType>::ThalliumLocalGet, this,
                       std::placeholders::_1, std::placeholders::_2));
-        std::function<void(const tl::request &, KeyType)> eraseFunc(
+        std::function<void(const tl::request &, KeyType &)> eraseFunc(
             std::bind(&unordered_map<KeyType, MappedType>::ThalliumLocalErase, this,
                       std::placeholders::_1, std::placeholders::_2));
         std::function<void(const tl::request &)>
@@ -151,12 +155,11 @@ unordered_map<KeyType, MappedType>::unordered_map(std::string name_,
  * @return bool, true if Put was successful else false.
  */
 template<typename KeyType, typename MappedType>
-bool unordered_map<KeyType, MappedType>::LocalPut(KeyType key,
-                                                  MappedType data) {
-    uint16_t key_int = (uint16_t)keyHash(key)% num_servers;
-    // boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex>lock(*mutex);
-    auto retval = myHashMap->insert_or_assign(key, data);
-    return retval.second;
+bool unordered_map<KeyType, MappedType>::LocalPut(KeyType &key,
+                                                  MappedType &data) {
+    boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex>lock(*mutex);
+    myHashMap->insert_or_assign(key, data);
+    return true;
 }
 /**
  * Put the data into the unordered map. Uses key to decide the server to hash it to,
@@ -165,20 +168,20 @@ bool unordered_map<KeyType, MappedType>::LocalPut(KeyType key,
  * @return bool, true if Put was successful else false.
  */
 template<typename KeyType, typename MappedType>
-bool unordered_map<KeyType, MappedType>::Put(KeyType key,
-                                             MappedType data) {
+bool unordered_map<KeyType, MappedType>::Put(KeyType &key,
+                                             MappedType &data) {
     uint16_t key_int = (uint16_t)keyHash(key)% num_servers;
     if (key_int == my_server && server_on_node) {
         return LocalPut(key, data);
     } else {
-        // #ifdef BASKET_ENABLE_THALLIUM_ROCE
-        // tl::bulk bulk_handle = rpc->prep_rdma_client<MappedType>(data);
-        // return RPC_CALL_WRAPPER("_Put", key_int, bool,
-        //                         bulk_handle, key);
-        // #endif
-
+// #ifdef BASKET_ENABLE_THALLIUM_ROCE
+//         tl::bulk bulk_handle = rpc->prep_rdma_client<MappedType>(data);
+//         return RPC_CALL_WRAPPER("_Put", key_int, bool,
+//                                 bulk_handle, key);
+// #else
         return RPC_CALL_WRAPPER("_Put", key_int, bool,
                                 key, data);
+// #endif
     }
 }
 
@@ -190,7 +193,7 @@ bool unordered_map<KeyType, MappedType>::Put(KeyType key,
  */
 template<typename KeyType, typename MappedType>
 std::pair<bool, MappedType>
-unordered_map<KeyType, MappedType>::LocalGet(KeyType key) {
+unordered_map<KeyType, MappedType>::LocalGet(KeyType &key) {
     boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex>
             lock(*mutex);
     typename MyHashMap::iterator iterator = myHashMap->find(key);
@@ -209,7 +212,7 @@ unordered_map<KeyType, MappedType>::LocalGet(KeyType key) {
  */
 template<typename KeyType, typename MappedType>
 std::pair<bool, MappedType>
-unordered_map<KeyType, MappedType>::Get(KeyType key) {
+unordered_map<KeyType, MappedType>::Get(KeyType &key) {
     size_t key_hash = keyHash(key);
     uint16_t key_int = static_cast<uint16_t>(key_hash % num_servers);
     if (key_int == my_server && server_on_node) {
@@ -219,7 +222,6 @@ unordered_map<KeyType, MappedType>::Get(KeyType key) {
         // #ifdef BASKET_ENABLE_THALLIUM_ROCE
         // auto rpc_result = rpc->call<tl::packed_response>( key_int, func_prefix + "_Get" , key).template as< std::pair<tl::endpoint, tl::bulk> >();
 
-        // // NOTE for me tomorrow: This fails because we can't serialize the std::pair<tl::endpoint, tl::bulk> structure. I can try creating a unique struct, but this would take time.
         // auto final_result = rpc->prep_rdma_server<std::string>(rpc_result.first, rpc_result.second);
         // return std::make_pair(true, final_result);
         // #ENDIF
@@ -235,7 +237,7 @@ unordered_map<KeyType, MappedType>::Get(KeyType key) {
 
 template<typename KeyType, typename MappedType>
 std::pair<bool, MappedType>
-unordered_map<KeyType, MappedType>::LocalErase(KeyType key) {
+unordered_map<KeyType, MappedType>::LocalErase(KeyType &key) {
     boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex>
             lock(*mutex);
     size_t s = myHashMap->erase(key);
@@ -244,7 +246,7 @@ unordered_map<KeyType, MappedType>::LocalErase(KeyType key) {
 
 template<typename KeyType, typename MappedType>
 std::pair<bool, MappedType>
-unordered_map<KeyType, MappedType>::Erase(KeyType key) {
+unordered_map<KeyType, MappedType>::Erase(KeyType &key) {
     size_t key_hash = keyHash(key);
     uint16_t key_int = static_cast<uint16_t>(key_hash % num_servers);
     if (key_int == my_server && server_on_node) {
@@ -269,9 +271,9 @@ unordered_map<KeyType, MappedType>::GetAllData() {
     for (int i = 0; i < num_servers; ++i) {
         if (i != my_server) {
 	  
-	  typedef std::vector<std::pair<KeyType, MappedType> > ret_type;
-	  auto server = RPC_CALL_WRAPPER1("_GetAllData",i, ret_type);
-	  final_values.insert(final_values.end(), server.begin(), server.end());
+            typedef std::vector<std::pair<KeyType, MappedType> > ret_type;
+            auto server = RPC_CALL_WRAPPER1("_GetAllData",i, ret_type);
+            final_values.insert(final_values.end(), server.begin(), server.end());
         }
     }
     return final_values;

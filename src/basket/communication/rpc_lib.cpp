@@ -48,9 +48,10 @@ RPC::~RPC() {
 }
 
 RPC::RPC(std::string name_, bool is_server_, uint16_t my_server_,
-         int num_servers_, std::string processor_name_) :
+         int num_servers_, bool server_on_node_, std::string processor_name_) :
         isInitialized(false), my_server(my_server_), is_server(is_server_),
         server_list(), server_port(RPC_PORT),
+        server_on_node(server_on_node_),
         processor_name(processor_name_),
         num_servers(num_servers_), name(name_),
         memory_allocated(1024ULL * 1024ULL), segment() {
@@ -80,8 +81,12 @@ RPC::RPC(std::string name_, bool is_server_, uint16_t my_server_,
             }
 
             /* Get current servers rank in the server group starts with 1*/
-            int ranks_per_server = comm_size / num_servers;
-            int server_rank = (my_rank / ranks_per_server) + 1;
+            int server_rank;
+            MPI_Comm_rank(scomm, &server_rank);
+            server_rank += 1;
+            // int ranks_per_server = comm_size / num_servers;
+            // int server_rank = (my_rank / ranks_per_server) + 1;
+
             /* Synchronize hostnames accross all servers*/
             int *recvcounts = NULL;
             if (server_rank == 1)
@@ -155,7 +160,6 @@ RPC::RPC(std::string name_, bool is_server_, uint16_t my_server_,
                 }
 #endif
             }
-
             std::string final_server_list_str(final_server_list);
             std::vector<std::string> temp_list = std::vector<std::string>();
             boost::split(temp_list, final_server_list_str, boost::is_any_of(","));
@@ -193,7 +197,6 @@ RPC::RPC(std::string name_, bool is_server_, uint16_t my_server_,
 #endif
             }
         }
-
         MPI_Barrier(MPI_COMM_WORLD);
         if (!is_server) {
             segment = bip::managed_shared_memory(bip::open_only, name.c_str());
@@ -201,6 +204,7 @@ RPC::RPC(std::string name_, bool is_server_, uint16_t my_server_,
             res = segment.find<MyVector>("MyVector");
             server_list = res.first;
         }
+
         /* Create server list from the broadcast list*/
         isInitialized = true;
         MPI_Barrier(MPI_COMM_WORLD);
@@ -215,8 +219,7 @@ void RPC::run(size_t workers) {
         switch (CONF->RPC_IMPLEMENTATION) {
 #ifdef BASKET_ENABLE_RPCLIB
             case RPCLIB: {
-
-                rpclib_server->async_run(workers);
+                    rpclib_server->async_run(workers);
                 break;
             }
 #endif
@@ -228,7 +231,6 @@ void RPC::run(size_t workers) {
 #endif
 #if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
                 {
-
                     thallium_engine = Singleton<tl::engine>::GetInstance(engine_init_str, THALLIUM_SERVER_MODE,true,RPC_THREADS);
                     break;
                 }
