@@ -12,7 +12,7 @@ The Basket Library compiles with cmake, so the general procedure is
 ```bash
 cd basket
 mkdir build
-cmake ..
+cmake -DBASKET_ENABLE_RPCLIB ..
 make
 sudo make install
 ```
@@ -21,16 +21,35 @@ If you want to install somewhere besides `/usr/local`, then use
 ```bash
 cd basket
 mkdir build
-cmake -DCMAKE_INSTALL_PREFIX:PATH=/wherever ..
+cmake -DCMAKE_INSTALL_PREFIX:PATH=/wherever -DBASKET_ENABLE_RPCLIB ..
 make
 make install
 ```
 
+A flag should be added to cmake to indicate preferred RPC library,
+otherwise behavior is undefined. If compiling with RPCLib, use
+-DBASKET_ENABLE_RPCLIB. If compiling with Thallium, use either
+-DBASKET_ENABLE_THALLIUM_TCP or -DBASKET_ENABLE_THALLIUM_ROCE
+
 ### Dependencies
 - mpi
 - boost
-- rpclib
+- RPC (pick one and compile appropriately)
+  - rpclib
+  - Thallium (wrapper over Mercury)
 - glibc (for librt and posix threads)
+
+#### Recommended Versions
+We tested with mpich 3.3.1, boost 1.69.0, rpclib 2.2.1, mercury 1.0.1,
+and thallium 0.4.0. Please consider patching mercury using the patch
+specified below, especially if you're using the Thallium RoCE
+transport. Also of note is that we uses libfabric (ofi) as the default
+Mercury transport (for TCP and RoCE (verbs)). We used libfabric
+version 1.11.0. If you would rather use a different Mercury transport,
+please change the configuration via
+include/basket/common/configuration_manager.h. The TCP_CONF string is
+what we use for tcp via Mercury, and the VERBS_CONF string is how we
+do verbs via Mercury. The VERBS_DOMAIN is the domain used for RoCE.
 
 ## Usage
 
@@ -41,27 +60,81 @@ of the server, and the number of servers it utilizes (generally
 one). In the test/ directory, you will find examples for how to use
 each data structure, and also for the clock and sequencer. Data
 structures typically assume that we are running the server and clients
-on the same node.
+on the same node, but this need not be the case. However, currently
+please keep a server on each node in the system, because server lists
+are initialized on a shared memory right now, so clients won't be able
+to find servers if there is no server to place the server list in
+the shared memory on their node. That said, you can easily configure
+clients to work with servers that are not on their node.
 
-### GlobalClock
+### Structure Initialization
 
-GlobalClock makes the assumption that a node is running a server and
-multiple clients (this is the assumption that all structures
-make). Technically one node could run multiple sets of servers and
-clients, but for our purposes we will call the set of a server with
-clients a node. GlobalClock uses RPC calls to access time on other
-nodes via the GetTimeServer method. GetTime gets the local node
-time. The test is ClockTest, and it runs as an MPI program (most tests
-do). ClockTest can have as many ranks as you like, so long as it has
-more ranks than the number of servers. The number of servers can be
-passed as an argument, but defaults to one. ClockTest will go through
-each MPI rank (where ranks 0 to (n-1) are servers and clients are
-assigned with modular arithmetic) and output the time at that rank and
-the time at each server accessed from that rank with
-GetTimeServer(). It uses various MPI barriers to ensure that output
-doesn't conflict with itself.
+When creating a basket structure, you currently need to pass a lot of
+parameters. For example:
+
+basket::unordered_map(std::string name_, bool is_server_,
+                      uint16_t my_server_, int num_servers_,
+                      bool server_on_node_,
+                      std::string processor_name_ = "");
+
+name should be a unique name used to initialize the shared memory.
+
+is_server should be true when we are on a server, false otherwise.
+
+my_server should be the relative rank of your server (if servers are
+on ranks 3 and 5, server relative ranks are still 0 and 1)
+
+server_on_node is true when my_server is on the current node.
+
+processor_name only needs to be initialized when you want to run
+servers on a special hostname (i.e. when you're using RoCE). In Ares
+we use this to add "-40g" to the name of the processor to switch to
+the 40 Gbit network.
+
+### unordered_map
+
+unordered_map makes the assumption that a node is running a server and
+multiple clients. the unordered_map_test will perform puts and gets on a
+std::unordered_map locally, a basket::unordered_map locally, and a
+basket::unordered_map remotely.
+
+### Other Structures
+
+Basket also has queues, priority_queues, multimaps, maps,
+global_clocks, and global_sequence (sequencers). However, the tests
+for these structures are not ironed out yet. The structures are fully
+functional, however, and you should be able to figure them out by
+analogy with unordered_map.
 
 ### Testing on Ares cluster
+
+When testing on Ares cluster, make sure to change the hostfile at
+test/hostfile. It should have two mpi processes on the first node, and
+two on the second, as in:
+
+ares-comp-01:2
+ares-comp-02:2
+
+You can either run tests using ctest or mpirun. If you aren't familiar
+with the tests, ctest is preferred.
+
+`ctest -N` lists the tests you can run.
+
+`ctest -V -R ares_unordered_map_test_MPI_4_2_500_1000_1_0` runs the
+unordered_map test.
+
+`ctest -V` runs all tests available.
+
+The command to run a test without ctest is:
+
+LD_PRELOAD=`pwd`/libbasket.so mpirun -f test/hostfile -n 4
+test/unordered_map_test 2 500 1000 1 0
+
+The arguments are ranks_per_server, num_requests, size_of_request,
+server_on_node, and debug. The variable size_of_request should be
+equal to TEST_REQUEST_SIZE in include/basket/common/constants.h, since
+we have not yet found a way to make dynamically configurable request
+sizes (due to serialization).
 
 ## Configure
 
@@ -92,10 +165,20 @@ $ ctest -V
 ```
 ## Patching Mercury 1.0.1 to work with RoCE
 
-For Basket to work with Mercury 1.0.1 with RoCE, it needs a patched version of Mercury.
-Assuming that Mercury 1.0.1 has been extracted to `./mercury-1.0.1` run our patch `mercury-1.0.1-RoCE.patch` in the `RoCE_Patch` folder as such 
+For Basket to work with Mercury 1.0.1 with RoCE, it needs a patched
+version of Mercury. The patch allows you to specify a domain to be
+used when connecting to a verbs interface (rather than looking up the
+domain), which is the only practical way to use RoCE. This patch will
+not work with other versions of Mercury, and it certainly won't work
+with previous versions, since it changes lookup syntax, and therefore
+assumes that lookup syntax is as in Mercury 1.0.1 to begin with
+(lookup syntax was actually changed in Mercury 1.0.1, so this
+certainly shouldn't work with older versions).
+
+Assuming that Mercury 1.0.1 has been extracted to `./mercury-1.0.1`
+run our patch `mercury-1.0.1-RoCE.patch` in the `RoCE_Patch` folder as
+such
 
 ```bash
 $ patch  -p0 <  mercury-1.0.1-RoCE.patch
 ```
-

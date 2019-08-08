@@ -34,5 +34,5 @@ endfunction()
 
 # Define MPI test case
 foreach (example ${examples})
-    mpi(ares 4 ${example} 2 1000 1000 1 0)
+    mpi(ares 4 ${example} 2 500 1000 1 0)
 endforeach()
