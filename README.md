@@ -45,7 +45,7 @@ and thallium 0.4.0. Please consider patching mercury using the patch
 specified below, especially if you're using the Thallium RoCE
 transport. Also of note is that we uses libfabric (ofi) as the default
 Mercury transport (for TCP and RoCE (verbs)). We used libfabric
-version 1.11.0. If you would rather use a different Mercury transport,
+version 1.8.x. If you would rather use a different Mercury transport,
 please change the configuration via
 include/basket/common/configuration_manager.h. The TCP_CONF string is
 what we use for tcp via Mercury, and the VERBS_CONF string is how we
