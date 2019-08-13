@@ -12,7 +12,7 @@ The Basket Library compiles with cmake, so the general procedure is
 ```bash
 cd basket
 mkdir build
-cmake -DBASKET_ENABLE_RPCLIB ..
+cmake -DBASKET_ENABLE_RPCLIB=true ..
 make
 sudo make install
 ```
@@ -21,7 +21,7 @@ If you want to install somewhere besides `/usr/local`, then use
 ```bash
 cd basket
 mkdir build
-cmake -DCMAKE_INSTALL_PREFIX:PATH=/wherever -DBASKET_ENABLE_RPCLIB ..
+cmake -DCMAKE_INSTALL_PREFIX:PATH=/wherever -DBASKET_ENABLE_RPCLIB=true ..
 make
 make install
 ```
