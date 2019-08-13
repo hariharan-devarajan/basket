@@ -33,6 +33,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <tuple>
 
 #include <basket/communication/rpc_lib.h>
 #include <basket/common/singleton.h>
@@ -84,7 +85,7 @@ class unordered_map {
     /** Class attributes**/
     int comm_size, my_rank, num_servers;
     uint16_t  my_server;
-  std::shared_ptr<RPC> rpc;
+    std::shared_ptr<RPC> rpc;
     really_long memory_allocated;
     bool is_server;
     boost::interprocess::managed_shared_memory segment;
@@ -92,6 +93,7 @@ class unordered_map {
     MyHashMap *myHashMap;
     boost::interprocess::interprocess_mutex* mutex;
     bool server_on_node;
+    std::unordered_map<std::string, std::string> binding_map;
 
   public:
     ~unordered_map();
@@ -100,6 +102,11 @@ class unordered_map {
                            uint16_t my_server_, int num_servers_,
                            bool server_on_node_,
                            std::string processor_name_ = "");
+
+    template <typename F>
+    void Bind(std::string rpc_name, F fun);
+
+    void BindClient(std::string rpc_name);
 
     bool LocalPut(KeyType &key, MappedType &data);
     std::pair<bool, MappedType> LocalGet(KeyType &key);
@@ -134,6 +141,24 @@ class unordered_map {
     std::pair<bool, MappedType> Erase(KeyType &key);
     std::vector<std::pair<KeyType, MappedType>> GetAllData();
     std::vector<std::pair<KeyType, MappedType>> GetAllDataInServer();
+
+    template<typename... CB_Tuple_Args>
+    bool LocalPutWithCallback(KeyType &key, MappedType &data,
+                              std::string cb_name,
+                              std::tuple<CB_Tuple_Args...> cb_args);
+    // std::pair<bool, MappedType> LocalGet(KeyType &key);
+    // std::pair<bool, MappedType> LocalErase(KeyType &key);
+    // std::vector<std::pair<KeyType, MappedType>> LocalGetAllDataInServer();
+
+    template<typename... CB_Args>
+    bool PutWithCallback(KeyType &key, MappedType &data,
+                         std::string cb_name,
+                         CB_Args... cb_args);
+
+    template<typename... CB_Tuple_Args, size_t... Is>
+    void callWithCallbackSequence(std::string cb_name,
+                                  std::tuple<CB_Tuple_Args...> cb_args,
+                                  std::index_sequence<Is...> sequence);
 };
 
 #include "unordered_map.cpp"

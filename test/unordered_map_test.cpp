@@ -53,7 +53,6 @@ struct KeyType{
         ar & a;
     }
 #endif
-
 };
 namespace std {
     template<>
@@ -136,6 +135,8 @@ int main (int argc,char* argv[])
     int client_comm_size;
     MPI_Comm_size(client_comm, &client_comm_size);
 
+    map.Bind("Put", [](int x){ std::cout << x << std::endl; });
+
     if (!is_server) {
         Timer llocal_map_timer=Timer();
         std::hash<KeyType> keyHash;
@@ -175,7 +176,7 @@ int main (int argc,char* argv[])
             size_t val=my_server;
             auto key=KeyType(val);
             local_map_timer.resumeTime();
-            map.Put(key,my_vals);
+            map.PutWithCallback(key,my_vals,"Put",42);
             local_map_timer.pauseTime();
         }
         double local_map_throughput=num_request/local_map_timer.getElapsedTime()*1000*size_of_elem*my_vals.size()/1024/1024;
