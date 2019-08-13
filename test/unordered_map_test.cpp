@@ -36,7 +36,9 @@ struct KeyType{
     size_t a;
     KeyType():a(0){}
     KeyType(size_t a_):a(a_){}
+#ifdef BASKET_ENABLE_RPCLIB
     MSGPACK_DEFINE(a);
+#endif
     /* equal operator for comparing two Matrix. */
     bool operator==(const KeyType &o) const {
         return a == o.a;
@@ -45,10 +47,12 @@ struct KeyType{
         a = other.a;
         return *this;
     }
+#if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
     template<typename A>
     void serialize(A& ar) const {
         ar & a;
     }
+#endif
 
 };
 namespace std {
