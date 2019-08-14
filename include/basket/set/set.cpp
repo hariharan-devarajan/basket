@@ -22,14 +22,14 @@
 #define INCLUDE_BASKET_SET_SET_CPP_
 
 /* Constructor to deallocate the shared memory*/
-template<typename KeyType, typename MappedType, typename Compare>
-set<KeyType, MappedType, Compare>::~set() {
+template<typename KeyType, typename Compare>
+set<KeyType, Compare>::~set() {
     if (is_server)
         boost::interprocess::shared_memory_object::remove(name.c_str());
 }
 
-template<typename KeyType, typename MappedType, typename Compare>
-set<KeyType, MappedType, Compare>::set(std::string name_,
+template<typename KeyType, typename Compare>
+set<KeyType, Compare>::set(std::string name_,
                                        bool is_server_,
                                        uint16_t my_server_,
                                        int num_servers_,
@@ -67,20 +67,20 @@ set<KeyType, MappedType, Compare>::set(std::string name_,
 #ifdef BASKET_ENABLE_RPCLIB
             case RPCLIB: {
                 std::function<bool(KeyType &, MappedType &)> putFunc(
-                    std::bind(&set<KeyType, MappedType, Compare>::LocalPut, this,
+                    std::bind(&set<KeyType, Compare>::LocalPut, this,
                               std::placeholders::_1, std::placeholders::_2));
                 std::function<std::pair<bool, MappedType>(KeyType &)> getFunc(
-                    std::bind(&set<KeyType, MappedType, Compare>::LocalGet, this,
+                    std::bind(&set<KeyType, Compare>::LocalGet, this,
                               std::placeholders::_1));
                 std::function<std::pair<bool, MappedType>(KeyType &)> eraseFunc(
-                    std::bind(&set<KeyType, MappedType, Compare>::LocalErase, this,
+                    std::bind(&set<KeyType, Compare>::LocalErase, this,
                               std::placeholders::_1));
                 std::function<std::vector<std::pair<KeyType, MappedType>>(void)>
                         getAllDataInServerFunc(std::bind(
-                            &set<KeyType, MappedType, Compare>::LocalGetAllDataInServer,
+                            &set<KeyType, Compare>::LocalGetAllDataInServer,
                             this));
                 std::function<std::vector<std::pair<KeyType, MappedType>>(KeyType &)>
-                        containsInServerFunc(std::bind(&set<KeyType, MappedType,
+                        containsInServerFunc(std::bind(&set<KeyType,
                                                        Compare>::LocalContainsInServer, this,
                                                        std::placeholders::_1));
 
@@ -102,21 +102,21 @@ set<KeyType, MappedType, Compare>::set(std::string name_,
                 {
 
                     std::function<void(const tl::request &, KeyType &, MappedType &)> putFunc(
-                        std::bind(&set<KeyType, MappedType, Compare>::ThalliumLocalPut, this,
+                        std::bind(&set<KeyType, Compare>::ThalliumLocalPut, this,
                                   std::placeholders::_1, std::placeholders::_2,
                                   std::placeholders::_3));
                     std::function<void(const tl::request &, KeyType &)> getFunc(
-                        std::bind(&set<KeyType, MappedType, Compare>::ThalliumLocalGet, this,
+                        std::bind(&set<KeyType, Compare>::ThalliumLocalGet, this,
                                   std::placeholders::_1, std::placeholders::_2));
                     std::function<void(const tl::request &, KeyType &)> eraseFunc(
-                        std::bind(&set<KeyType, MappedType, Compare>::ThalliumLocalErase, this,
+                        std::bind(&set<KeyType, Compare>::ThalliumLocalErase, this,
                                   std::placeholders::_1, std::placeholders::_2));
                     std::function<void(const tl::request &)>
                             getAllDataInServerFunc(std::bind(
-                                &set<KeyType, MappedType, Compare>::ThalliumLocalGetAllDataInServer,
+                                &set<KeyType, Compare>::ThalliumLocalGetAllDataInServer,
                                 this, std::placeholders::_1));
                     std::function<void(const tl::request &, KeyType &)>
-                            containsInServerFunc(std::bind(&set<KeyType, MappedType,
+                            containsInServerFunc(std::bind(&set<KeyType,
                                                            Compare>::ThalliumLocalContainsInServer, this,
                                                            std::placeholders::_1));
 
@@ -153,17 +153,11 @@ set<KeyType, MappedType, Compare>::set(std::string name_,
  * @param data, the value for put
  * @return bool, true if Put was successful else false.
  */
-template<typename KeyType, typename MappedType, typename Compare>
-bool set<KeyType, MappedType, Compare>::LocalPut(KeyType &key,
-                                                 MappedType &data) {
-    AutoTrace trace = AutoTrace("basket::set::Put(local)", key, data);
+template<typename KeyType, typename Compare>
+bool set<KeyType, Compare>::LocalPut(KeyType &key) {
+    AutoTrace trace = AutoTrace("basket::set::Put(local)", key);
     boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(*mutex);
-    myset->insert_or_assign(key, data);
-    /*typename MySet::iterator iterator = myset->find(key);
-      if (iterator != myset->end()) {
-      myset->erase(iterator);
-      }
-      myset->insert(std::pair<KeyType, MappedType>(key, data));*/
+    myset->insert_or_assign(key);
     return true;
 }
 
@@ -173,17 +167,15 @@ bool set<KeyType, MappedType, Compare>::LocalPut(KeyType &key,
  * @param data, the value for put
  * @return bool, true if Put was successful else false.
  */
-template<typename KeyType, typename MappedType, typename Compare>
-bool set<KeyType, MappedType, Compare>::Put(KeyType &key,
-                                            MappedType &data) {
+template<typename KeyType, typename Compare>
+bool set<KeyType, Compare>::Put(KeyType &key) {
     size_t key_hash = keyHash(key);
     uint16_t key_int = static_cast<uint16_t>(key_hash % num_servers);
     if (key_int == my_server && server_on_node) {
-        return LocalPut(key, data);
+        return LocalPut(key);
     } else {
-        AutoTrace trace = AutoTrace("basket::set::Put(remote)", key, data);
-        return RPC_CALL_WRAPPER("_Put", key_int, bool,
-                                key, data);
+        AutoTrace trace = AutoTrace("basket::set::Put(remote)", key);
+        return RPC_CALL_WRAPPER("_Put", key_int, bool, key);
     }
 }
 
@@ -193,17 +185,16 @@ bool set<KeyType, MappedType, Compare>::Put(KeyType &key,
  * @return return a pair of bool and Value. If bool is true then
  * data was found and is present in value part else bool is set to false
  */
-template<typename KeyType, typename MappedType, typename Compare>
-std::pair<bool, MappedType>
-set<KeyType, MappedType, Compare>::LocalGet(KeyType &key) {
+template<typename KeyType, typename Compare>
+bool set<KeyType, Compare>::LocalGet(KeyType &key) {
     AutoTrace trace = AutoTrace("basket::set::Get(local)", key);
     boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex>
             lock(*mutex);
     typename MySet::iterator iterator = myset->find(key);
     if (iterator != myset->end()) {
-        return std::pair<bool, MappedType>(true, iterator->second);
+        return true;
     } else {
-        return std::pair<bool, MappedType>(false, MappedType());
+        return false;
     }
 }
 
@@ -213,41 +204,37 @@ set<KeyType, MappedType, Compare>::LocalGet(KeyType &key) {
  * @return return a pair of bool and Value. If bool is true then
  * data was found and is present in value part else bool is set to false
  */
-template<typename KeyType, typename MappedType, typename Compare>
-std::pair<bool, MappedType>
-set<KeyType, MappedType, Compare>::Get(KeyType &key) {
+template<typename KeyType, typename Compare>
+bool set<KeyType, Compare>::Get(KeyType &key) {
     size_t key_hash = keyHash(key);
     uint16_t key_int = key_hash % num_servers;
     if (key_int == my_server && server_on_node) {
         return LocalGet(key);
     } else {
         AutoTrace trace = AutoTrace("basket::set::Get(remote)", key);
-        typedef std::pair<bool, MappedType> ret_type;
-        return RPC_CALL_WRAPPER("_Get", key_int, ret_type,
-                                key);
+        typedef bool ret_type;
+        return RPC_CALL_WRAPPER("_Get", key_int, ret_type, key);
     }
 }
 
-template<typename KeyType, typename MappedType, typename Compare>
-std::pair<bool, MappedType>
-set<KeyType, MappedType, Compare>::LocalErase(KeyType &key) {
+template<typename KeyType, typename Compare>
+bool set<KeyType, Compare>::LocalErase(KeyType &key) {
     AutoTrace trace = AutoTrace("basket::set::Erase(local)", key);
-    boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex>
-            lock(*mutex);
+    boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(*mutex);
     size_t s = myset->erase(key);
-    return std::pair<bool, MappedType>(s > 0, MappedType());
+    return s > 0;
 }
 
-template<typename KeyType, typename MappedType, typename Compare>
-std::pair<bool, MappedType>
-set<KeyType, MappedType, Compare>::Erase(KeyType &key) {
+template<typename KeyType, typename Compare>
+bool
+set<KeyType, Compare>::Erase(KeyType &key) {
     size_t key_hash = keyHash(key);
     uint16_t key_int = key_hash % num_servers;
     if (key_int == my_server && server_on_node) {
         return LocalErase(key);
     } else {
         AutoTrace trace = AutoTrace("basket::set::Erase(remote)", key);
-        typedef std::pair<bool, MappedType> ret_type;
+        typedef bool ret_type;
         return RPC_CALL_WRAPPER("_Erase", key_int, ret_type, key);
     }
 }
@@ -258,40 +245,32 @@ set<KeyType, MappedType, Compare>::Erase(KeyType &key) {
  * @return return a pair of bool and Value. If bool is true then data was
  * found and is present in value part else bool is set to false
  */
-template<typename KeyType, typename MappedType, typename Compare>
-std::vector<std::pair<KeyType, MappedType>>
-set<KeyType, MappedType, Compare>::Contains(KeyType &key) {
+template<typename KeyType, typename Compare>
+std::vector<KeyType>
+set<KeyType, Compare>::Contains(KeyType &key) {
     AutoTrace trace = AutoTrace("basket::set::Contains", key);
-    std::vector<std::pair<KeyType, MappedType>> final_values =
-            std::vector<std::pair<KeyType, MappedType>>();
+    std::vector<KeyType> final_values = std::vector<KeyType>();
     auto current_server = ContainsInServer(key);
-    final_values.insert(final_values.end(), current_server.begin(),
-                        current_server.end());
+    final_values.insert(final_values.end(), current_server.begin(), current_server.end());
     for (int i = 0; i < num_servers; ++i) {
         if (i != my_server) {
-            typedef std::vector<std::pair<KeyType, MappedType>> ret_type;
-            auto server = RPC_CALL_WRAPPER("_Contains", i, ret_type,
-                                           key);
-            // auto server = rpc->call(i, func_prefix+"_Contains", key).template
-            //         as<std::vector<std::pair<KeyType, MappedType>>>();
+            typedef std::vector<KeyType> ret_type;
+            auto server = RPC_CALL_WRAPPER("_Contains", i, ret_type, key);
             final_values.insert(final_values.end(), server.begin(), server.end());
         }
     }
     return final_values;
 }
 
-template<typename KeyType, typename MappedType, typename Compare>
-std::vector<std::pair<KeyType, MappedType>>
-set<KeyType, MappedType, Compare>::GetAllData() {
+template<typename KeyType, typename Compare>
+std::vector<KeyType> set<KeyType, Compare>::GetAllData() {
     AutoTrace trace = AutoTrace("basket::set::GetAllData");
-    std::vector<std::pair<KeyType, MappedType>> final_values =
-            std::vector<std::pair<KeyType, MappedType>>();
+    std::vector<KeyType> final_values = std::vector<KeyType>();
     auto current_server = GetAllDataInServer();
-    final_values.insert(final_values.end(), current_server.begin(),
-                        current_server.end());
+    final_values.insert(final_values.end(), current_server.begin(), current_server.end());
     for (int i = 0; i < num_servers ; ++i) {
         if (i != my_server) {
-            typedef std::vector<std::pair<KeyType, MappedType> > ret_type;
+            typedef std::vector<KeyType> ret_type;
             auto server = RPC_CALL_WRAPPER1("_GetAllData", i, ret_type);
             final_values.insert(final_values.end(), server.begin(), server.end());
         }
@@ -299,22 +278,18 @@ set<KeyType, MappedType, Compare>::GetAllData() {
     return final_values;
 }
 
-template<typename KeyType, typename MappedType, typename Compare>
-std::vector<std::pair<KeyType, MappedType>>
-set<KeyType, MappedType, Compare>::LocalContainsInServer(KeyType &key) {
+template<typename KeyType, typename Compare>
+std::vector<KeyType> set<KeyType, Compare>::LocalContainsInServer(KeyType &key) {
     AutoTrace trace = AutoTrace("basket::set::ContainsInServer", key);
-    std::vector<std::pair<KeyType, MappedType>> final_values =
-            std::vector<std::pair<KeyType, MappedType>>();
+    std::vector<KeyType> final_values = std::vector<KeyType>();
     {
-        boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex>
-                lock(*mutex);
+        boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(*mutex);
         typename MySet::iterator lower_bound;
         size_t size = myset->size();
         if (size == 0) {
         } else if (size == 1) {
             lower_bound = myset->begin();
-            final_values.insert(final_values.end(), std::pair<KeyType, MappedType>(
-                lower_bound->first, lower_bound->second));
+            final_values.insert(final_values.end(), lower_bound->first);
         } else {
             lower_bound = myset->lower_bound(key);
             if (lower_bound == myset->end()) return final_values;
@@ -325,9 +300,7 @@ set<KeyType, MappedType, Compare>::LocalContainsInServer(KeyType &key) {
             while (lower_bound != myset->end()) {
                 if (!(key.Contains(lower_bound->first) ||
                       lower_bound->first.Contains(key))) break;
-                final_values.insert(final_values.end(), std::pair<KeyType,
-                                    MappedType>(lower_bound->first,
-                                                lower_bound->second));
+                        final_values.insert(final_values.end(), lower_bound->first);
                 lower_bound++;
             }
         }
@@ -335,48 +308,44 @@ set<KeyType, MappedType, Compare>::LocalContainsInServer(KeyType &key) {
     return final_values;
 }
 
-template<typename KeyType, typename MappedType, typename Compare>
+template<typename KeyType, typename Compare>
 std::vector<std::pair<KeyType, MappedType>>
-set<KeyType, MappedType, Compare>::ContainsInServer(KeyType &key) {
+set<KeyType, Compare>::ContainsInServer(KeyType &key) {
     if (server_on_node) {
         return LocalContainsInServer(key);
     }
     else {
-        typedef std::vector<std::pair<KeyType, MappedType> > ret_type;
+        typedef std::vector<KeyType> ret_type;
         auto my_server_i = my_server;
-        return RPC_CALL_WRAPPER("_Contains", my_server_i, ret_type,
-                                key);
+        return RPC_CALL_WRAPPER("_Contains", my_server_i, ret_type, key);
     }
 }
 
-template<typename KeyType, typename MappedType, typename Compare>
-std::vector<std::pair<KeyType, MappedType>>
-set<KeyType, MappedType, Compare>::LocalGetAllDataInServer() {
+template<typename KeyType, typename Compare>
+std::vector<KeyType> set<KeyType, Compare>::LocalGetAllDataInServer() {
     AutoTrace trace = AutoTrace("basket::set::GetAllDataInServer", NULL);
-    std::vector<std::pair<KeyType, MappedType>> final_values =
-            std::vector<std::pair<KeyType, MappedType>>();
+    std::vector<KeyType> final_values = std::vector<KeyType>();
     {
         boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex>
                 lock(*mutex);
         typename MySet::iterator lower_bound;
         lower_bound = myset->begin();
         while (lower_bound != myset->end()) {
-            final_values.insert(final_values.end(), std::pair<KeyType, MappedType>(
-                lower_bound->first, lower_bound->second));
+            final_values.insert(final_values.end(),  lower_bound->first);
             lower_bound++;
         }
     }
     return final_values;
 }
 
-template<typename KeyType, typename MappedType, typename Compare>
-std::vector<std::pair<KeyType, MappedType>>
-set<KeyType, MappedType, Compare>::GetAllDataInServer() {
+template<typename KeyType, typename Compare>
+std::vector<KeyType>
+set<KeyType, Compare>::GetAllDataInServer() {
     if (server_on_node) {
         return LocalGetAllDataInServer();
     }
     else {
-        typedef std::vector<std::pair<KeyType, MappedType> > ret_type;
+        typedef std::vector<KeyType> ret_type;
         auto my_server_i = my_server;
         return RPC_CALL_WRAPPER1("_GetAllData", my_server_i, ret_type);
    }
