@@ -197,16 +197,10 @@ void unordered_map<KeyType, MappedType>::Bind(  std::string callback_name,
 template<typename KeyType, typename MappedType>
 template<typename ReturnType,typename... CB_Tuple_Args>
 typename std::enable_if_t<std::is_void<ReturnType>::value,bool>
-unordered_map<KeyType, MappedType>::LocalPutWithCallback(KeyType &key, MappedType &data, std::string cb_name,
-                                                                                          CB_Tuple_Args... cb_args){
-    boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex>lock(*mutex);
-    myHashMap->insert_or_assign(key, data);
-    auto iter =  binding_map.find(cb_name);
-    if(iter!=binding_map.end()){
-        std::function<ReturnType(CB_Tuple_Args...)> *cb_func=(std::function<ReturnType(CB_Tuple_Args...)> *)iter->second;
-        (*cb_func)(std::forward<CB_Tuple_Args>(cb_args)...);
-    }
-    return true;
+unordered_map<KeyType, MappedType>::LocalPutWithCallback(KeyType &key, MappedType &data, std::string cb_name, CB_Tuple_Args... cb_args){
+    auto ret_1=LocalPut(key,data);
+    auto ret_2=Call<ReturnType>(cb_name,std::forward<CB_Tuple_Args>(cb_args)...);
+    return ret_1;
 }
 
 template<typename KeyType, typename MappedType>
@@ -214,15 +208,9 @@ template<typename ReturnType,typename... CB_Tuple_Args>
 typename std::enable_if_t<!std::is_void<ReturnType>::value,std::pair<bool,ReturnType>> unordered_map<KeyType, MappedType>::LocalPutWithCallback(KeyType &key, MappedType &data,
                                                               std::string cb_name,
                                                               CB_Tuple_Args... cb_args) {
-    boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex>lock(*mutex);
-    myHashMap->insert_or_assign(key, data);
-    auto iter =  binding_map.find(cb_name);
-    if(iter!=binding_map.end()){
-        std::function<ReturnType(CB_Tuple_Args...)> *cb_func=(std::function<ReturnType(CB_Tuple_Args...)> *)iter->second;
-        ReturnType val=(*cb_func)(std::forward<CB_Tuple_Args>(cb_args)...);
-        return std::pair<bool,ReturnType>(true,val);
-    }
-    return std::pair<bool,ReturnType>(true,ReturnType());
+    auto ret_1=LocalPut(key,data);
+    auto ret_2=Call<ReturnType>(cb_name,std::forward<CB_Tuple_Args>(cb_args)...);
+    return std::pair<bool,ReturnType>(ret_1,ret_2);
 }
 
 template<typename KeyType, typename MappedType>

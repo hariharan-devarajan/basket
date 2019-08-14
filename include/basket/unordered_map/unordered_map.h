@@ -109,6 +109,16 @@ class unordered_map {
    template<typename CF, typename ReturnType,typename... ArgsType>
    void Bind(std::string rpc_name, std::function<ReturnType(ArgsType...)> callback_func, std::string caller_func_name, CF caller_func);
 
+   template<typename ReturnType,typename... CB_Tuple_Args>
+   ReturnType Call(std::string cb_name, CB_Tuple_Args... cb_args){
+       auto iter =  binding_map.find(cb_name);
+       if(iter!=binding_map.end()){
+           std::function<ReturnType(CB_Tuple_Args...)> *cb_func=(std::function<ReturnType(CB_Tuple_Args...)> *)iter->second;
+           (*cb_func)(std::forward<CB_Tuple_Args>(cb_args)...);
+       }
+   }
+
+
     void BindClient(std::string rpc_name);
 
     bool LocalPut(KeyType &key, MappedType &data);
