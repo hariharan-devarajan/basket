@@ -85,10 +85,10 @@ int main (int argc,char* argv[])
     if(argc > 4)    server_on_node = (bool)atoi(argv[4]);
     if(argc > 5)    debug = (bool)atoi(argv[5]);
 
-    if(comm_size/ranks_per_server < 2){
+   /* if(comm_size/ranks_per_server < 2){
         perror("comm_size/ranks_per_server should be atleast 2 for this test\n");
         exit(-1);
-    }
+    }*/
     int len;
     char processor_name[MPI_MAX_PROCESSOR_NAME];
     MPI_Get_processor_name(processor_name, &len);
@@ -109,10 +109,10 @@ int main (int argc,char* argv[])
     // The following is used to switch to 40g network on Ares.
     // This is necessary when we use RoCE on Ares.
     std::string proc_name = std::string(processor_name);
-    int split_loc = proc_name.find('.');
+    /*int split_loc = proc_name.find('.');
     std::string node_name = proc_name.substr(0, split_loc);
     std::string extra_info = proc_name.substr(split_loc+1, string::npos);
-    proc_name = node_name + "-40g." + extra_info;
+    proc_name = node_name + "-40g." + extra_info;*/
 
     size_t size_of_elem = sizeof(int);
 
@@ -134,9 +134,15 @@ int main (int argc,char* argv[])
     MPI_Comm_split(MPI_COMM_WORLD, !is_server, my_rank, &client_comm);
     int client_comm_size;
     MPI_Comm_size(client_comm, &client_comm_size);
+    if(is_server){
+        std::function<int(int)> func=[](int x){ std::cout<<x<<std::endl;return x; };
+        int a;
+        std::function<std::pair<bool,int>(KeyType&,std::array<int, array_size>&,std::string,int)> putFunc(std::bind(&basket::unordered_map<KeyType,std::array<int,
+                array_size>>::LocalPutWithCallback<int,int>,&map,std::placeholders::_1, std::placeholders::_2,std::placeholders::_3, std::placeholders::_4));
+        map.Bind("CB_Put", func, "APut",putFunc);
+    }
 
-    map.Bind("Put", [](int x){ std::cout << x << std::endl; });
-
+    MPI_Barrier(MPI_COMM_WORLD);
     if (!is_server) {
         Timer llocal_map_timer=Timer();
         std::hash<KeyType> keyHash;
@@ -173,10 +179,10 @@ int main (int argc,char* argv[])
         Timer local_map_timer=Timer();
         /*Local map test*/
         for(int i=0;i<num_request;i++){
-            size_t val=my_server;
+            size_t val=my_server+1;
             auto key=KeyType(val);
             local_map_timer.resumeTime();
-            map.PutWithCallback(key,my_vals,"Put",42);
+            map.PutWithCallback<int>(key,my_vals,"APut","CB_Put",42);
             local_map_timer.pauseTime();
         }
         double local_map_throughput=num_request/local_map_timer.getElapsedTime()*1000*size_of_elem*my_vals.size()/1024/1024;

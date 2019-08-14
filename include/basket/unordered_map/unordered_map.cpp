@@ -185,73 +185,73 @@ bool unordered_map<KeyType, MappedType>::Put(KeyType &key,
 }
 
 template<typename KeyType, typename MappedType>
-template<typename F>
-void unordered_map<KeyType, MappedType>::Bind(std::string rpc_name, F fun) {
-    static std::string callback_name = "CB_" + std::string(rpc_name);
-    binding_map.insert_or_assign(rpc_name, callback_name);
-    if (is_server) {
-        rpc->bind(callback_name, fun);
-    }
+template<typename CF, typename ReturnType,typename... ArgsType>
+void unordered_map<KeyType, MappedType>::Bind(  std::string callback_name,
+                                                std::function<ReturnType(ArgsType...)> callback_func,
+                                                std::string caller_func_name,
+                                                CF caller_func) {
+    binding_map.insert_or_assign(callback_name, &callback_func);
+    rpc->bind(caller_func_name, caller_func);
 }
 
 template<typename KeyType, typename MappedType>
-void unordered_map<KeyType, MappedType>::BindClient(std::string rpc_name) {
-    static std::string callback_name = "CB_" + std::string(rpc_name);
-    binding_map.insert_or_assign(rpc_name, callback_name);
-}
-
-template<typename KeyType, typename MappedType>
-template<typename... CB_Tuple_Args, size_t... Is>
-void unordered_map<KeyType, MappedType>::callWithCallbackSequence(std::string cb_name,
-                                                                  std::tuple<CB_Tuple_Args...> cb_args,
-                                                                  std::index_sequence<Is...> sequence) {
-    auto my_server_i = my_server;
-    rpc->call<RPCLIB_MSGPACK::object_handle>(my_server_i, binding_map[cb_name],
-                                             std::get<Is>(cb_args)...);
-}
-
-template<typename KeyType, typename MappedType>
-template<typename... CB_Tuple_Args>
-bool unordered_map<KeyType, MappedType>::LocalPutWithCallback(KeyType &key, MappedType &data,
-                                                              std::string cb_name,
-                                                              std::tuple<CB_Tuple_Args...> cb_args) {
+template<typename ReturnType,typename... CB_Tuple_Args>
+typename std::enable_if_t<std::is_void<ReturnType>::value,bool>
+unordered_map<KeyType, MappedType>::LocalPutWithCallback(KeyType &key, MappedType &data, std::string cb_name,
+                                                                                          CB_Tuple_Args... cb_args){
     boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex>lock(*mutex);
     myHashMap->insert_or_assign(key, data);
-    // if (sizeof...(cb_args) == 0) {
-    // std::string callback_name = binding_map[cb_name];
-    // RPC_CALL_WRAPPER1(callback_name, my_server_i, void);
-    // auto rpc_call_args = std::tuple_cat(std::make_tuple(my_server_i,
-    //                                                     binding_map[cb_name]),
-    //                                     cb_args);
-
-    // auto sequence = std::index_sequence_for<CB_Tuple_Args...>{};
-    callWithCallbackSequence(cb_name, cb_args, std::index_sequence_for<CB_Tuple_Args...>{});
-    // std::apply(rpc->call<RPCLIB_MSGPACK::object_handle, CB_Tuple_Args...>, rpc_call_args);
-    // }
-    // else {
-    //     RPC_CALL_WRAPPER(binding_map[cb_name], my_server, bool, std::forward(cb_args)...);
-    // }
-    // rpc->call(binding_map[cb_name], std::forward(cb_args)...);
+    auto iter =  binding_map.find(cb_name);
+    if(iter!=binding_map.end()){
+        std::function<ReturnType(CB_Tuple_Args...)> *cb_func=(std::function<ReturnType(CB_Tuple_Args...)> *)iter->second;
+        (*cb_func)(std::forward<CB_Tuple_Args>(cb_args)...);
+    }
     return true;
 }
 
 template<typename KeyType, typename MappedType>
-template<typename... CB_Args>
-bool unordered_map<KeyType, MappedType>::PutWithCallback(KeyType &key, MappedType &data,
+template<typename ReturnType,typename... CB_Tuple_Args>
+typename std::enable_if_t<!std::is_void<ReturnType>::value,std::pair<bool,ReturnType>> unordered_map<KeyType, MappedType>::LocalPutWithCallback(KeyType &key, MappedType &data,
+                                                              std::string cb_name,
+                                                              CB_Tuple_Args... cb_args) {
+    boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex>lock(*mutex);
+    myHashMap->insert_or_assign(key, data);
+    auto iter =  binding_map.find(cb_name);
+    if(iter!=binding_map.end()){
+        std::function<ReturnType(CB_Tuple_Args...)> *cb_func=(std::function<ReturnType(CB_Tuple_Args...)> *)iter->second;
+        ReturnType val=(*cb_func)(std::forward<CB_Tuple_Args>(cb_args)...);
+        return std::pair<bool,ReturnType>(true,val);
+    }
+    return std::pair<bool,ReturnType>(true,ReturnType());
+}
+
+template<typename KeyType, typename MappedType>
+template<typename ReturnType,typename... CB_Args>
+typename std::enable_if_t<!std::is_void<ReturnType>::value,std::pair<bool,ReturnType>> unordered_map<KeyType, MappedType>::PutWithCallback(KeyType &key, MappedType &data,
+                                                         std::string c_name,
                                                          std::string cb_name,
                                                          CB_Args... cb_args) {
     uint16_t key_int = (uint16_t)keyHash(key)% num_servers;
-    auto cb_args_tuple = std::make_tuple(cb_args...);
     if (key_int == my_server && server_on_node) {
-        return LocalPutWithCallback(key, data, cb_name, cb_args_tuple);
+        return LocalPutWithCallback<ReturnType>(key, data, cb_name, std::forward<CB_Args>(cb_args)...);
     } else {
-        std::function<bool(KeyType &, MappedType &, std::string, std::tuple<CB_Args...>)> putCBFunc(
-            std::bind(&unordered_map<KeyType, MappedType>::LocalPutWithCallback<CB_Args...>, this,
-                      std::placeholders::_1, std::placeholders::_2,
-                      std::placeholders::_3, std::placeholders::_4));
-        rpc->bind(func_prefix+"_PutCB", putCBFunc);
-        return RPC_CALL_WRAPPER("_PutCB", key_int, bool,
-                                key, data, cb_name, cb_args_tuple);
+        typedef std::pair<bool,ReturnType> ret;
+        return RPC_CALL_WRAPPER_CB(c_name, key_int, ret, key, data, cb_name);
+    }
+}
+
+template<typename KeyType, typename MappedType>
+template<typename ReturnType,typename... CB_Args>
+typename std::enable_if_t<std::is_void<ReturnType>::value,bool> unordered_map<KeyType, MappedType>::PutWithCallback(KeyType &key, MappedType &data,
+                                                                                                                                                std::string c_name,
+                                                                                                                                                std::string cb_name,
+                                                                                                                                                CB_Args... cb_args) {
+    uint16_t key_int = (uint16_t)keyHash(key)% num_servers;
+    if (key_int == my_server && server_on_node) {
+        return LocalPutWithCallback<ReturnType>(key, data, cb_name, std::forward<CB_Args>(cb_args)...);
+    } else {
+
+        return RPC_CALL_WRAPPER_CB(c_name, key_int, bool, key, data, cb_name);
     }
 }
 

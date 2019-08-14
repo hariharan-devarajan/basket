@@ -22,7 +22,7 @@
 
 #include <basket/common/configuration_manager.h>
 #include <basket/common/singleton.h>
-
+# define EXPAND_ARGS(...) __VA_ARGS__
 #define CONF Singleton<ConfigurationManager>::GetInstance()
 
 #define THALLIUM_DEFINE(name, args,args_t...) void Thallium##name(const tl::request &thallium_req, args_t) { thallium_req.respond(name args ); }
@@ -43,6 +43,21 @@
 #else
 #define RPC_CALL_WRAPPER_RPCLIB1(funcname, serverVar,ret)
 #define RPC_CALL_WRAPPER_RPCLIB(funcname, serverVar,ret,args...) 
+#endif
+#ifdef BASKET_ENABLE_RPCLIB
+#define RPC_CALL_WRAPPER_RPCLIB1_CB(funcname, serverVar,ret) \
+ case RPCLIB: {								\
+    return rpc->call<RPCLIB_MSGPACK::object_handle>( serverVar , funcname , std::forward< CB_Args >( cb_args )...).template as< ret >();\
+    break;\
+  }
+#define RPC_CALL_WRAPPER_RPCLIB_CB(funcname, serverVar,ret, ...)			\
+ case RPCLIB: {								\
+  return rpc->call<RPCLIB_MSGPACK::object_handle>( serverVar , funcname , __VA_ARGS__ , std::forward< CB_Args >( cb_args )...).template as< ret >();\
+    break;\
+  }
+#else
+#define RPC_CALL_WRAPPER_RPCLIB1_CB(funcname, serverVar,ret)
+#define RPC_CALL_WRAPPER_RPCLIB_CB(funcname, serverVar,ret,args...)
 #endif
 
 #ifdef  BASKET_ENABLE_THALLIUM_TCP
@@ -83,6 +98,23 @@ RPC_CALL_WRAPPER_THALLIUM1(funcname, serverVar,ret)\
 #define RPC_CALL_WRAPPER(funcname, serverVar,ret, args...) [this, serverVar , args ]()-> ret { \
 switch (CONF->RPC_IMPLEMENTATION) {\
   RPC_CALL_WRAPPER_RPCLIB(funcname, serverVar,ret,args)	\
+RPC_CALL_WRAPPER_THALLIUM_TCP()\
+RPC_CALL_WRAPPER_THALLIUM_ROCE()\
+    RPC_CALL_WRAPPER_THALLIUM(funcname, serverVar,ret,args)	\
+}\
+  }();
+#define RPC_CALL_WRAPPER1_CB(funcname, serverVar,ret) [&]()-> ret { \
+switch (CONF->RPC_IMPLEMENTATION) {\
+RPC_CALL_WRAPPER_RPCLIB1(funcname, serverVar,ret) \
+RPC_CALL_WRAPPER_THALLIUM_TCP()\
+RPC_CALL_WRAPPER_THALLIUM_ROCE()\
+RPC_CALL_WRAPPER_THALLIUM1(funcname, serverVar,ret)\
+ }\
+}();
+
+#define RPC_CALL_WRAPPER_CB(funcname, serverVar,ret, ...) [&]()-> ret { \
+switch (CONF->RPC_IMPLEMENTATION) {\
+  RPC_CALL_WRAPPER_RPCLIB_CB(funcname, serverVar,ret, __VA_ARGS__)	\
 RPC_CALL_WRAPPER_THALLIUM_TCP()\
 RPC_CALL_WRAPPER_THALLIUM_ROCE()\
     RPC_CALL_WRAPPER_THALLIUM(funcname, serverVar,ret,args)	\

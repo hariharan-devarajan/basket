@@ -93,7 +93,7 @@ class unordered_map {
     MyHashMap *myHashMap;
     boost::interprocess::interprocess_mutex* mutex;
     bool server_on_node;
-    std::unordered_map<std::string, std::string> binding_map;
+    std::unordered_map<std::string, void*> binding_map;
 
   public:
     ~unordered_map();
@@ -103,8 +103,11 @@ class unordered_map {
                            bool server_on_node_,
                            std::string processor_name_ = "");
 
-    template <typename F>
-    void Bind(std::string rpc_name, F fun);
+   /* template <typename F>
+    void Bind(std::string rpc_name, F fun);*/
+
+   template<typename CF, typename ReturnType,typename... ArgsType>
+   void Bind(std::string rpc_name, std::function<ReturnType(ArgsType...)> callback_func, std::string caller_func_name, CF caller_func);
 
     void BindClient(std::string rpc_name);
 
@@ -142,23 +145,30 @@ class unordered_map {
     std::vector<std::pair<KeyType, MappedType>> GetAllData();
     std::vector<std::pair<KeyType, MappedType>> GetAllDataInServer();
 
-    template<typename... CB_Tuple_Args>
-    bool LocalPutWithCallback(KeyType &key, MappedType &data,
+    template<typename ReturnType,typename... CB_Tuple_Args>
+    typename std::enable_if_t<std::is_void<ReturnType>::value,bool> LocalPutWithCallback(KeyType &key, MappedType &data,
                               std::string cb_name,
-                              std::tuple<CB_Tuple_Args...> cb_args);
+                              CB_Tuple_Args... cb_args);
+
+    template<typename ReturnType,typename... CB_Tuple_Args>
+    typename std::enable_if_t<!std::is_void<ReturnType>::value,std::pair<bool,ReturnType>> LocalPutWithCallback(KeyType &key, MappedType &data,
+                                                                                              std::string cb_name,
+                                                                                              CB_Tuple_Args... cb_args);
     // std::pair<bool, MappedType> LocalGet(KeyType &key);
     // std::pair<bool, MappedType> LocalErase(KeyType &key);
     // std::vector<std::pair<KeyType, MappedType>> LocalGetAllDataInServer();
 
-    template<typename... CB_Args>
-    bool PutWithCallback(KeyType &key, MappedType &data,
-                         std::string cb_name,
-                         CB_Args... cb_args);
+        template<typename ReturnType,typename... CB_Args>
+        typename std::enable_if_t<!std::is_void<ReturnType>::value,std::pair<bool,ReturnType>>  PutWithCallback(KeyType &key, MappedType &data,
+                                                                 std::string c_name,
+                                                                 std::string cb_name,
+                                                                 CB_Args... cb_args);
+        template<typename ReturnType,typename... CB_Args>
+        typename std::enable_if_t<std::is_void<ReturnType>::value,bool>  PutWithCallback(KeyType &key, MappedType &data,
+                                                                                                                     std::string c_name,
+                                                                                                                     std::string cb_name,
+                                                                                                                     CB_Args... cb_args);
 
-    template<typename... CB_Tuple_Args, size_t... Is>
-    void callWithCallbackSequence(std::string cb_name,
-                                  std::tuple<CB_Tuple_Args...> cb_args,
-                                  std::index_sequence<Is...> sequence);
 };
 
 #include "unordered_map.cpp"

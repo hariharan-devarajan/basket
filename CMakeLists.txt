@@ -3,6 +3,11 @@ cmake_minimum_required(VERSION 3.10)
 project(basket VERSION 1.0.0 DESCRIPTION "Basket: A library for flexible distributed data containers")
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -gdwarf-2 -g3")
+option(BASKET_ENABLE_RPCLIB "allow basket to use RPCLIB" ON)
+if(BASKET_ENABLE_RPCLIB)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBASKET_ENABLE_RPCLIB")
+endif()
 
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBASKET_ENABLE_RPCLIB=true")
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBASKET_ENABLE_THALLIUM_TCP=true")
