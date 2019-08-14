@@ -249,7 +249,7 @@ set<KeyType, Compare>::Erase(KeyType &key) {
 template<typename KeyType, typename Compare>
 std::vector<KeyType>
 set<KeyType, Compare>::Contains(KeyType &key_start, KeyType &key_end) {
-    AutoTrace trace = AutoTrace("basket::set::Contains", key);
+    AutoTrace trace = AutoTrace("basket::set::Contains", key_start,key_end);
     std::vector<KeyType> final_values = std::vector<KeyType>();
     auto current_server = ContainsInServer(key_start,key_end);
     final_values.insert(final_values.end(), current_server.begin(), current_server.end());
@@ -281,7 +281,7 @@ std::vector<KeyType> set<KeyType, Compare>::GetAllData() {
 
 template<typename KeyType, typename Compare>
 std::vector<KeyType> set<KeyType, Compare>::LocalContainsInServer(KeyType &key_start, KeyType &key_end) {
-    AutoTrace trace = AutoTrace("basket::set::ContainsInServer", key);
+    AutoTrace trace = AutoTrace("basket::set::ContainsInServer", key_start,key_end);
     std::vector<KeyType> final_values = std::vector<KeyType>();
     {
         boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(*mutex);
@@ -310,14 +310,14 @@ std::vector<KeyType> set<KeyType, Compare>::LocalContainsInServer(KeyType &key_s
 
 template<typename KeyType, typename Compare>
 std::vector<KeyType>
-set<KeyType, Compare>::ContainsInServer(KeyType &key_start, KeyType &key_start) {
+set<KeyType, Compare>::ContainsInServer(KeyType &key_start, KeyType &key_end) {
     if (server_on_node) {
-        return LocalContainsInServer(key_start,key_start);
+        return LocalContainsInServer(key_start,key_end);
     }
     else {
         typedef std::vector<KeyType> ret_type;
         auto my_server_i = my_server;
-        return RPC_CALL_WRAPPER("_Contains", my_server_i, ret_type, key);
+        return RPC_CALL_WRAPPER("_Contains", my_server_i, ret_type, key_start,key_end);
     }
 }
 
