@@ -50,7 +50,7 @@ global_clock::global_clock(std::string name_,
     rpc = Singleton<RPC>::GetInstance("RPC_SERVER_LIST", is_server_, my_server_,
                                       num_servers_, server_on_node_, processor_name_);
     if (is_server) {
-                switch (CONF->RPC_IMPLEMENTATION) {
+                switch (BASKET_CONF->RPC_IMPLEMENTATION) {
 #ifdef BASKET_ENABLE_RPCLIB
             case RPCLIB: {
                 std::function<HTime(void)> getTimeFunction(

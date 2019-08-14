@@ -67,7 +67,7 @@ unordered_map<KeyType, MappedType>::unordered_map(std::string name_,
             128, std::hash<KeyType>(), std::equal_to<KeyType>(),
             segment.get_allocator<ValueType>());
         /* Create a RPC server and map the methods to it. */
-  switch (CONF->RPC_IMPLEMENTATION) {
+  switch (BASKET_CONF->RPC_IMPLEMENTATION) {
 #ifdef BASKET_ENABLE_RPCLIB
   case RPCLIB: {
         std::function<bool(KeyType &, MappedType &)> putFunc(

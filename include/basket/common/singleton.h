@@ -40,6 +40,7 @@
  * Singleton<T>::GetInstance()
  * @tparam T
  */
+ namespace basket{
 template<typename T>
 class Singleton {
   public:
@@ -75,5 +76,5 @@ class Singleton {
 
 template<typename T>
 std::shared_ptr<T> Singleton<T>::instance = nullptr;
-
+ }
 #endif  // INCLUDE_BASKET_COMMON_SINGLETON_H_

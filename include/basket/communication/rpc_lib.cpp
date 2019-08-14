@@ -25,7 +25,7 @@
 
 template <typename F> 
 void RPC::bind(std::string str, F func) {
-    switch (CONF->RPC_IMPLEMENTATION) {
+    switch (BASKET_CONF->RPC_IMPLEMENTATION) {
 #ifdef BASKET_ENABLE_RPCLIB
         case RPCLIB: {
             rpclib_server->bind(str, func);
@@ -54,7 +54,7 @@ Response RPC::call(uint16_t server_index,
     AutoTrace trace = AutoTrace("RPC::call", server_index, func_name);
     int16_t port = server_port + server_index;
     
-    switch (CONF->RPC_IMPLEMENTATION) {
+    switch (BASKET_CONF->RPC_IMPLEMENTATION) {
 #ifdef BASKET_ENABLE_RPCLIB
         case RPCLIB: {
             /* Connect to Server */

@@ -23,7 +23,7 @@
 #include <basket/common/configuration_manager.h>
 #include <basket/common/singleton.h>
 # define EXPAND_ARGS(...) __VA_ARGS__
-#define CONF Singleton<ConfigurationManager>::GetInstance()
+#define BASKET_CONF basket::Singleton<basket::ConfigurationManager>::GetInstance()
 
 #define THALLIUM_DEFINE(name, args,args_t...) void Thallium##name(const tl::request &thallium_req, args_t) { thallium_req.respond(name args ); }
 
@@ -88,7 +88,7 @@
 
 
 #define RPC_CALL_WRAPPER1(funcname, serverVar,ret) [this, serverVar ]()-> ret { \
-switch (CONF->RPC_IMPLEMENTATION) {\
+switch (BASKET_CONF->RPC_IMPLEMENTATION) {\
 RPC_CALL_WRAPPER_RPCLIB1(funcname, serverVar,ret) \
 RPC_CALL_WRAPPER_THALLIUM_TCP()\
 RPC_CALL_WRAPPER_THALLIUM_ROCE()\
@@ -96,7 +96,7 @@ RPC_CALL_WRAPPER_THALLIUM1(funcname, serverVar,ret)\
  }\
 }();
 #define RPC_CALL_WRAPPER(funcname, serverVar,ret, args...) [this, serverVar , args ]()-> ret { \
-switch (CONF->RPC_IMPLEMENTATION) {\
+switch (BASKET_CONF->RPC_IMPLEMENTATION) {\
   RPC_CALL_WRAPPER_RPCLIB(funcname, serverVar,ret,args)	\
 RPC_CALL_WRAPPER_THALLIUM_TCP()\
 RPC_CALL_WRAPPER_THALLIUM_ROCE()\
@@ -104,7 +104,7 @@ RPC_CALL_WRAPPER_THALLIUM_ROCE()\
 }\
   }();
 #define RPC_CALL_WRAPPER1_CB(funcname, serverVar,ret) [&]()-> ret { \
-switch (CONF->RPC_IMPLEMENTATION) {\
+switch (BASKET_CONF->RPC_IMPLEMENTATION) {\
 RPC_CALL_WRAPPER_RPCLIB1(funcname, serverVar,ret) \
 RPC_CALL_WRAPPER_THALLIUM_TCP()\
 RPC_CALL_WRAPPER_THALLIUM_ROCE()\
@@ -113,7 +113,7 @@ RPC_CALL_WRAPPER_THALLIUM1(funcname, serverVar,ret)\
 }();
 
 #define RPC_CALL_WRAPPER_CB(funcname, serverVar,ret, ...) [&]()-> ret { \
-switch (CONF->RPC_IMPLEMENTATION) {\
+switch (BASKET_CONF->RPC_IMPLEMENTATION) {\
   RPC_CALL_WRAPPER_RPCLIB_CB(funcname, serverVar,ret, __VA_ARGS__)	\
 RPC_CALL_WRAPPER_THALLIUM_TCP()\
 RPC_CALL_WRAPPER_THALLIUM_ROCE()\

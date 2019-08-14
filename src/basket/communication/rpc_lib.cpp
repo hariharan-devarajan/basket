@@ -23,7 +23,7 @@
 RPC::~RPC() {
     if (is_server) {
         bip::shared_memory_object::remove(name.c_str());
-        switch (CONF->RPC_IMPLEMENTATION) {
+        switch (BASKET_CONF->RPC_IMPLEMENTATION) {
 #ifdef BASKET_ENABLE_RPCLIB
             case RPCLIB: {
           // Twiddle thumbs
@@ -133,7 +133,7 @@ RPC::RPC(std::string name_, bool is_server_, uint16_t my_server_,
                         malloc(total_len * sizeof(char)));
                 MPI_Bcast(final_server_list, total_len, MPI_CHAR, 0, scomm);
             }
-            switch (CONF->RPC_IMPLEMENTATION) {
+            switch (BASKET_CONF->RPC_IMPLEMENTATION) {
 #ifdef BASKET_ENABLE_RPCLIB
                 case RPCLIB: {
                   rpclib_server = std::make_shared<rpc::server>(server_port+my_server_);
@@ -175,7 +175,7 @@ RPC::RPC(std::string name_, bool is_server_, uint16_t my_server_,
                 server_list->push_back(CharStruct(element));
             }
         } else {
-            switch (CONF->RPC_IMPLEMENTATION) {
+            switch (BASKET_CONF->RPC_IMPLEMENTATION) {
 #ifdef BASKET_ENABLE_RPCLIB
                 case RPCLIB: {
                   break;
@@ -216,7 +216,7 @@ RPC::RPC(std::string name_, bool is_server_, uint16_t my_server_,
 void RPC::run(size_t workers) {
     AutoTrace trace = AutoTrace("RPC::run", workers);
     if (is_server){
-        switch (CONF->RPC_IMPLEMENTATION) {
+        switch (BASKET_CONF->RPC_IMPLEMENTATION) {
 #ifdef BASKET_ENABLE_RPCLIB
             case RPCLIB: {
                     rpclib_server->async_run(workers);
