@@ -158,7 +158,7 @@ template<typename KeyType, typename Compare>
 bool set<KeyType, Compare>::LocalPut(KeyType &key) {
     AutoTrace trace = AutoTrace("basket::set::Put(local)", key);
     boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(*mutex);
-    myset->insert_or_assign(key);
+    myset->insert(key);
     return true;
 }
 
@@ -299,7 +299,7 @@ std::vector<KeyType> set<KeyType, Compare>::LocalContainsInServer(KeyType &key_s
                 if (key_start > *lower_bound) lower_bound++;
             }
             while (lower_bound != myset->end()) {
-                if (lower_bound < key_end)
+                if (*lower_bound < key_end)
                     final_values.insert(final_values.end(), *lower_bound);
                 lower_bound++;
             }
