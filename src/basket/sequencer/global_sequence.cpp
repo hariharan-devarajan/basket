@@ -46,7 +46,7 @@ global_sequence::global_sequence(std::string name_,
 
         
 
-        switch (CONF->RPC_IMPLEMENTATION) {
+        switch (BASKET_CONF->RPC_IMPLEMENTATION) {
 #ifdef BASKET_ENABLE_RPCLIB
             case RPCLIB: {
                 std::function<uint64_t(void)> getNextSequence(std::bind(
