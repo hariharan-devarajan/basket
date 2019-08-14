@@ -114,11 +114,11 @@ class set {
     bool Get(KeyType &key);
 
     bool Erase(KeyType &key);
-    std::vector<KeyType> Contains(KeyType &key);
+    std::vector<KeyType> Contains(KeyType &key_start,KeyType &key_end);
 
     std::vector<KeyType> GetAllData();
 
-    std::vector<KeyType> ContainsInServer(KeyType &key);
+    std::vector<KeyType> ContainsInServer(KeyType &key_start,KeyType &key_end);
     std::vector<KeyType> GetAllDataInServer();
 };
 
