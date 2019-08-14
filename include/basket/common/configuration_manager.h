@@ -27,6 +27,9 @@
 
 #include <basket/common/debug.h>
 #include <basket/common/enumerations.h>
+#include <basket/common/singleton.h>
+
+#define BASKET_CONF Singleton<ConfigurationManager>::GetInstance();
 
 class ConfigurationManager {
 public:
