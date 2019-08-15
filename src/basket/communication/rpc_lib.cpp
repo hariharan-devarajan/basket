@@ -73,7 +73,6 @@ RPC::RPC() : isInitialized(false), shared_init(false),
             std::string file_line;
             std::string server_node;
             std::string server_network;
-
             server_on_node = false;  // in case there is no server on node
             while (getline(file, file_line)) {
                 int split_loc = file_line.find(':');  // split to node and net
@@ -89,7 +88,7 @@ RPC::RPC() : isInitialized(false), shared_init(false),
                 server_list.single->push_back(std::string(server_network));
             }
         } else {
-            printf("Error: Can't open server list file %s\n", BASKET_CONF->SERVER_LIST);
+            printf("Error: Can't open server list file %s\n", BASKET_CONF->SERVER_LIST.c_str());
             exit(EXIT_FAILURE);
         }
         file.close();
