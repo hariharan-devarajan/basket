@@ -37,7 +37,7 @@ set(BASKET_SRC  include/basket/common/singleton.h
                 src/basket/clock/global_clock.cpp
                 include/basket/queue/queue.h
                 include/basket/priority_queue/priority_queue.h
-                # include/basket/set/set.h
+                include/basket/set/set.h
                 include/basket/sequencer/global_sequence.h
                 src/basket/sequencer/global_sequence.cpp
 	)

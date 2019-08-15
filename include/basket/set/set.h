@@ -90,7 +90,7 @@ class set {
   public:
     ~set();
 
-    explicit set();
+    explicit set(std::string name_ = "TEST_SET");
     explicit set(std::string name_, bool is_server_,
                  uint16_t my_server_, int num_servers_,
                  bool server_on_node_,
@@ -101,6 +101,9 @@ class set {
     bool LocalErase(KeyType &key);
     std::vector<KeyType> LocalGetAllDataInServer();
     std::vector<KeyType> LocalContainsInServer(KeyType &key_start, KeyType &key_end);
+    std::pair<bool, KeyType> LocalSeekLast();
+    std::pair<bool, KeyType> LocalPopLast();
+    size_t LocalSize();
 
 #if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
     THALLIUM_DEFINE(LocalPut, (key,data), KeyType &key, MappedType &data)
@@ -120,6 +123,10 @@ class set {
 
     std::vector<KeyType> ContainsInServer(KeyType &key_start,KeyType &key_end);
     std::vector<KeyType> GetAllDataInServer();
+
+    std::pair<bool, KeyType> SeekLast(uint16_t &key_int);
+    std::pair<bool, KeyType> PopLast(uint16_t &key_int);
+    size_t Size(uint16_t &key_int);
 };
 
 #include "set.cpp"

@@ -26,4 +26,4 @@
 #include <basket/priority_queue/priority_queue.h>
 #include <basket/queue/queue.h>
 #include <basket/sequencer/global_sequence.h>
-/* #include <basket/set/set.h> */
+#include <basket/set/set.h>

@@ -29,11 +29,11 @@ set<KeyType, Compare>::~set() {
 }
 
 template<typename KeyType, typename Compare>
-set<KeyType, Compare>::set()
+set<KeyType, Compare>::set(std::string name_)
         : is_server(BASKET_CONF->IS_SERVER), my_server(BASKET_CONF->MY_SERVER),
           num_servers(BASKET_CONF->NUM_SERVERS),
           comm_size(1), my_rank(0), memory_allocated(1024ULL * 1024ULL * 128ULL),
-          name(BASKET_CONF->SHMEM_NAME), segment(), myset(), func_prefix(BASKET_CONF->SHMEM_NAME),
+          name(name_), segment(), myset(), func_prefix(name_),
           server_on_node(BASKET_CONF->SERVER_ON_NODE) {
     AutoTrace trace = AutoTrace("basket::set");
     /* Initialize MPI rank and size of world */
@@ -62,26 +62,39 @@ set<KeyType, Compare>::set()
                 std::function<bool(KeyType &)> putFunc(
                     std::bind(&set<KeyType, Compare>::LocalPut, this,
                               std::placeholders::_1));
-                std::function<std::pair<bool, KeyType>(KeyType &)> getFunc(
+                std::function<bool(KeyType &)> getFunc(
                     std::bind(&set<KeyType, Compare>::LocalGet, this,
                               std::placeholders::_1));
-                std::function<std::pair<bool, MappedType>(KeyType &)> eraseFunc(
+                std::function<bool(KeyType &)> eraseFunc(
                     std::bind(&set<KeyType, Compare>::LocalErase, this,
                               std::placeholders::_1));
-                std::function<std::vector<std::pair<KeyType, MappedType>>(void)>
+                std::function<std::vector<KeyType>(void)>
                         getAllDataInServerFunc(std::bind(
                             &set<KeyType, Compare>::LocalGetAllDataInServer,
                             this));
-                std::function<std::vector<std::pair<KeyType, MappedType>>(KeyType &)>
+                std::function<std::vector<KeyType>(KeyType &, KeyType &)>
                         containsInServerFunc(std::bind(&set<KeyType,
                                                        Compare>::LocalContainsInServer, this,
-                                                       std::placeholders::_1));
-
+                                                       std::placeholders::_1,
+                                                       std::placeholders::_2));
+                std::function<std::pair<bool, KeyType>(void)>
+                        seekLastFunc(std::bind(&set<KeyType,
+                                               Compare>::LocalSeekLast, this));
+                std::function<std::pair<bool, KeyType>(void)>
+                        popLastFunc(std::bind(&set<KeyType,
+                                              Compare>::LocalPopLast, this));
+                std::function<size_t(void)>
+                        sizeFunc(std::bind(&set<KeyType,
+                                           Compare>::LocalSize, this));
                 rpc->bind(func_prefix+"_Put", putFunc);
                 rpc->bind(func_prefix+"_Get", getFunc);
                 rpc->bind(func_prefix+"_Erase", eraseFunc);
                 rpc->bind(func_prefix+"_GetAllData", getAllDataInServerFunc);
                 rpc->bind(func_prefix+"_Contains", containsInServerFunc);
+
+                rpc->bind(func_prefix+"_SeekLast", seekLastFunc);
+                rpc->bind(func_prefix+"_PopLast", popLastFunc);
+                rpc->bind(func_prefix+"_Size", sizeFunc);
                 break;
             }
 #endif
@@ -94,29 +107,28 @@ set<KeyType, Compare>::set()
 #if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
                 {
 
-                    std::function<void(const tl::request &, KeyType &, MappedType &)> putFunc(
+                    std::function<void(const tl::request &, KeyType &)> putFunc(
                         std::bind(&set<KeyType, Compare>::ThalliumLocalPut, this,
-                                  std::placeholders::_1, std::placeholders::_2,
-                                  std::placeholders::_3));
-                    std::function<void(const tl::request &, KeyType &)> getFunc(
-                        std::bind(&set<KeyType, Compare>::ThalliumLocalGet, this,
                                   std::placeholders::_1, std::placeholders::_2));
-                    std::function<void(const tl::request &, KeyType &)> eraseFunc(
-                        std::bind(&set<KeyType, Compare>::ThalliumLocalErase, this,
-                                  std::placeholders::_1, std::placeholders::_2));
-                    std::function<void(const tl::request &)>
-                            getAllDataInServerFunc(std::bind(
-                                &set<KeyType, Compare>::ThalliumLocalGetAllDataInServer,
-                                this, std::placeholders::_1));
+                    // std::function<void(const tl::request &, KeyType &)> getFunc(
+                    //     std::bind(&set<KeyType, Compare>::ThalliumLocalGet, this,
+                    //               std::placeholders::_1, std::placeholders::_2));
+                    // std::function<void(const tl::request &, KeyType &)> eraseFunc(
+                    //     std::bind(&set<KeyType, Compare>::ThalliumLocalErase, this,
+                    //               std::placeholders::_1, std::placeholders::_2));
+                    // std::function<void(const tl::request &)>
+                    //         getAllDataInServerFunc(std::bind(
+                    //             &set<KeyType, Compare>::ThalliumLocalGetAllDataInServer,
+                    //             this, std::placeholders::_1));
                     std::function<void(const tl::request &, KeyType &)>
                             containsInServerFunc(std::bind(&set<KeyType,
                                                            Compare>::ThalliumLocalContainsInServer, this,
                                                            std::placeholders::_1));
 
                     rpc->bind(func_prefix+"_Put", putFunc);
-                    rpc->bind(func_prefix+"_Get", getFunc);
-                    rpc->bind(func_prefix+"_Erase", eraseFunc);
-                    rpc->bind(func_prefix+"_GetAllData", getAllDataInServerFunc);
+                    // rpc->bind(func_prefix+"_Get", getFunc);
+                    // rpc->bind(func_prefix+"_Erase", eraseFunc);
+                    // rpc->bind(func_prefix+"_GetAllData", getAllDataInServerFunc);
                     rpc->bind(func_prefix+"_Contains", containsInServerFunc);
                     break;
                 }
@@ -178,13 +190,13 @@ set<KeyType, Compare>::set(std::string name_,
         switch (BASKET_CONF->RPC_IMPLEMENTATION) {
 #ifdef BASKET_ENABLE_RPCLIB
             case RPCLIB: {
-                std::function<bool(KeyType &, MappedType &)> putFunc(
+                std::function<bool(KeyType &)> putFunc(
                     std::bind(&set<KeyType, Compare>::LocalPut, this,
-                              std::placeholders::_1, std::placeholders::_2));
-                std::function<bool>(KeyType &)> getFunc(
+                              std::placeholders::_1));
+                std::function<bool(KeyType &)> getFunc(
                     std::bind(&set<KeyType, Compare>::LocalGet, this,
                               std::placeholders::_1));
-                std::function<bool>(KeyType &)> eraseFunc(
+                std::function<bool(KeyType &)> eraseFunc(
                     std::bind(&set<KeyType, Compare>::LocalErase, this,
                               std::placeholders::_1));
                 std::function<std::vector<KeyType>(void)>
@@ -196,12 +208,25 @@ set<KeyType, Compare>::set(std::string name_,
                                                        Compare>::LocalContainsInServer, this,
                                                        std::placeholders::_1,
                                                        std::placeholders::_2));
+                std::function<std::pair<bool, KeyType>(void)>
+                        seekLastFunc(std::bind(&set<KeyType,
+                                               Compare>::LocalSeekLast, this));
+                std::function<std::pair<bool, KeyType>(void)>
+                        popLastFunc(std::bind(&set<KeyType,
+                                              Compare>::LocalPopLast, this));
+                std::function<size_t(void)>
+                        sizeFunc(std::bind(&set<KeyType,
+                                           Compare>::LocalSize, this));
 
                 rpc->bind(func_prefix+"_Put", putFunc);
                 rpc->bind(func_prefix+"_Get", getFunc);
                 rpc->bind(func_prefix+"_Erase", eraseFunc);
                 rpc->bind(func_prefix+"_GetAllData", getAllDataInServerFunc);
                 rpc->bind(func_prefix+"_Contains", containsInServerFunc);
+
+                rpc->bind(func_prefix+"_SeekLast", seekLastFunc);
+                rpc->bind(func_prefix+"_PopLast", popLastFunc);
+                rpc->bind(func_prefix+"_Size", sizeFunc);
                 break;
             }
 #endif
@@ -461,5 +486,72 @@ set<KeyType, Compare>::GetAllDataInServer() {
         auto my_server_i = my_server;
         return RPC_CALL_WRAPPER1("_GetAllData", my_server_i, ret_type);
    }
+}
+
+template<typename KeyType, typename Compare>
+std::pair<bool, KeyType> set<KeyType, Compare>::LocalSeekLast() {
+    AutoTrace trace = AutoTrace("basket::set::SeekLast(local)");
+    bip::scoped_lock<bip::interprocess_mutex> lock(*mutex);
+    if (myset->size() > 0) {
+        auto iterator = myset->rbegin();  // We want last (largest) value in set
+        KeyType value = *iterator;
+        return std::pair<bool, KeyType>(true, value);
+    }
+    return std::pair<bool, KeyType>(false, KeyType());
+}
+
+template<typename KeyType, typename Compare>
+std::pair<bool, KeyType> set<KeyType, Compare>::SeekLast(uint16_t &key_int) {
+    if (key_int == my_server && server_on_node) {
+        return LocalPopLast();
+    } else {
+        AutoTrace trace = AutoTrace("basket::set::SeekLast(remote)",
+                                    key_int);
+        typedef std::pair<bool, KeyType> ret_type;
+        return RPC_CALL_WRAPPER1("_SeekLast", key_int, ret_type);
+    }
+}
+
+template<typename KeyType, typename Compare>
+std::pair<bool, KeyType> set<KeyType, Compare>::LocalPopLast() {
+    AutoTrace trace = AutoTrace("basket::set::PopLast(local)");
+    bip::scoped_lock<bip::interprocess_mutex> lock(*mutex);
+    if (myset->size() > 0) {
+        auto iterator = myset->rbegin();  // We want last (largest) value in set
+        KeyType value = *iterator;
+        myset->erase(iterator);
+        return std::pair<bool, KeyType>(true, value);
+    }
+    return std::pair<bool, KeyType>(false, KeyType());
+}
+
+template<typename KeyType, typename Compare>
+std::pair<bool, KeyType> set<KeyType, Compare>::PopLast(uint16_t &key_int) {
+    if (key_int == my_server && server_on_node) {
+        return LocalPopLast();
+    } else {
+        AutoTrace trace = AutoTrace("basket::set::PopLast(remote)",
+                                    key_int);
+        typedef std::pair<bool, KeyType> ret_type;
+        return RPC_CALL_WRAPPER1("_PopLast", key_int, ret_type);
+    }
+}
+
+template<typename KeyType, typename Compare>
+size_t set<KeyType, Compare>::LocalSize() {
+    AutoTrace trace = AutoTrace("basket::set::Size(local)");
+    boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(*mutex);
+    return myset->size();
+}
+
+template<typename KeyType, typename Compare>
+size_t set<KeyType, Compare>::Size(uint16_t &key_int) {
+    if (key_int == my_server && server_on_node) {
+        return LocalSize();
+    } else {
+        AutoTrace trace = AutoTrace("basket::set::Size(remote)", key_int);
+        typedef size_t ret_type;
+        return RPC_CALL_WRAPPER1("_Size", key_int, ret_type);
+    }
 }
 #endif  // INCLUDE_BASKET_SET_SET_CPP_
