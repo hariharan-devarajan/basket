@@ -56,7 +56,7 @@ Response RPC::call(uint16_t server_index,
 #ifdef BASKET_ENABLE_RPCLIB
         case RPCLIB: {
             /* Connect to Server */
-            rpc::client client((shared_init ? server_list.shared->at(server_index).c_str() : server_list.single->at(server_index).c_str()), port);
+            rpc::client client(server_list->at(server_index).c_str(), port);
             // client.set_timeout(5000);
             return client.call(func_name, std::forward<Args>(args)...);
             break;
@@ -80,10 +80,7 @@ Response RPC::call(uint16_t server_index,
 
             // We use addr lookup because mercury addresses must be exactly 15 char
             char ip[16];
-            struct hostent *he =
-                    (shared_init ?
-                     gethostbyname(server_list.shared->at(server_index).c_str()) :
-                     gethostbyname(server_list.single->at(server_index).c_str()));
+            struct hostent *he = gethostbyname(server_list->at(server_index).c_str());
             in_addr **addr_list = (struct in_addr **)he->h_addr_list;
             strcpy(ip, inet_ntoa(*addr_list[0]));
 
@@ -113,10 +110,7 @@ Response RPC::call(uint16_t server_index,
 
             // We use addr lookup because mercury addresses must be exactly 15 char
             char ip[16];
-            struct hostent *he =
-                    (shared_init ?
-                     gethostbyname(server_list.shared->at(server_index).c_str()) :
-                     gethostbyname(server_list.single->at(server_index).c_str()));
+            struct hostent *he = gethostbyname(server_list->at(server_index).c_str());
             in_addr **addr_list = (struct in_addr **)he->h_addr_list;
             strcpy(ip, inet_ntoa(*addr_list[0]));
 
@@ -148,7 +142,7 @@ std::future<Response> RPC::async_call(uint16_t server_index,
 #ifdef BASKET_ENABLE_RPCLIB
         case RPCLIB: {
             /* Connect to Server */
-            rpc::client client((shared_init ? server_list.shared->at(server_index).c_str() : server_list.single->at(server_index).c_str()), port);
+            rpc::client client(server_list->at(server_index).c_str(), port);
             // client.set_timeout(5000);
             return client.async_call(func_name, std::forward<Args>(args)...);
             break;

@@ -21,12 +21,7 @@
 #include <basket/communication/rpc_lib.h>
 
 RPC::~RPC() {
-    if (!shared_init) {
-        delete server_list.single;
-    }
-    else if (is_server) {
-        bip::shared_memory_object::remove(name.c_str());
-    }
+    delete server_list;
 
     if (is_server) {
         switch (BASKET_CONF->RPC_IMPLEMENTATION) {
@@ -66,7 +61,7 @@ RPC::RPC() : isInitialized(false), shared_init(false),
         MPI_Get_processor_name(proc_name, &len);
         processor_name = std::string(proc_name);  // so we can compare to servers
 
-        server_list.single = new std::vector<std::string>();
+        server_list = new std::vector<std::string>();
         fstream file;
         file.open(BASKET_CONF->SERVER_LIST,ios::in);
         if (file.is_open()) {
@@ -85,7 +80,7 @@ RPC::RPC() : isInitialized(false), shared_init(false),
                     server_network = file_line;
                 }
                 // server list is list of network interfaces
-                server_list.single->push_back(std::string(server_network));
+                server_list->push_back(std::string(server_network));
             }
         } else {
             printf("Error: Can't open server list file %s\n", BASKET_CONF->SERVER_LIST.c_str());
