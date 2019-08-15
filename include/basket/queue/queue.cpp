@@ -93,11 +93,8 @@ queue<MappedType>::queue(std::string name_)
                 }
 #endif
         }
-    }
-    /* Make clients wait until all servers reach here*/
-    MPI_Barrier(MPI_COMM_WORLD);
-    /* Map the clients to their respective memory pools */
-    if (!is_server && server_on_node) {
+    }else if (!is_server && server_on_node) {
+        /* Map the clients to their respective memory pools */
         segment = bip::managed_shared_memory(bip::open_only, name.c_str());
         std::pair<Queue*, bip::managed_shared_memory::size_type> res;
         res = segment.find<Queue> ("Queue");
@@ -107,7 +104,6 @@ queue<MappedType>::queue(std::string name_)
         res2 = segment.find<bip::interprocess_mutex>("mtx");
         mutex = res2.first;
     }
-    MPI_Barrier(MPI_COMM_WORLD);
 }
 
 /**

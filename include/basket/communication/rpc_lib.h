@@ -93,7 +93,6 @@ class RPC {
     bool isInitialized, is_server;
     int my_rank, comm_size, num_servers;
     uint16_t server_port, my_server;
-    std::string processor_name;
     std::string name;
     bool server_on_node;
 #ifdef BASKET_ENABLE_RPCLIB

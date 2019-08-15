@@ -61,11 +61,6 @@ RPC::RPC() : isInitialized(false), shared_init(false),
              server_port(RPC_PORT) {
     AutoTrace trace = AutoTrace("RPC");
     if (!isInitialized) {
-        int len;
-        char proc_name[MPI_MAX_PROCESSOR_NAME];
-        MPI_Get_processor_name(proc_name, &len);
-        processor_name = std::string(proc_name);  // so we can compare to servers
-
         server_list.single = new std::vector<std::string>();
         fstream file;
         file.open(BASKET_CONF->SERVER_LIST,ios::in);
@@ -149,13 +144,9 @@ RPC::RPC() : isInitialized(false), shared_init(false),
 #endif
             }
         }
-
         /* Create server list from the broadcast list*/
         isInitialized = true;
-
-        MPI_Barrier(MPI_COMM_WORLD);
         run();
-        MPI_Barrier(MPI_COMM_WORLD);
     }
 }
 

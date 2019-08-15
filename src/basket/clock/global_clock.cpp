@@ -76,10 +76,7 @@ global_clock::global_clock(std::string name_)
             std::chrono::high_resolution_clock::now());
         mutex = segment.construct<boost::interprocess::interprocess_mutex>(
             "mtx")();
-    }
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    if (!is_server && server_on_node) {
+    }else if (!is_server && server_on_node) {
         segment = bip::managed_shared_memory(bip::open_only, name.c_str());
         std::pair<chrono_time*, bip::managed_shared_memory::size_type> res;
         res = segment.find<chrono_time> ("Time");
@@ -89,7 +86,6 @@ global_clock::global_clock(std::string name_)
         res2 = segment.find<bip::interprocess_mutex>("mtx");
         mutex = res2.first;
     }
-    MPI_Barrier(MPI_COMM_WORLD);
 }
 
 

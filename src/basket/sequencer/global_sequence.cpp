@@ -71,9 +71,7 @@ global_sequence::global_sequence(std::string name_)
         value = segment.construct<uint64_t>(name.c_str())(0);
         mutex = segment.construct<boost::interprocess::interprocess_mutex>(
             "mtx")();
-    }
-    MPI_Barrier(MPI_COMM_WORLD);
-    if (!is_server && server_on_node) {
+    }else if (!is_server && server_on_node) {
         segment = bip::managed_shared_memory(bip::open_only, name.c_str());
         std::pair<uint64_t*, bip::managed_shared_memory::size_type> res;
         res = segment.find<uint64_t> (name.c_str());
@@ -83,7 +81,6 @@ global_sequence::global_sequence(std::string name_)
         res2 = segment.find<bip::interprocess_mutex>("mtx");
         mutex = res2.first;
     }
-    MPI_Barrier(MPI_COMM_WORLD);
 }
 
 uint64_t global_sequence::LocalGetNextSequence() {
