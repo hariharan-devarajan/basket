@@ -21,12 +21,7 @@
 #include <basket/communication/rpc_lib.h>
 
 RPC::~RPC() {
-    if (!shared_init) {
-        delete server_list.single;
-    }
-    else if (is_server) {
-        bip::shared_memory_object::remove(name.c_str());
-    }
+    delete server_list;
 
     if (is_server) {
         switch (BASKET_CONF->RPC_IMPLEMENTATION) {
@@ -53,7 +48,7 @@ RPC::~RPC() {
     }
 }
 
-RPC::RPC() : isInitialized(false), shared_init(false),
+RPC::RPC() : isInitialized(false),
              is_server(BASKET_CONF->IS_SERVER),
              my_server(BASKET_CONF->MY_SERVER),
              num_servers(BASKET_CONF->NUM_SERVERS),
@@ -61,7 +56,13 @@ RPC::RPC() : isInitialized(false), shared_init(false),
              server_port(RPC_PORT) {
     AutoTrace trace = AutoTrace("RPC");
     if (!isInitialized) {
-        server_list.single = new std::vector<std::string>();
+        int len;
+        char proc_name[MPI_MAX_PROCESSOR_NAME];
+        MPI_Get_processor_name(proc_name, &len);
+        std::string processor_name = std::string(proc_name);
+        // so we can compare to servers and for server init
+
+        server_list = new std::vector<std::string>();
         fstream file;
         file.open(BASKET_CONF->SERVER_LIST,ios::in);
         if (file.is_open()) {
@@ -74,13 +75,16 @@ RPC::RPC() : isInitialized(false), shared_init(false),
                 if (split_loc != std::string::npos) {
                     server_node = file_line.substr(0, split_loc);
                     server_network = file_line.substr(split_loc+1, std::string::npos);
+                    if (is_server) {
+                        processor_name = server_network;  // set network to suggestion
+                    }
                 } else {
                     // no special network
                     server_node = file_line;
                     server_network = file_line;
                 }
                 // server list is list of network interfaces
-                server_list.single->push_back(std::string(server_network));
+                server_list->push_back(std::string(server_network));
             }
         } else {
             printf("Error: Can't open server list file %s\n", BASKET_CONF->SERVER_LIST.c_str());

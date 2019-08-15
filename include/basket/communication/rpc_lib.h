@@ -110,14 +110,9 @@ class RPC {
       }*/
 
 #endif
-    union slist {
-        std::vector<std::string> *single;
-        MyVector* shared;
-    };
 
-    union slist server_list;
+    std::vector<std::string> * server_list;
 
-    bool shared_init;
     really_long memory_allocated;
     boost::interprocess::managed_shared_memory segment;
 
