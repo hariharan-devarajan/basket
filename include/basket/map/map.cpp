@@ -29,11 +29,11 @@ map<KeyType, MappedType, Compare>::~map() {
 }
 
 template<typename KeyType, typename MappedType, typename Compare>
-map<KeyType, MappedType, Compare>::map()
+map<KeyType, MappedType, Compare>::map(std::string name_)
         : is_server(BASKET_CONF->IS_SERVER), my_server(BASKET_CONF->MY_SERVER),
           num_servers(BASKET_CONF->NUM_SERVERS),
           comm_size(1), my_rank(0), memory_allocated(1024ULL * 1024ULL * 128ULL),
-          name(BASKET_CONF->SHMEM_NAME), segment(), mymap(), func_prefix(BASKET_CONF->SHMEM_NAME),
+          name(name_), segment(), mymap(), func_prefix(name_),
           server_on_node(BASKET_CONF->SERVER_ON_NODE)
 {
     AutoTrace trace = AutoTrace("basket::map");

@@ -149,11 +149,11 @@ unordered_map<KeyType, MappedType>::unordered_map(std::string name_,
 }
 
 template<typename KeyType, typename MappedType>
-unordered_map<KeyType, MappedType>::unordered_map()
+unordered_map<KeyType, MappedType>::unordered_map(std::string name_)
         : is_server(BASKET_CONF->IS_SERVER), my_server(BASKET_CONF->MY_SERVER),
           num_servers(BASKET_CONF->NUM_SERVERS),
           comm_size(1), my_rank(0), memory_allocated(1024ULL * 1024ULL * 128ULL),
-          name(BASKET_CONF->SHMEM_NAME), segment(), myHashMap(), func_prefix(BASKET_CONF->SHMEM_NAME),
+          name(name_), segment(), myHashMap(), func_prefix(name_),
           server_on_node(BASKET_CONF->SERVER_ON_NODE) {
     // init my_server, num_servers, server_on_node, processor_name from RPC
     AutoTrace trace = AutoTrace("basket::unordered_map");
@@ -245,6 +245,7 @@ unordered_map<KeyType, MappedType>::unordered_map()
     }
     /* Make clients wait untill all servers reach here*/
     MPI_Barrier(MPI_COMM_WORLD);
+
     /* Map the clients to their respective memory pools */
     if (!is_server && server_on_node) {
         segment = boost::interprocess::managed_shared_memory(

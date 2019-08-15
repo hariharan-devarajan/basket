@@ -103,7 +103,7 @@ class unordered_map {
                            bool server_on_node_,
                            std::string processor_name_ = "");
 
-    explicit unordered_map();
+    explicit unordered_map(std::string name_ = "TEST_UNORDERED_MAP");
 
    /* template <typename F>
     void Bind(std::string rpc_name, F fun);*/

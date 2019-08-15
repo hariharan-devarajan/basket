@@ -126,7 +126,6 @@ int main (int argc,char* argv[])
 
     std::array<int,array_size> my_vals=std::array<int,array_size>();
 
-    BASKET_CONF->SHMEM_NAME = "test_mp";
     BASKET_CONF->IS_SERVER = is_server;
     BASKET_CONF->MY_SERVER = my_server;
     BASKET_CONF->NUM_SERVERS = num_servers;

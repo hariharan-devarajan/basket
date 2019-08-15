@@ -60,7 +60,7 @@ namespace basket{
         RPC_IMPLEMENTATION(THALLIUM_ROCE),
 #endif
         TCP_CONF("ofi+tcp"), VERBS_CONF("verbs"), VERBS_DOMAIN("mlx5_0"),
-        SHMEM_NAME("TEST"), IS_SERVER(false), MY_SERVER(0), NUM_SERVERS(1),
+        IS_SERVER(false), MY_SERVER(0), NUM_SERVERS(1),
         SERVER_ON_NODE(true), SERVER_LIST("test/server_list"), DYN_CONFIG(false) {
           AutoTrace trace = AutoTrace("ConfigurationManager");
           MPI_Comm_size(MPI_COMM_WORLD, &COMM_SIZE);

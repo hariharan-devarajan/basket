@@ -61,7 +61,7 @@ class global_clock {
                  int num_servers_,
                  bool server_on_node_,
                  std::string processor_name_ = "");
-    global_clock();
+    global_clock(std::string name_ = "TEST_GLOBAL_CLOCK");
 
     HTime GetTime();
 
