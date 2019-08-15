@@ -100,7 +100,7 @@ class set {
     bool LocalGet(KeyType &key);
     bool LocalErase(KeyType &key);
     std::vector<KeyType> LocalGetAllDataInServer();
-    std::vector<KeyType> LocalContainsInServer(KeyType &key);
+    std::vector<KeyType> LocalContainsInServer(KeyType &key_start, KeyType &key_end);
 
 #if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
     THALLIUM_DEFINE(LocalPut, (key,data), KeyType &key, MappedType &data)
@@ -114,11 +114,11 @@ class set {
     bool Get(KeyType &key);
 
     bool Erase(KeyType &key);
-    std::vector<KeyType> Contains(KeyType &key);
+    std::vector<KeyType> Contains(KeyType &key_start,KeyType &key_end);
 
     std::vector<KeyType> GetAllData();
 
-    std::vector<KeyType> ContainsInServer(KeyType &key);
+    std::vector<KeyType> ContainsInServer(KeyType &key_start,KeyType &key_end);
     std::vector<KeyType> GetAllDataInServer();
 };
 

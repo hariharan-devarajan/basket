@@ -181,20 +181,21 @@ set<KeyType, Compare>::set(std::string name_,
                 std::function<bool(KeyType &, MappedType &)> putFunc(
                     std::bind(&set<KeyType, Compare>::LocalPut, this,
                               std::placeholders::_1, std::placeholders::_2));
-                std::function<std::pair<bool, MappedType>(KeyType &)> getFunc(
+                std::function<bool>(KeyType &)> getFunc(
                     std::bind(&set<KeyType, Compare>::LocalGet, this,
                               std::placeholders::_1));
-                std::function<std::pair<bool, MappedType>(KeyType &)> eraseFunc(
+                std::function<bool>(KeyType &)> eraseFunc(
                     std::bind(&set<KeyType, Compare>::LocalErase, this,
                               std::placeholders::_1));
-                std::function<std::vector<std::pair<KeyType, MappedType>>(void)>
+                std::function<std::vector<KeyType>(void)>
                         getAllDataInServerFunc(std::bind(
                             &set<KeyType, Compare>::LocalGetAllDataInServer,
                             this));
-                std::function<std::vector<std::pair<KeyType, MappedType>>(KeyType &)>
+                std::function<std::vector<KeyType>(KeyType &,KeyType &)>
                         containsInServerFunc(std::bind(&set<KeyType,
                                                        Compare>::LocalContainsInServer, this,
-                                                       std::placeholders::_1));
+                                                       std::placeholders::_1,
+                                                       std::placeholders::_2));
 
                 rpc->bind(func_prefix+"_Put", putFunc);
                 rpc->bind(func_prefix+"_Get", getFunc);
@@ -269,7 +270,7 @@ template<typename KeyType, typename Compare>
 bool set<KeyType, Compare>::LocalPut(KeyType &key) {
     AutoTrace trace = AutoTrace("basket::set::Put(local)", key);
     boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(*mutex);
-    myset->insert_or_assign(key);
+    myset->insert(key);
     return true;
 }
 
@@ -359,15 +360,15 @@ set<KeyType, Compare>::Erase(KeyType &key) {
  */
 template<typename KeyType, typename Compare>
 std::vector<KeyType>
-set<KeyType, Compare>::Contains(KeyType &key) {
-    AutoTrace trace = AutoTrace("basket::set::Contains", key);
+set<KeyType, Compare>::Contains(KeyType &key_start, KeyType &key_end) {
+    AutoTrace trace = AutoTrace("basket::set::Contains", key_start,key_end);
     std::vector<KeyType> final_values = std::vector<KeyType>();
-    auto current_server = ContainsInServer(key);
+    auto current_server = ContainsInServer(key_start,key_end);
     final_values.insert(final_values.end(), current_server.begin(), current_server.end());
     for (int i = 0; i < num_servers; ++i) {
         if (i != my_server) {
             typedef std::vector<KeyType> ret_type;
-            auto server = RPC_CALL_WRAPPER("_Contains", i, ret_type, key);
+            auto server = RPC_CALL_WRAPPER("_Contains", i, ret_type, key_start,key_end);
             final_values.insert(final_values.end(), server.begin(), server.end());
         }
     }
@@ -391,8 +392,8 @@ std::vector<KeyType> set<KeyType, Compare>::GetAllData() {
 }
 
 template<typename KeyType, typename Compare>
-std::vector<KeyType> set<KeyType, Compare>::LocalContainsInServer(KeyType &key) {
-    AutoTrace trace = AutoTrace("basket::set::ContainsInServer", key);
+std::vector<KeyType> set<KeyType, Compare>::LocalContainsInServer(KeyType &key_start, KeyType &key_end) {
+    AutoTrace trace = AutoTrace("basket::set::ContainsInServer", key_start,key_end);
     std::vector<KeyType> final_values = std::vector<KeyType>();
     {
         boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(*mutex);
@@ -401,18 +402,17 @@ std::vector<KeyType> set<KeyType, Compare>::LocalContainsInServer(KeyType &key) 
         if (size == 0) {
         } else if (size == 1) {
             lower_bound = myset->begin();
-            final_values.insert(final_values.end(), lower_bound->first);
+            if(*lower_bound > key_start) final_values.insert(final_values.end(), *lower_bound);
         } else {
-            lower_bound = myset->lower_bound(key);
+            lower_bound = myset->lower_bound(key_start);
             if (lower_bound == myset->end()) return final_values;
             if (lower_bound != myset->begin()) {
                 --lower_bound;
-                if (!key.Contains(lower_bound->first)) lower_bound++;
+                if (key_start > *lower_bound) lower_bound++;
             }
             while (lower_bound != myset->end()) {
-                if (!(key.Contains(lower_bound->first) ||
-                      lower_bound->first.Contains(key))) break;
-                        final_values.insert(final_values.end(), lower_bound->first);
+                if (*lower_bound < key_end)
+                    final_values.insert(final_values.end(), *lower_bound);
                 lower_bound++;
             }
         }
@@ -421,15 +421,15 @@ std::vector<KeyType> set<KeyType, Compare>::LocalContainsInServer(KeyType &key) 
 }
 
 template<typename KeyType, typename Compare>
-std::vector<std::pair<KeyType, MappedType>>
-set<KeyType, Compare>::ContainsInServer(KeyType &key) {
+std::vector<KeyType>
+set<KeyType, Compare>::ContainsInServer(KeyType &key_start, KeyType &key_end) {
     if (server_on_node) {
-        return LocalContainsInServer(key);
+        return LocalContainsInServer(key_start,key_end);
     }
     else {
         typedef std::vector<KeyType> ret_type;
         auto my_server_i = my_server;
-        return RPC_CALL_WRAPPER("_Contains", my_server_i, ret_type, key);
+        return RPC_CALL_WRAPPER("_Contains", my_server_i, ret_type, key_start,key_end);
     }
 }
 
@@ -443,7 +443,7 @@ std::vector<KeyType> set<KeyType, Compare>::LocalGetAllDataInServer() {
         typename MySet::iterator lower_bound;
         lower_bound = myset->begin();
         while (lower_bound != myset->end()) {
-            final_values.insert(final_values.end(),  lower_bound->first);
+            final_values.insert(final_values.end(),  *lower_bound);
             lower_bound++;
         }
     }
