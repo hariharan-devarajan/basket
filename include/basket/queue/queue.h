@@ -95,6 +95,7 @@ class queue {
                    int num_servers_,
                    bool server_on_node_,
                    std::string processor_name_ = "");
+    explicit queue();
 
     bool LocalPush(MappedType &data);
     std::pair<bool, MappedType> LocalPop();

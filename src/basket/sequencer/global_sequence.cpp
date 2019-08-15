@@ -25,6 +25,67 @@ namespace basket {
 global_sequence::~global_sequence() {
     if (is_server) bip::shared_memory_object::remove(name.c_str());
 }
+
+global_sequence::global_sequence()
+        : is_server(BASKET_CONF->IS_SERVER), my_server(BASKET_CONF->MY_SERVER),
+          num_servers(BASKET_CONF->NUM_SERVERS),
+          comm_size(1), my_rank(0), memory_allocated(1024ULL * 1024ULL * 128ULL),
+          name(BASKET_CONF->SHMEM_NAME), segment(),
+          func_prefix(BASKET_CONF->SHMEM_NAME),
+          server_on_node(BASKET_CONF->SERVER_ON_NODE) {
+    AutoTrace trace = AutoTrace("basket::global_sequence");
+    MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
+    MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+    name = name+"_"+std::to_string(my_server);
+    rpc = Singleton<RPC>::GetInstance();
+    if (is_server) {
+        switch (BASKET_CONF->RPC_IMPLEMENTATION) {
+#ifdef BASKET_ENABLE_RPCLIB
+            case RPCLIB: {
+                std::function<uint64_t(void)> getNextSequence(std::bind(
+                    &basket::global_sequence::LocalGetNextSequence, this));
+                rpc->bind(func_prefix+"_GetNextSequence", getNextSequence);
+                break;
+            }
+#endif
+#ifdef BASKET_ENABLE_THALLIUM_TCP
+            case THALLIUM_TCP:
+#endif
+#ifdef BASKET_ENABLE_THALLIUM_ROCE
+            case THALLIUM_ROCE:
+#endif
+#if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
+                {
+                    std::function<void(const tl::request &)> getNextSequence(std::bind(
+                        &basket::global_sequence::ThalliumLocalGetNextSequence, this,
+                        std::placeholders::_1));
+                    rpc->bind(func_prefix+"_GetNextSequence", getNextSequence);
+                    break;
+                }
+#endif
+        }
+
+        bip::shared_memory_object::remove(name.c_str());
+        segment = bip::managed_shared_memory(bip::create_only, name.c_str(),
+                                             65536);
+        value = segment.construct<uint64_t>(name.c_str())(0);
+        mutex = segment.construct<boost::interprocess::interprocess_mutex>(
+            "mtx")();
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (!is_server && server_on_node) {
+        segment = bip::managed_shared_memory(bip::open_only, name.c_str());
+        std::pair<uint64_t*, bip::managed_shared_memory::size_type> res;
+        res = segment.find<uint64_t> (name.c_str());
+        value = res.first;
+        std::pair<bip::interprocess_mutex *,
+                  bip::managed_shared_memory::size_type> res2;
+        res2 = segment.find<bip::interprocess_mutex>("mtx");
+        mutex = res2.first;
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+}
+
 global_sequence::global_sequence(std::string name_,
                                  bool is_server_,
                                  uint16_t my_server_,

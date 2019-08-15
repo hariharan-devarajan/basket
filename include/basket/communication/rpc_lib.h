@@ -75,6 +75,8 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <fstream>
+#include <iostream>
 
 namespace bip = boost::interprocess;
 #if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
@@ -101,28 +103,45 @@ class RPC {
     std::string engine_init_str;
     /*std::promise<void> thallium_exit_signal;
 
-    void runThalliumServer(std::future<void> futureObj){
+      void runThalliumServer(std::future<void> futureObj){
 
-        while(futureObj.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout){}
-        thallium_engine->wait_for_finalize();
-    }*/
+      while(futureObj.wait_for(std::chrono::milliseconds(1)) == std::future_status::timeout){}
+      thallium_engine->wait_for_finalize();
+      }*/
 
 #endif
-    MyVector* server_list;
+    union slist {
+        std::vector<std::string> *single;
+        MyVector* shared;
+    };
+
+    union slist server_list;
+
+    bool shared_init;
     really_long memory_allocated;
     boost::interprocess::managed_shared_memory segment;
 
   public:
-  ~RPC();
+    ~RPC();
 
-  RPC(std::string name_, bool is_server_, uint16_t my_server_,
-      int num_servers_, bool server_on_node_,
-      std::string processor_name_ = "");
+    RPC(std::string name_, bool is_server_, uint16_t my_server_,
+        int num_servers_, bool server_on_node_,
+        std::string processor_name_ = "");
 
-  template <typename F>
-  void bind(std::string str, F func);
+    // RPC(std::string server_list_, bool is_server_);
 
-  void run(size_t workers = RPC_THREADS);
+    RPC();
+
+    template <typename F>
+    void bind(std::string str, F func);
+
+    // template <typename F, typename CB>
+    // void bindWithCallback(std::string str, F func, CB callback);
+
+    // template <typename CB>
+    // void setCallback(std::string str, CB callback);
+
+    void run(size_t workers = RPC_THREADS);
 
 #ifdef BASKET_ENABLE_THALLIUM_ROCE
     template<typename MappedType>
@@ -131,14 +150,19 @@ class RPC {
     template<typename MappedType>
     tl::bulk prep_rdma_client(MappedType &data);
 #endif
-  /**
-   * Response should be RPCLIB_MSGPACK::object_handle for rpclib and
-   * tl::packed_response for thallium/mercury
-   */
-  template <typename Response, typename... Args>
+    /**
+     * Response should be RPCLIB_MSGPACK::object_handle for rpclib and
+     * tl::packed_response for thallium/mercury
+     */
+    template <typename Response, typename... Args>
     Response call(uint16_t server_index,
-		  std::string const &func_name,
-		  Args... args);
+                  std::string const &func_name,
+                  Args... args);
+    // template <typename Response, typename CBArgs, typename... Args>
+    // Response callWithCallback(uint16_t server_index,
+    //                           std::string const &func_name,
+    //                           CBArgs cb_args,
+    //                           Args... args);
 };
 
 #include "rpc_lib.cpp"

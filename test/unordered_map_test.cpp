@@ -126,7 +126,13 @@ int main (int argc,char* argv[])
 
     std::array<int,array_size> my_vals=std::array<int,array_size>();
 
-    basket::unordered_map<KeyType,std::array<int, array_size>> map("test_map", is_server, my_server, num_servers, server_on_node || is_server, proc_name);
+    BASKET_CONF->SHMEM_NAME = "test_mp";
+    BASKET_CONF->IS_SERVER = is_server;
+    BASKET_CONF->MY_SERVER = my_server;
+    BASKET_CONF->NUM_SERVERS = num_servers;
+    BASKET_CONF->SERVER_ON_NODE = server_on_node || is_server;
+    
+    basket::unordered_map<KeyType,std::array<int, array_size>> map=basket::unordered_map<KeyType,std::array<int,array_size>>();
 
     std::unordered_map<KeyType,std::array<int, array_size>> lmap=std::unordered_map<KeyType,std::array<int, array_size>>();
 

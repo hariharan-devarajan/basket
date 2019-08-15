@@ -90,7 +90,7 @@ class multimap {
     /* Constructor to deallocate the shared memory*/
     ~multimap();
 
-    multimap();
+    explicit multimap();
     explicit multimap(std::string name_, bool is_server_,
                       uint16_t my_server_, int num_servers_,
                       bool server_on_node_,

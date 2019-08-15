@@ -53,6 +53,121 @@ unordered_map<KeyType, MappedType>::unordered_map(std::string name_,
     /* if current rank is a server */
     rpc = Singleton<RPC>::GetInstance("RPC_SERVER_LIST", is_server_, my_server_,
                                       num_servers_, server_on_node_, processor_name_);
+    std::cout << "RPC initialized" << std::endl;
+    if (is_server) {
+        /* Delete existing instance of shared memory space*/
+        boost::interprocess::shared_memory_object::remove(name.c_str());
+        /* allocate new shared memory space */
+        segment = boost::interprocess::managed_shared_memory(
+            boost::interprocess::create_only, name.c_str(), memory_allocated);
+        ShmemAllocator alloc_inst(segment.get_segment_manager());
+        mutex = segment.construct<boost::interprocess::interprocess_mutex>(
+            "mtx")();
+        /* Construct unordered_map in the shared memory space. */
+        myHashMap = segment.construct<MyHashMap>(name.c_str())(
+            128, std::hash<KeyType>(), std::equal_to<KeyType>(),
+            segment.get_allocator<ValueType>());
+        /* Create a RPC server and map the methods to it. */
+  switch (BASKET_CONF->RPC_IMPLEMENTATION) {
+#ifdef BASKET_ENABLE_RPCLIB
+  case RPCLIB: {
+        std::function<bool(KeyType &, MappedType &)> putFunc(
+            std::bind(&unordered_map<KeyType, MappedType>::LocalPut, this,
+                      std::placeholders::_1, std::placeholders::_2));
+        std::function<std::pair<bool, MappedType>(KeyType &)> getFunc(
+            std::bind(&unordered_map<KeyType, MappedType>::LocalGet, this,
+                      std::placeholders::_1));
+        std::function<std::pair<bool, MappedType>(KeyType &)> eraseFunc(
+            std::bind(&unordered_map<KeyType, MappedType>::LocalErase, this,
+                      std::placeholders::_1));
+        std::function<std::vector<std::pair<KeyType, MappedType>>(void)>
+                getAllDataInServerFunc(std::bind(
+                    &unordered_map<KeyType, MappedType>::LocalGetAllDataInServer,
+                    this));
+        rpc->bind(func_prefix+"_Put", putFunc);
+        rpc->bind(func_prefix+"_Get", getFunc);
+        rpc->bind(func_prefix+"_Erase", eraseFunc);
+        rpc->bind(func_prefix+"_GetAllData", getAllDataInServerFunc);
+	break;
+  }
+#endif
+#ifdef BASKET_ENABLE_THALLIUM_TCP
+  case THALLIUM_TCP:
+#endif
+#ifdef BASKET_ENABLE_THALLIUM_ROCE
+  case THALLIUM_ROCE:
+#endif
+#if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
+    {
+
+     std::function<void(const tl::request &, KeyType &, MappedType &)> putFunc(
+            std::bind(&unordered_map<KeyType, MappedType>::ThalliumLocalPut, this,
+                      std::placeholders::_1, std::placeholders::_2,
+                      std::placeholders::_3));
+        // std::function<void(const tl::request &, tl::bulk &, KeyType &)> putFunc(
+        //     std::bind(&unordered_map<KeyType, MappedType>::ThalliumLocalPut, this,
+        //               std::placeholders::_1, std::placeholders::_2,
+        //               std::placeholders::_3));
+        std::function<void(const tl::request &, KeyType &)> getFunc(
+            std::bind(&unordered_map<KeyType, MappedType>::ThalliumLocalGet, this,
+                      std::placeholders::_1, std::placeholders::_2));
+        std::function<void(const tl::request &, KeyType &)> eraseFunc(
+            std::bind(&unordered_map<KeyType, MappedType>::ThalliumLocalErase, this,
+                      std::placeholders::_1, std::placeholders::_2));
+        std::function<void(const tl::request &)>
+                getAllDataInServerFunc(std::bind(
+                    &unordered_map<KeyType, MappedType>::ThalliumLocalGetAllDataInServer,
+                    this, std::placeholders::_1));
+
+        rpc->bind(func_prefix+"_Put", putFunc);
+        rpc->bind(func_prefix+"_Get", getFunc);
+        rpc->bind(func_prefix+"_Erase", eraseFunc);
+        rpc->bind(func_prefix+"_GetAllData", getAllDataInServerFunc);
+	break;
+    }
+#endif
+  }
+        // srv->suppress_exceptions(true);
+    }
+    /* Make clients wait untill all servers reach here*/
+    MPI_Barrier(MPI_COMM_WORLD);
+    /* Map the clients to their respective memory pools */
+    if (!is_server && server_on_node) {
+        segment = boost::interprocess::managed_shared_memory(
+            boost::interprocess::open_only, name.c_str());
+        std::pair<MyHashMap *,
+                  boost::interprocess::managed_shared_memory::size_type> res;
+        res = segment.find<MyHashMap>(name.c_str());
+        myHashMap = res.first;
+        size_t size = myHashMap->size();
+        std::pair<boost::interprocess::interprocess_mutex *,
+                  boost::interprocess::managed_shared_memory::size_type> res2;
+        res2 = segment.find<boost::interprocess::interprocess_mutex>("mtx");
+        mutex = res2.first;
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+}
+
+template<typename KeyType, typename MappedType>
+unordered_map<KeyType, MappedType>::unordered_map()
+        : is_server(BASKET_CONF->IS_SERVER), my_server(BASKET_CONF->MY_SERVER),
+          num_servers(BASKET_CONF->NUM_SERVERS),
+          comm_size(1), my_rank(0), memory_allocated(1024ULL * 1024ULL * 128ULL),
+          name(BASKET_CONF->SHMEM_NAME), segment(), myHashMap(), func_prefix(BASKET_CONF->SHMEM_NAME),
+          server_on_node(BASKET_CONF->SERVER_ON_NODE) {
+    // init my_server, num_servers, server_on_node, processor_name from RPC
+    AutoTrace trace = AutoTrace("basket::unordered_map");
+
+    /* Initialize MPI rank and size of world */
+    MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
+    MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+    /* create per server name for shared memory. Needed if multiple servers are
+       spawned on one node*/
+    this->name += "_" + std::to_string(my_server);
+    /* if current rank is a server */
+    rpc = Singleton<RPC>::GetInstance();
+    // rpc->copyArgs(&my_server, &num_servers, &server_on_node);
+
     if (is_server) {
         /* Delete existing instance of shared memory space*/
         boost::interprocess::shared_memory_object::remove(name.c_str());
@@ -294,6 +409,55 @@ unordered_map<KeyType, MappedType>::Get(KeyType &key) {
 }
 
 template<typename KeyType, typename MappedType>
+template<typename ReturnType,typename... CB_Tuple_Args>
+typename std::enable_if_t<std::is_void<ReturnType>::value,std::pair<bool, MappedType>>
+unordered_map<KeyType, MappedType>::LocalGetWithCallback(KeyType &key, std::string cb_name, CB_Tuple_Args... cb_args){
+    auto ret_1=LocalGet(key);
+    auto ret_2=Call<ReturnType>(cb_name,std::forward<CB_Tuple_Args>(cb_args)...);
+    return ret_1;
+}
+
+template<typename KeyType, typename MappedType>
+template<typename ReturnType,typename... CB_Tuple_Args>
+typename std::enable_if_t<!std::is_void<ReturnType>::value,std::pair<std::pair<bool, MappedType>,ReturnType>> unordered_map<KeyType, MappedType>::LocalGetWithCallback(KeyType &key,
+                                                              std::string cb_name,
+                                                              CB_Tuple_Args... cb_args) {
+    auto ret_1=LocalGet(key);
+    auto ret_2=Call<ReturnType>(cb_name,std::forward<CB_Tuple_Args>(cb_args)...);
+    return std::pair<decltype(ret_1),ReturnType>(ret_1,ret_2);
+}
+
+template<typename KeyType, typename MappedType>
+template<typename ReturnType,typename... CB_Args>
+typename std::enable_if_t<!std::is_void<ReturnType>::value,std::pair<std::pair<bool, MappedType>,ReturnType>> unordered_map<KeyType, MappedType>::GetWithCallback(KeyType &key,
+                                                         std::string c_name,
+                                                         std::string cb_name,
+                                                         CB_Args... cb_args) {
+    uint16_t key_int = (uint16_t)keyHash(key)% num_servers;
+    if (key_int == my_server && server_on_node) {
+        return LocalGetWithCallback<ReturnType>(key, cb_name, std::forward<CB_Args>(cb_args)...);
+    } else {
+        typedef std::pair<std::pair<bool, MappedType>,ReturnType> ret;
+        return RPC_CALL_WRAPPER_CB(c_name, key_int, ret, key, cb_name);
+    }
+}
+
+template<typename KeyType, typename MappedType>
+template<typename ReturnType,typename... CB_Args>
+typename std::enable_if_t<std::is_void<ReturnType>::value,std::pair<bool, MappedType>> unordered_map<KeyType, MappedType>::GetWithCallback(KeyType &key,
+                                                                                                                                                std::string c_name,
+                                                                                                                                                std::string cb_name,
+                                                                                                                                                CB_Args... cb_args) {
+    uint16_t key_int = (uint16_t)keyHash(key)% num_servers;
+    if (key_int == my_server && server_on_node) {
+        return LocalGetWithCallback<ReturnType>(key, cb_name, std::forward<CB_Args>(cb_args)...);
+    } else {
+        typedef std::pair<bool, MappedType> ret;
+        return RPC_CALL_WRAPPER_CB(c_name, key_int, ret, key, cb_name);
+    }
+}
+
+template<typename KeyType, typename MappedType>
 std::pair<bool, MappedType>
 unordered_map<KeyType, MappedType>::LocalErase(KeyType &key) {
     boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex>
@@ -315,6 +479,55 @@ unordered_map<KeyType, MappedType>::Erase(KeyType &key) {
 			      key);
       // return rpc->call(key_int, func_prefix+"_Erase",
       //                  key).template as<std::pair<bool, MappedType>>();
+    }
+}
+
+template<typename KeyType, typename MappedType>
+template<typename ReturnType,typename... CB_Tuple_Args>
+typename std::enable_if_t<std::is_void<ReturnType>::value,std::pair<bool, MappedType>>
+unordered_map<KeyType, MappedType>::LocalEraseWithCallback(KeyType &key, std::string cb_name, CB_Tuple_Args... cb_args){
+    auto ret_1=LocalErase(key);
+    auto ret_2=Call<ReturnType>(cb_name,std::forward<CB_Tuple_Args>(cb_args)...);
+    return ret_1;
+}
+
+template<typename KeyType, typename MappedType>
+template<typename ReturnType,typename... CB_Tuple_Args>
+typename std::enable_if_t<!std::is_void<ReturnType>::value,std::pair<std::pair<bool, MappedType>,ReturnType>> unordered_map<KeyType, MappedType>::LocalEraseWithCallback(KeyType &key,
+                                                              std::string cb_name,
+                                                              CB_Tuple_Args... cb_args) {
+    auto ret_1=LocalErase(key);
+    auto ret_2=Call<ReturnType>(cb_name,std::forward<CB_Tuple_Args>(cb_args)...);
+    return std::pair<decltype(ret_1),ReturnType>(ret_1,ret_2);
+}
+
+template<typename KeyType, typename MappedType>
+template<typename ReturnType,typename... CB_Args>
+typename std::enable_if_t<!std::is_void<ReturnType>::value,std::pair<std::pair<bool, MappedType>,ReturnType>> unordered_map<KeyType, MappedType>::EraseWithCallback(KeyType &key,
+                                                         std::string c_name,
+                                                         std::string cb_name,
+                                                         CB_Args... cb_args) {
+    uint16_t key_int = (uint16_t)keyHash(key)% num_servers;
+    if (key_int == my_server && server_on_node) {
+        return LocalEraseWithCallback<ReturnType>(key, cb_name, std::forward<CB_Args>(cb_args)...);
+    } else {
+        typedef std::pair<std::pair<bool, MappedType>,ReturnType> ret;
+        return RPC_CALL_WRAPPER_CB(c_name, key_int, ret, key, cb_name);
+    }
+}
+
+template<typename KeyType, typename MappedType>
+template<typename ReturnType,typename... CB_Args>
+typename std::enable_if_t<std::is_void<ReturnType>::value,std::pair<bool, MappedType>> unordered_map<KeyType, MappedType>::EraseWithCallback(KeyType &key,
+                                                                                                                                                std::string c_name,
+                                                                                                                                                std::string cb_name,
+                                                                                                                                                CB_Args... cb_args) {
+    uint16_t key_int = (uint16_t)keyHash(key)% num_servers;
+    if (key_int == my_server && server_on_node) {
+        return LocalEraseWithCallback<ReturnType>(key, cb_name, std::forward<CB_Args>(cb_args)...);
+    } else {
+        typedef std::pair<bool, MappedType> ret;
+        return RPC_CALL_WRAPPER_CB(c_name, key_int, ret, key, cb_name);
     }
 }
 
@@ -374,4 +587,52 @@ unordered_map<KeyType, MappedType>::GetAllDataInServer() {
     }
 }
 
+template<typename KeyType, typename MappedType>
+template<typename ReturnType,typename... CB_Tuple_Args>
+typename std::enable_if_t<std::is_void<ReturnType>::value,std::vector<std::pair<bool, MappedType>>>
+unordered_map<KeyType, MappedType>::LocalGetAllDataInServerWithCallback(std::string cb_name, CB_Tuple_Args... cb_args){
+    auto ret_1=LocalGetAllDataInServer();
+    auto ret_2=Call<ReturnType>(cb_name,std::forward<CB_Tuple_Args>(cb_args)...);
+    return ret_1;
+}
+
+template<typename KeyType, typename MappedType>
+template<typename ReturnType,typename... CB_Tuple_Args>
+typename std::enable_if_t<!std::is_void<ReturnType>::value,std::pair<std::vector<std::pair<bool, MappedType>>,ReturnType>>
+unordered_map<KeyType, MappedType>::LocalGetAllDataInServerWithCallback(std::string cb_name,
+                                                                        CB_Tuple_Args... cb_args) {
+    auto ret_1=LocalGetAllDataInServer();
+    auto ret_2=Call<ReturnType>(cb_name,std::forward<CB_Tuple_Args>(cb_args)...);
+    return std::pair<decltype(ret_1),ReturnType>(ret_1,ret_2);
+}
+
+template<typename KeyType, typename MappedType>
+template<typename ReturnType,typename... CB_Args>
+typename std::enable_if_t<!std::is_void<ReturnType>::value,std::pair<std::vector<std::pair<bool, MappedType>>,ReturnType>>
+unordered_map<KeyType, MappedType>::GetAllDataInServerWithCallback(std::string c_name,
+                                                                   std::string cb_name,
+                                                                   CB_Args... cb_args) {
+    if (server_on_node) {
+        return LocalGetAllDataInServerWithCallback<ReturnType>(cb_name, std::forward<CB_Args>(cb_args)...);
+    } else {
+        typedef std::pair<std::vector<std::pair<bool, MappedType>>,ReturnType> ret;
+        auto my_server_i = my_server;
+        return RPC_CALL_WRAPPER_CB(c_name, my_server_i, ret, cb_name);
+    }
+}
+
+template<typename KeyType, typename MappedType>
+template<typename ReturnType,typename... CB_Args>
+typename std::enable_if_t<std::is_void<ReturnType>::value,std::vector<std::pair<bool, MappedType>>>
+unordered_map<KeyType, MappedType>::GetAllDataInServerWithCallback(std::string c_name,
+                                                                   std::string cb_name,
+                                                                   CB_Args... cb_args) {
+    if (server_on_node) {
+        return LocalGetAllDataInServerWithCallback<ReturnType>(cb_name, std::forward<CB_Args>(cb_args)...);
+    } else {
+        typedef std::vector<std::pair<bool, MappedType>> ret;
+        auto my_server_i = my_server;
+        return RPC_CALL_WRAPPER_CB(c_name, my_server_i, ret, cb_name);
+    }
+}
 #endif  // INCLUDE_BASKET_UNORDERED_MAP_UNORDERED_MAP_CPP_

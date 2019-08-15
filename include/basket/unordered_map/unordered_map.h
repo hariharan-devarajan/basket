@@ -103,6 +103,8 @@ class unordered_map {
                            bool server_on_node_,
                            std::string processor_name_ = "");
 
+    explicit unordered_map();
+
    /* template <typename F>
     void Bind(std::string rpc_name, F fun);*/
 
@@ -156,29 +158,105 @@ class unordered_map {
     std::vector<std::pair<KeyType, MappedType>> GetAllDataInServer();
 
     template<typename ReturnType,typename... CB_Tuple_Args>
-    typename std::enable_if_t<std::is_void<ReturnType>::value,bool> LocalPutWithCallback(KeyType &key, MappedType &data,
-                              std::string cb_name,
-                              CB_Tuple_Args... cb_args);
+    typename std::enable_if_t<std::is_void<ReturnType>::value,bool>
+    LocalPutWithCallback(KeyType &key, MappedType &data,
+                         std::string cb_name,
+                         CB_Tuple_Args... cb_args);
 
     template<typename ReturnType,typename... CB_Tuple_Args>
-    typename std::enable_if_t<!std::is_void<ReturnType>::value,std::pair<bool,ReturnType>> LocalPutWithCallback(KeyType &key, MappedType &data,
-                                                                                              std::string cb_name,
-                                                                                              CB_Tuple_Args... cb_args);
-    // std::pair<bool, MappedType> LocalGet(KeyType &key);
-    // std::pair<bool, MappedType> LocalErase(KeyType &key);
-    // std::vector<std::pair<KeyType, MappedType>> LocalGetAllDataInServer();
+    typename std::enable_if_t<!std::is_void<ReturnType>::value,std::pair<bool,ReturnType>>
+    LocalPutWithCallback(KeyType &key, MappedType &data,
+                         std::string cb_name,
+                         CB_Tuple_Args... cb_args);
 
-        template<typename ReturnType,typename... CB_Args>
-        typename std::enable_if_t<!std::is_void<ReturnType>::value,std::pair<bool,ReturnType>>  PutWithCallback(KeyType &key, MappedType &data,
-                                                                 std::string c_name,
-                                                                 std::string cb_name,
-                                                                 CB_Args... cb_args);
-        template<typename ReturnType,typename... CB_Args>
-        typename std::enable_if_t<std::is_void<ReturnType>::value,bool>  PutWithCallback(KeyType &key, MappedType &data,
-                                                                                                                     std::string c_name,
-                                                                                                                     std::string cb_name,
-                                                                                                                     CB_Args... cb_args);
+    template<typename ReturnType,typename... CB_Args>
+    typename std::enable_if_t<!std::is_void<ReturnType>::value,std::pair<bool,ReturnType>>
+    PutWithCallback(KeyType &key, MappedType &data,
+                    std::string c_name,
+                    std::string cb_name,
+                    CB_Args... cb_args);
 
+    template<typename ReturnType,typename... CB_Args>
+        typename std::enable_if_t<std::is_void<ReturnType>::value,bool>
+    PutWithCallback(KeyType &key, MappedType &data,
+                    std::string c_name,
+                    std::string cb_name,
+                    CB_Args... cb_args);
+
+
+    template<typename ReturnType,typename... CB_Tuple_Args>
+    typename std::enable_if_t<std::is_void<ReturnType>::value,std::pair<bool, MappedType>>
+    LocalGetWithCallback(KeyType &key,
+                         std::string cb_name,
+                         CB_Tuple_Args... cb_args);
+
+    template<typename ReturnType,typename... CB_Tuple_Args>
+    typename std::enable_if_t<!std::is_void<ReturnType>::value,std::pair<std::pair<bool, MappedType>,ReturnType>>
+    LocalGetWithCallback(KeyType &key,
+                         std::string cb_name,
+                         CB_Tuple_Args... cb_args);
+
+    template<typename ReturnType,typename... CB_Args>
+    typename std::enable_if_t<!std::is_void<ReturnType>::value,std::pair<std::pair<bool, MappedType>,ReturnType>>
+    GetWithCallback(KeyType &key,
+                    std::string c_name,
+                    std::string cb_name,
+                    CB_Args... cb_args);
+
+    template<typename ReturnType,typename... CB_Args>
+    typename std::enable_if_t<std::is_void<ReturnType>::value,std::pair<bool, MappedType>>
+    GetWithCallback(KeyType &key,
+                    std::string c_name,
+                    std::string cb_name,
+                    CB_Args... cb_args);
+
+    template<typename ReturnType,typename... CB_Tuple_Args>
+    typename std::enable_if_t<std::is_void<ReturnType>::value,std::pair<bool, MappedType>>
+    LocalEraseWithCallback(KeyType &key,
+                         std::string cb_name,
+                         CB_Tuple_Args... cb_args);
+
+    template<typename ReturnType,typename... CB_Tuple_Args>
+    typename std::enable_if_t<!std::is_void<ReturnType>::value,std::pair<std::pair<bool, MappedType>,ReturnType>>
+    LocalEraseWithCallback(KeyType &key,
+                         std::string cb_name,
+                         CB_Tuple_Args... cb_args);
+
+    template<typename ReturnType,typename... CB_Args>
+    typename std::enable_if_t<!std::is_void<ReturnType>::value,std::pair<std::pair<bool, MappedType>,ReturnType>>
+    EraseWithCallback(KeyType &key,
+                    std::string c_name,
+                    std::string cb_name,
+                    CB_Args... cb_args);
+
+    template<typename ReturnType,typename... CB_Args>
+    typename std::enable_if_t<std::is_void<ReturnType>::value,std::pair<bool, MappedType>>
+    EraseWithCallback(KeyType &key,
+                    std::string c_name,
+                    std::string cb_name,
+                    CB_Args... cb_args);
+
+    template<typename ReturnType,typename... CB_Tuple_Args>
+    typename std::enable_if_t<std::is_void<ReturnType>::value,std::vector<std::pair<bool, MappedType>>>
+    LocalGetAllDataInServerWithCallback(std::string cb_name,
+                                        CB_Tuple_Args... cb_args);
+
+    template<typename ReturnType,typename... CB_Tuple_Args>
+    typename std::enable_if_t<!std::is_void<ReturnType>::value,std::pair<std::vector<std::pair<bool, MappedType>>,ReturnType>>
+    LocalGetAllDataInServerWithCallback(std::string cb_name,
+                                        CB_Tuple_Args... cb_args);
+
+    template<typename ReturnType,typename... CB_Args>
+    typename std::enable_if_t<!std::is_void<ReturnType>::value,std::pair<std::vector<std::pair<bool, MappedType>>,ReturnType>>
+    GetAllDataInServerWithCallback(std::string c_name,
+                                   std::string cb_name,
+                                   CB_Args... cb_args);
+
+    template<typename ReturnType,typename... CB_Args>
+    typename std::enable_if_t<std::is_void<ReturnType>::value,std::vector<std::pair<bool, MappedType>>>
+    GetAllDataInServerWithCallback(std::string c_name,
+                                   std::string cb_name,
+                                   CB_Args... cb_args);
 };
 
 #include "unordered_map.cpp"

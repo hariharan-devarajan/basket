@@ -22,6 +22,93 @@ template<typename MappedType>
 queue<MappedType>::~queue() {
     if (is_server) bip::shared_memory_object::remove(name.c_str());
 }
+template<typename MappedType>
+queue<MappedType>::queue()
+        : is_server(BASKET_CONF->IS_SERVER), my_server(BASKET_CONF->MY_SERVER),
+          num_servers(BASKET_CONF->NUM_SERVERS),
+          comm_size(1), my_rank(0), memory_allocated(1024ULL * 1024ULL * 128ULL),
+          name(BASKET_CONF->SHMEM_NAME), segment(), my_queue(), func_prefix(BASKET_CONF->SHMEM_NAME),
+          server_on_node(BASKET_CONF->SERVER_ON_NODE) {
+    AutoTrace trace = AutoTrace("basket::queue(local)");
+    /* Initialize MPI rank and size of world */
+    MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
+    MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+    /* create per server name for shared memory. Needed if multiple servers are
+       spawned on one node*/
+    this->name += "_" + std::to_string(my_server);
+    rpc = Singleton<RPC>::GetInstance();
+    if (is_server) {
+        /* Delete existing instance of shared memory space*/
+        bip::shared_memory_object::remove(name.c_str());
+        /* allocate new shared memory space */
+        segment = bip::managed_shared_memory(bip::create_only, name.c_str(),
+                                             memory_allocated);
+        ShmemAllocator alloc_inst(segment.get_segment_manager());
+        /* Construct queue in the shared memory space. */
+        my_queue = segment.construct<Queue>("Queue")(alloc_inst);
+        mutex = segment.construct<bip::interprocess_mutex>("mtx")();
+        /* Create a RPC server and map the methods to it. */
+        switch (BASKET_CONF->RPC_IMPLEMENTATION) {
+#ifdef BASKET_ENABLE_RPCLIB
+            case RPCLIB: {
+                std::function<bool(MappedType &)> pushFunc(
+                    std::bind(&basket::queue<MappedType>::LocalPush, this,
+                              std::placeholders::_1));
+                std::function<std::pair<bool, MappedType>(void)> popFunc(std::bind(
+                    &basket::queue<MappedType>::LocalPop, this));
+                std::function<size_t(void)> sizeFunc(std::bind(
+                    &basket::queue<MappedType>::LocalSize, this));
+                std::function<bool(void)> waitForElementFunc(std::bind(
+                    &basket::queue<MappedType>::LocalWaitForElement, this));
+                rpc->bind(func_prefix+"_Push", pushFunc);
+                rpc->bind(func_prefix+"_Pop", popFunc);
+                rpc->bind(func_prefix+"_WaitForElement", waitForElementFunc);
+                rpc->bind(func_prefix+"_Size", sizeFunc);
+                break;
+            }
+#endif
+#ifdef BASKET_ENABLE_THALLIUM_TCP
+            case THALLIUM_TCP:
+#endif
+#ifdef BASKET_ENABLE_THALLIUM_ROCE
+            case THALLIUM_ROCE:
+#endif
+#if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
+                {
+                    std::function<void(const tl::request &, MappedType &)> pushFunc(
+                        std::bind(&basket::queue<MappedType>::ThalliumLocalPush, this,
+                                  std::placeholders::_1, std::placeholders::_2));
+                    std::function<void(const tl::request &)> popFunc(std::bind(
+                        &basket::queue<MappedType>::ThalliumLocalPop, this, std::placeholders::_1));
+                    std::function<void(const tl::request &)> sizeFunc(std::bind(
+                        &basket::queue<MappedType>::ThalliumLocalSize, this, std::placeholders::_1));
+                    std::function<void(const tl::request &)> waitForElementFunc(std::bind(
+                        &basket::queue<MappedType>::ThalliumLocalWaitForElement, this,
+                        std::placeholders::_1));
+                    rpc->bind(func_prefix+"_Push", pushFunc);
+                    rpc->bind(func_prefix+"_Pop", popFunc);
+                    rpc->bind(func_prefix+"_WaitForElement", waitForElementFunc);
+                    rpc->bind(func_prefix+"_Size", sizeFunc);
+                    break;
+                }
+#endif
+        }
+    }
+    /* Make clients wait until all servers reach here*/
+    MPI_Barrier(MPI_COMM_WORLD);
+    /* Map the clients to their respective memory pools */
+    if (!is_server && server_on_node) {
+        segment = bip::managed_shared_memory(bip::open_only, name.c_str());
+        std::pair<Queue*, bip::managed_shared_memory::size_type> res;
+        res = segment.find<Queue> ("Queue");
+        my_queue = res.first;
+        std::pair<bip::interprocess_mutex *,
+                  bip::managed_shared_memory::size_type> res2;
+        res2 = segment.find<bip::interprocess_mutex>("mtx");
+        mutex = res2.first;
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+}
 
 template<typename MappedType>
 queue<MappedType>::queue(std::string name_,
@@ -57,7 +144,7 @@ queue<MappedType>::queue(std::string name_,
         my_queue = segment.construct<Queue>("Queue")(alloc_inst);
         mutex = segment.construct<bip::interprocess_mutex>("mtx")();
         /* Create a RPC server and map the methods to it. */
-        switch (CONF->RPC_IMPLEMENTATION) {
+        switch (BASKET_CONF->RPC_IMPLEMENTATION) {
 #ifdef BASKET_ENABLE_RPCLIB
             case RPCLIB: {
                 std::function<bool(MappedType &)> pushFunc(

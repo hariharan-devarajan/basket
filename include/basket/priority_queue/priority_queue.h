@@ -98,6 +98,7 @@ class priority_queue {
                             uint16_t my_server_, int num_servers_,
                             bool server_on_node_,
                             std::string processor_name_ = "");
+    explicit priority_queue();
 
     bool LocalPush(MappedType &data);
     std::pair<bool, MappedType> LocalPop();

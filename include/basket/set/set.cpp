@@ -29,6 +29,118 @@ set<KeyType, Compare>::~set() {
 }
 
 template<typename KeyType, typename Compare>
+set<KeyType, Compare>::set()
+        : is_server(BASKET_CONF->IS_SERVER), my_server(BASKET_CONF->MY_SERVER),
+          num_servers(BASKET_CONF->NUM_SERVERS),
+          comm_size(1), my_rank(0), memory_allocated(1024ULL * 1024ULL * 128ULL),
+          name(BASKET_CONF->SHMEM_NAME), segment(), myset(), func_prefix(BASKET_CONF->SHMEM_NAME),
+          server_on_node(BASKET_CONF->SERVER_ON_NODE) {
+    AutoTrace trace = AutoTrace("basket::set");
+    /* Initialize MPI rank and size of world */
+    MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
+    MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+    /* create per server name for shared memory. Needed if multiple servers are
+       spawned on one node*/
+    this->name += "_" + std::to_string(my_server);
+    /* if current rank is a server */
+    rpc = Singleton<RPC>::GetInstance();
+    if (is_server) {
+        /* Delete existing instance of shared memory space*/
+        boost::interprocess::shared_memory_object::remove(name.c_str());
+        /* allocate new shared memory space */
+        segment = boost::interprocess::managed_shared_memory(
+            boost::interprocess::create_only, name.c_str(), memory_allocated);
+        ShmemAllocator alloc_inst(segment.get_segment_manager());
+        /* Construct set in the shared memory space. */
+        myset = segment.construct<MySet>(name.c_str())(Compare(), alloc_inst);
+        mutex = segment.construct<boost::interprocess::interprocess_mutex>(
+            "mtx")();
+        /* Create a RPC server and map the methods to it. */
+        switch (BASKET_CONF->RPC_IMPLEMENTATION) {
+#ifdef BASKET_ENABLE_RPCLIB
+            case RPCLIB: {
+                std::function<bool(KeyType &)> putFunc(
+                    std::bind(&set<KeyType, Compare>::LocalPut, this,
+                              std::placeholders::_1));
+                std::function<std::pair<bool, KeyType>(KeyType &)> getFunc(
+                    std::bind(&set<KeyType, Compare>::LocalGet, this,
+                              std::placeholders::_1));
+                std::function<std::pair<bool, MappedType>(KeyType &)> eraseFunc(
+                    std::bind(&set<KeyType, Compare>::LocalErase, this,
+                              std::placeholders::_1));
+                std::function<std::vector<std::pair<KeyType, MappedType>>(void)>
+                        getAllDataInServerFunc(std::bind(
+                            &set<KeyType, Compare>::LocalGetAllDataInServer,
+                            this));
+                std::function<std::vector<std::pair<KeyType, MappedType>>(KeyType &)>
+                        containsInServerFunc(std::bind(&set<KeyType,
+                                                       Compare>::LocalContainsInServer, this,
+                                                       std::placeholders::_1));
+
+                rpc->bind(func_prefix+"_Put", putFunc);
+                rpc->bind(func_prefix+"_Get", getFunc);
+                rpc->bind(func_prefix+"_Erase", eraseFunc);
+                rpc->bind(func_prefix+"_GetAllData", getAllDataInServerFunc);
+                rpc->bind(func_prefix+"_Contains", containsInServerFunc);
+                break;
+            }
+#endif
+#ifdef BASKET_ENABLE_THALLIUM_TCP
+            case THALLIUM_TCP:
+#endif
+#ifdef BASKET_ENABLE_THALLIUM_ROCE
+            case THALLIUM_ROCE:
+#endif
+#if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
+                {
+
+                    std::function<void(const tl::request &, KeyType &, MappedType &)> putFunc(
+                        std::bind(&set<KeyType, Compare>::ThalliumLocalPut, this,
+                                  std::placeholders::_1, std::placeholders::_2,
+                                  std::placeholders::_3));
+                    std::function<void(const tl::request &, KeyType &)> getFunc(
+                        std::bind(&set<KeyType, Compare>::ThalliumLocalGet, this,
+                                  std::placeholders::_1, std::placeholders::_2));
+                    std::function<void(const tl::request &, KeyType &)> eraseFunc(
+                        std::bind(&set<KeyType, Compare>::ThalliumLocalErase, this,
+                                  std::placeholders::_1, std::placeholders::_2));
+                    std::function<void(const tl::request &)>
+                            getAllDataInServerFunc(std::bind(
+                                &set<KeyType, Compare>::ThalliumLocalGetAllDataInServer,
+                                this, std::placeholders::_1));
+                    std::function<void(const tl::request &, KeyType &)>
+                            containsInServerFunc(std::bind(&set<KeyType,
+                                                           Compare>::ThalliumLocalContainsInServer, this,
+                                                           std::placeholders::_1));
+
+                    rpc->bind(func_prefix+"_Put", putFunc);
+                    rpc->bind(func_prefix+"_Get", getFunc);
+                    rpc->bind(func_prefix+"_Erase", eraseFunc);
+                    rpc->bind(func_prefix+"_GetAllData", getAllDataInServerFunc);
+                    rpc->bind(func_prefix+"_Contains", containsInServerFunc);
+                    break;
+                }
+#endif
+        }
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    /* Map the clients to their respective memory pools */
+    if (!is_server && server_on_node) {
+        segment = boost::interprocess::managed_shared_memory(
+            boost::interprocess::open_only, name.c_str());
+        std::pair<MySet*,
+                  boost::interprocess::managed_shared_memory::size_type> res;
+        res = segment.find<MySet> (name.c_str());
+        myset = res.first;
+        std::pair<boost::interprocess::interprocess_mutex *,
+                  boost::interprocess::managed_shared_memory::size_type> res2;
+        res2 = segment.find<boost::interprocess::interprocess_mutex>("mtx");
+        mutex = res2.first;
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+}
+
+template<typename KeyType, typename Compare>
 set<KeyType, Compare>::set(std::string name_,
                                        bool is_server_,
                                        uint16_t my_server_,
@@ -63,7 +175,7 @@ set<KeyType, Compare>::set(std::string name_,
         mutex = segment.construct<boost::interprocess::interprocess_mutex>(
             "mtx")();
         /* Create a RPC server and map the methods to it. */
-        switch (CONF->RPC_IMPLEMENTATION) {
+        switch (BASKET_CONF->RPC_IMPLEMENTATION) {
 #ifdef BASKET_ENABLE_RPCLIB
             case RPCLIB: {
                 std::function<bool(KeyType &, MappedType &)> putFunc(

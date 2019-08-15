@@ -29,6 +29,68 @@ global_clock::~global_clock() {
     if (is_server) bip::shared_memory_object::remove(name.c_str());
 }
 
+
+global_clock::global_clock()
+        : is_server(BASKET_CONF->IS_SERVER), my_server(BASKET_CONF->MY_SERVER),
+          num_servers(BASKET_CONF->NUM_SERVERS),
+          comm_size(1), my_rank(0), memory_allocated(1024ULL * 1024ULL * 128ULL),
+          name(BASKET_CONF->SHMEM_NAME), segment(),
+          func_prefix(BASKET_CONF->SHMEM_NAME),
+          server_on_node(BASKET_CONF->SERVER_ON_NODE) {
+    AutoTrace trace = AutoTrace("basket::global_clock");
+    MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
+    MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+    name = name+"_"+std::to_string(my_server);
+    rpc = Singleton<RPC>::GetInstance();
+    if (is_server) {
+                switch (BASKET_CONF->RPC_IMPLEMENTATION) {
+#ifdef BASKET_ENABLE_RPCLIB
+            case RPCLIB: {
+                std::function<HTime(void)> getTimeFunction(
+                    std::bind(&global_clock::LocalGetTime, this));
+                rpc->bind(func_prefix+"_GetTime", getTimeFunction);
+                break;
+            }
+#endif
+#ifdef BASKET_ENABLE_THALLIUM_TCP
+            case THALLIUM_TCP:
+#endif
+#ifdef BASKET_ENABLE_THALLIUM_ROCE
+            case THALLIUM_ROCE:
+#endif
+#if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
+                {
+                    std::function<void(const tl::request &)> getTimeFunction(
+                        std::bind(&global_clock::ThalliumLocalGetTime, this,
+                                  std::placeholders::_1));
+                    rpc->bind(func_prefix+"_GetTime", getTimeFunction);
+                    break;
+                }
+#endif
+        }
+
+        bip::shared_memory_object::remove(name.c_str());
+        segment = bip::managed_shared_memory(bip::create_only, name.c_str(),
+                                             65536);
+        start = segment.construct<chrono_time>("Time")(
+            std::chrono::high_resolution_clock::now());
+        mutex = segment.construct<boost::interprocess::interprocess_mutex>(
+            "mtx")();
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    if (!is_server && server_on_node) {
+        segment = bip::managed_shared_memory(bip::open_only, name.c_str());
+        std::pair<chrono_time*, bip::managed_shared_memory::size_type> res;
+        res = segment.find<chrono_time> ("Time");
+        start = res.first;
+        std::pair<bip::interprocess_mutex *,
+                  bip::managed_shared_memory::size_type> res2;
+        res2 = segment.find<bip::interprocess_mutex>("mtx");
+        mutex = res2.first;
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+}
 /*
  * Constructor gets the start time in a node for later use, binds RPC
  * calls, and sets up mutexes for later locking.

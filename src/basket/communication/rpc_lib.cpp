@@ -21,8 +21,14 @@
 #include <basket/communication/rpc_lib.h>
 
 RPC::~RPC() {
-    if (is_server) {
+    if (!shared_init) {
+        delete server_list.single;
+    }
+    else if (is_server) {
         bip::shared_memory_object::remove(name.c_str());
+    }
+
+    if (is_server) {
         switch (BASKET_CONF->RPC_IMPLEMENTATION) {
 #ifdef BASKET_ENABLE_RPCLIB
             case RPCLIB: {
@@ -47,14 +53,229 @@ RPC::~RPC() {
     }
 }
 
+RPC::RPC() : isInitialized(false), shared_init(false),
+             is_server(BASKET_CONF->IS_SERVER),
+             my_server(BASKET_CONF->MY_SERVER),
+             num_servers(BASKET_CONF->NUM_SERVERS),
+             server_on_node(BASKET_CONF->SERVER_ON_NODE),
+             server_port(RPC_PORT) {
+    AutoTrace trace = AutoTrace("RPC");
+    if (!isInitialized) {
+        int len;
+        char proc_name[MPI_MAX_PROCESSOR_NAME];
+        MPI_Get_processor_name(proc_name, &len);
+        processor_name = std::string(proc_name);  // so we can compare to servers
+
+        server_list.single = new std::vector<std::string>();
+        fstream file;
+        file.open(BASKET_CONF->SERVER_LIST,ios::in);
+        if (file.is_open()) {
+            std::string file_line;
+            std::string server_node;
+            std::string server_network;
+
+            server_on_node = false;  // in case there is no server on node
+            while (getline(file, file_line)) {
+                int split_loc = file_line.find(':');  // split to node and net
+                if (split_loc != std::string::npos) {
+                    server_node = file_line.substr(0, split_loc);
+                    server_network = file_line.substr(split_loc+1, std::string::npos);
+                } else {
+                    // no special network
+                    server_node = file_line;
+                    server_network = file_line;
+                }
+                // server list is list of network interfaces
+                server_list.single->push_back(std::string(server_network));
+            }
+        } else {
+            printf("Error: Can't open server list file %s\n", BASKET_CONF->SERVER_LIST);
+            exit(EXIT_FAILURE);
+        }
+        file.close();
+
+        /* Initialize MPI rank and size of world */
+        MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
+        MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+
+        /* if current rank is a server */
+        if (is_server) {
+            switch (BASKET_CONF->RPC_IMPLEMENTATION) {
+#ifdef BASKET_ENABLE_RPCLIB
+                case RPCLIB: {
+                  rpclib_server = std::make_shared<rpc::server>(server_port+my_server);
+                  break;
+                }
+#endif
+#ifdef BASKET_ENABLE_THALLIUM_TCP
+                case THALLIUM_TCP: {
+                   engine_init_str = BASKET_CONF->TCP_CONF + "://" +
+                                                  std::string(processor_name) +
+                                                  ":" +
+                                                  std::to_string(server_port + my_server);
+                    break;
+                }
+#endif
+#ifdef BASKET_ENABLE_THALLIUM_ROCE
+                case THALLIUM_ROCE: {
+                    engine_init_str = BASKET_CONF->VERBS_CONF + "://" +
+                            BASKET_CONF->VERBS_DOMAIN + "://" +
+                            std::string(processor_name) +
+                            ":" +
+                            std::to_string(server_port+my_server);
+                    break;
+                }
+#endif
+            }
+        } else {
+            switch (BASKET_CONF->RPC_IMPLEMENTATION) {
+#ifdef BASKET_ENABLE_RPCLIB
+                case RPCLIB: {
+                  break;
+                }
+#endif
+#ifdef BASKET_ENABLE_THALLIUM_TCP
+                case THALLIUM_TCP: {
+                    thallium_engine = Singleton<tl::engine>::GetInstance(BASKET_CONF->TCP_CONF,
+                                                                         MARGO_CLIENT_MODE);
+                    break;
+                }
+#endif
+#ifdef BASKET_ENABLE_THALLIUM_ROCE
+                case THALLIUM_ROCE: {
+                  thallium_engine = Singleton<tl::engine>::GetInstance(BASKET_CONF->VERBS_CONF,
+                                           MARGO_CLIENT_MODE);
+                  break;
+                }
+#endif
+            }
+        }
+
+        /* Create server list from the broadcast list*/
+        isInitialized = true;
+
+        MPI_Barrier(MPI_COMM_WORLD);
+        run();
+        MPI_Barrier(MPI_COMM_WORLD);
+    }
+}
+
+// RPC::RPC(std::string server_list_, bool is_server_) : isInitialized(false), shared_init(false), is_server(is_server_), server_port(RPC_PORT) {
+//     AutoTrace trace = AutoTrace("RPC", server_list_, is_server_);
+//     if (!isInitialized) {
+//         int len;
+//         char proc_name[MPI_MAX_PROCESSOR_NAME];
+//         MPI_Get_processor_name(proc_name, &len);
+//         processor_name = std::string(proc_name);  // so we can compare to servers
+
+//         server_list.single = new std::vector<std::string>();
+//         fstream file;
+//         file.open(server_list_,ios::in);
+//         if (file.is_open()) {
+//             std::string file_line;
+//             std::string server_node;
+//             std::string server_network;
+
+//             server_on_node = false;  // in case there is no server on node
+//             while (getline(file, file_line)) {
+//                 int split_loc = file_line.find(':');  // split to node and net
+//                 if (split_loc != std::string::npos) {
+//                     server_node = file_line.substr(0, split_loc);
+//                     server_network = file_line.substr(split_loc+1, std::string::npos);
+//                 } else {
+//                     // no special network
+//                     server_node = file_line;
+//                     server_network = file_line;
+//                 }
+//                 if (server_node.compare(processor_name) == 0) {
+//                     my_server = server_list.single->size();  // this server is my server
+//                     server_on_node = true;  // there is a server on node
+//                 }
+//                 // server list is list of network interfaces
+//                 server_list.single->push_back(std::string(server_network));
+//             }
+//         } else {
+//             printf("Error: Can't open server list file %s\n", server_list_);
+//             exit(EXIT_FAILURE);
+//         }
+//         file.close();
+//         num_servers = server_list.single->size();
+
+//         /* Initialize MPI rank and size of world */
+//         MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
+//         MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+
+//         /* if current rank is a server */
+//         if (is_server) {
+//             switch (BASKET_CONF->RPC_IMPLEMENTATION) {
+// #ifdef BASKET_ENABLE_RPCLIB
+//                 case RPCLIB: {
+//                   rpclib_server = std::make_shared<rpc::server>(server_port+my_server);
+//                   break;
+//                 }
+// #endif
+// #ifdef BASKET_ENABLE_THALLIUM_TCP
+//                 case THALLIUM_TCP: {
+//                    engine_init_str = BASKET_CONF->TCP_CONF + "://" +
+//                                                   std::string(processor_name) +
+//                                                   ":" +
+//                                                   std::to_string(server_port + my_server);
+//                     break;
+//                 }
+// #endif
+// #ifdef BASKET_ENABLE_THALLIUM_ROCE
+//                 case THALLIUM_ROCE: {
+//                     engine_init_str = BASKET_CONF->VERBS_CONF + "://" +
+//                             BASKET_CONF->VERBS_DOMAIN + "://" +
+//                             std::string(processor_name) +
+//                             ":" +
+//                             std::to_string(server_port+my_server);
+//                     break;
+//                 }
+// #endif
+//             }
+//         } else {
+//             switch (BASKET_CONF->RPC_IMPLEMENTATION) {
+// #ifdef BASKET_ENABLE_RPCLIB
+//                 case RPCLIB: {
+//                   break;
+//                 }
+// #endif
+// #ifdef BASKET_ENABLE_THALLIUM_TCP
+//                 case THALLIUM_TCP: {
+//                     thallium_engine = Singleton<tl::engine>::GetInstance(BASKET_CONF->TCP_CONF,
+//                                                                          MARGO_CLIENT_MODE);
+//                     break;
+//                 }
+// #endif
+// #ifdef BASKET_ENABLE_THALLIUM_ROCE
+//                 case THALLIUM_ROCE: {
+//                   thallium_engine = Singleton<tl::engine>::GetInstance(BASKET_CONF->VERBS_CONF,
+//                                            MARGO_CLIENT_MODE);
+//                   break;
+//                 }
+// #endif
+//             }
+//         }
+
+//         /* Create server list from the broadcast list*/
+//         isInitialized = true;
+
+//         MPI_Barrier(MPI_COMM_WORLD);
+//         run();
+//         MPI_Barrier(MPI_COMM_WORLD);
+//     }
+// }
+
 RPC::RPC(std::string name_, bool is_server_, uint16_t my_server_,
          int num_servers_, bool server_on_node_, std::string processor_name_) :
         isInitialized(false), my_server(my_server_), is_server(is_server_),
-        server_list(), server_port(RPC_PORT),
+        server_port(RPC_PORT),
         server_on_node(server_on_node_),
         processor_name(processor_name_),
         num_servers(num_servers_), name(name_),
-        memory_allocated(1024ULL * 1024ULL), segment() {
+        memory_allocated(1024ULL * 1024ULL), segment(),
+        shared_init(true) {
     AutoTrace trace = AutoTrace("RPC", name_, is_server_, my_server_,
                                 num_servers_);
     if (!isInitialized) {
@@ -142,7 +363,7 @@ RPC::RPC(std::string name_, bool is_server_, uint16_t my_server_,
 #endif
 #ifdef BASKET_ENABLE_THALLIUM_TCP
                 case THALLIUM_TCP: {
-                   engine_init_str = CONF->TCP_CONF + "://" +
+                   engine_init_str = BASKET_CONF->TCP_CONF + "://" +
                                                   std::string(processor_name) +
                                                   ":" +
                                                   std::to_string(server_port + my_server_);
@@ -151,8 +372,8 @@ RPC::RPC(std::string name_, bool is_server_, uint16_t my_server_,
 #endif
 #ifdef BASKET_ENABLE_THALLIUM_ROCE
                 case THALLIUM_ROCE: {
-                    engine_init_str = CONF->VERBS_CONF + "://" +
-                            CONF->VERBS_DOMAIN + "://" +
+                    engine_init_str = BASKET_CONF->VERBS_CONF + "://" +
+                            BASKET_CONF->VERBS_DOMAIN + "://" +
                             std::string(processor_name) +
                             ":" +
                             std::to_string(server_port+my_server_);
@@ -170,9 +391,9 @@ RPC::RPC(std::string name_, bool is_server_, uint16_t my_server_,
             segment = bip::managed_shared_memory(bip::create_only, name.c_str(),
                                                  memory_allocated);
             ShmemAllocator alloc_inst(segment.get_segment_manager());
-            server_list = segment.construct<MyVector>("MyVector")(alloc_inst);
+            server_list.shared = segment.construct<MyVector>("MyVector")(alloc_inst);
             for (auto element : temp_list) {
-                server_list->push_back(CharStruct(element));
+                server_list.shared->push_back(CharStruct(element));
             }
         } else {
             switch (BASKET_CONF->RPC_IMPLEMENTATION) {
@@ -183,14 +404,14 @@ RPC::RPC(std::string name_, bool is_server_, uint16_t my_server_,
 #endif
 #ifdef BASKET_ENABLE_THALLIUM_TCP
                 case THALLIUM_TCP: {
-                    thallium_engine = Singleton<tl::engine>::GetInstance(CONF->TCP_CONF,
+                    thallium_engine = Singleton<tl::engine>::GetInstance(BASKET_CONF->TCP_CONF,
                                                                          MARGO_CLIENT_MODE);
                     break;
                 }
 #endif
 #ifdef BASKET_ENABLE_THALLIUM_ROCE
                 case THALLIUM_ROCE: {
-                  thallium_engine = Singleton<tl::engine>::GetInstance(CONF->VERBS_CONF,
+                  thallium_engine = Singleton<tl::engine>::GetInstance(BASKET_CONF->VERBS_CONF,
                                            MARGO_CLIENT_MODE);
                   break;
                 }
@@ -202,7 +423,7 @@ RPC::RPC(std::string name_, bool is_server_, uint16_t my_server_,
             segment = bip::managed_shared_memory(bip::open_only, name.c_str());
             std::pair<MyVector *, bip::managed_shared_memory::size_type> res;
             res = segment.find<MyVector>("MyVector");
-            server_list = res.first;
+            server_list.shared = res.first;
         }
 
         /* Create server list from the broadcast list*/
