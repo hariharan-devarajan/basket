@@ -48,7 +48,7 @@ RPC::~RPC() {
     }
 }
 
-RPC::RPC() : isInitialized(false), shared_init(false),
+RPC::RPC() : isInitialized(false),
              is_server(BASKET_CONF->IS_SERVER),
              my_server(BASKET_CONF->MY_SERVER),
              num_servers(BASKET_CONF->NUM_SERVERS),
@@ -59,7 +59,7 @@ RPC::RPC() : isInitialized(false), shared_init(false),
         int len;
         char proc_name[MPI_MAX_PROCESSOR_NAME];
         MPI_Get_processor_name(proc_name, &len);
-        processor_name = std::string(proc_name);
+        std::string processor_name = std::string(proc_name);
         // so we can compare to servers and for server init
 
         server_list = new std::vector<std::string>();
