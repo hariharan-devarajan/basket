@@ -59,7 +59,8 @@ RPC::RPC() : isInitialized(false), shared_init(false),
         int len;
         char proc_name[MPI_MAX_PROCESSOR_NAME];
         MPI_Get_processor_name(proc_name, &len);
-        processor_name = std::string(proc_name);  // so we can compare to servers
+        processor_name = std::string(proc_name);
+        // so we can compare to servers and for server init
 
         server_list = new std::vector<std::string>();
         fstream file;
@@ -74,6 +75,9 @@ RPC::RPC() : isInitialized(false), shared_init(false),
                 if (split_loc != std::string::npos) {
                     server_node = file_line.substr(0, split_loc);
                     server_network = file_line.substr(split_loc+1, std::string::npos);
+                    if (is_server) {
+                        processor_name = server_network;  // set network to suggestion
+                    }
                 } else {
                     // no special network
                     server_node = file_line;
@@ -144,13 +148,9 @@ RPC::RPC() : isInitialized(false), shared_init(false),
 #endif
             }
         }
-
         /* Create server list from the broadcast list*/
         isInitialized = true;
-
-        MPI_Barrier(MPI_COMM_WORLD);
         run();
-        MPI_Barrier(MPI_COMM_WORLD);
     }
 }
 

@@ -134,10 +134,7 @@ set<KeyType, Compare>::set(std::string name_)
                 }
 #endif
         }
-    }
-    MPI_Barrier(MPI_COMM_WORLD);
-    /* Map the clients to their respective memory pools */
-    if (!is_server && server_on_node) {
+    }else if (!is_server && server_on_node) {
         segment = boost::interprocess::managed_shared_memory(
             boost::interprocess::open_only, name.c_str());
         std::pair<MySet*,
@@ -149,7 +146,6 @@ set<KeyType, Compare>::set(std::string name_)
         res2 = segment.find<boost::interprocess::interprocess_mutex>("mtx");
         mutex = res2.first;
     }
-    MPI_Barrier(MPI_COMM_WORLD);
 }
 
 /**
