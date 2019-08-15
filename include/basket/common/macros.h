@@ -87,7 +87,7 @@
 #endif
 
 
-#define RPC_CALL_WRAPPER1(funcname, serverVar,ret) [this, serverVar ]()-> ret { \
+#define RPC_CALL_WRAPPER1(funcname, serverVar,ret) [& ]()-> ret { \
 switch (BASKET_CONF->RPC_IMPLEMENTATION) {\
 RPC_CALL_WRAPPER_RPCLIB1(funcname, serverVar,ret) \
 RPC_CALL_WRAPPER_THALLIUM_TCP()\
@@ -95,7 +95,7 @@ RPC_CALL_WRAPPER_THALLIUM_ROCE()\
 RPC_CALL_WRAPPER_THALLIUM1(funcname, serverVar,ret)\
  }\
 }();
-#define RPC_CALL_WRAPPER(funcname, serverVar,ret, args...) [this, serverVar , args ]()-> ret { \
+#define RPC_CALL_WRAPPER(funcname, serverVar,ret, args...) [& ]()-> ret { \
 switch (BASKET_CONF->RPC_IMPLEMENTATION) {\
   RPC_CALL_WRAPPER_RPCLIB(funcname, serverVar,ret,args)	\
 RPC_CALL_WRAPPER_THALLIUM_TCP()\
