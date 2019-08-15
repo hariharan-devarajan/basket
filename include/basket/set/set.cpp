@@ -78,11 +78,11 @@ set<KeyType, Compare>::set(std::string name_)
                                                        std::placeholders::_1,
                                                        std::placeholders::_2));
                 std::function<std::pair<bool, KeyType>(void)>
-                        seekLastFunc(std::bind(&set<KeyType,
-                                               Compare>::LocalSeekLast, this));
+                        seekFirstFunc(std::bind(&set<KeyType,
+                                               Compare>::LocalSeekFirst, this));
                 std::function<std::pair<bool, KeyType>(void)>
-                        popLastFunc(std::bind(&set<KeyType,
-                                              Compare>::LocalPopLast, this));
+                        popFirstFunc(std::bind(&set<KeyType,
+                                              Compare>::LocalPopFirst, this));
                 std::function<size_t(void)>
                         sizeFunc(std::bind(&set<KeyType,
                                            Compare>::LocalSize, this));
@@ -92,8 +92,8 @@ set<KeyType, Compare>::set(std::string name_)
                 rpc->bind(func_prefix+"_GetAllData", getAllDataInServerFunc);
                 rpc->bind(func_prefix+"_Contains", containsInServerFunc);
 
-                rpc->bind(func_prefix+"_SeekLast", seekLastFunc);
-                rpc->bind(func_prefix+"_PopLast", popLastFunc);
+                rpc->bind(func_prefix+"_SeekFirst", seekFirstFunc);
+                rpc->bind(func_prefix+"_PopFirst", popFirstFunc);
                 rpc->bind(func_prefix+"_Size", sizeFunc);
                 break;
             }
@@ -209,11 +209,11 @@ set<KeyType, Compare>::set(std::string name_,
                                                        std::placeholders::_1,
                                                        std::placeholders::_2));
                 std::function<std::pair<bool, KeyType>(void)>
-                        seekLastFunc(std::bind(&set<KeyType,
-                                               Compare>::LocalSeekLast, this));
+                        seekFirstFunc(std::bind(&set<KeyType,
+                                               Compare>::LocalSeekFirst, this));
                 std::function<std::pair<bool, KeyType>(void)>
-                        popLastFunc(std::bind(&set<KeyType,
-                                              Compare>::LocalPopLast, this));
+                        popFirstFunc(std::bind(&set<KeyType,
+                                              Compare>::LocalPopFirst, this));
                 std::function<size_t(void)>
                         sizeFunc(std::bind(&set<KeyType,
                                            Compare>::LocalSize, this));
@@ -224,8 +224,8 @@ set<KeyType, Compare>::set(std::string name_,
                 rpc->bind(func_prefix+"_GetAllData", getAllDataInServerFunc);
                 rpc->bind(func_prefix+"_Contains", containsInServerFunc);
 
-                rpc->bind(func_prefix+"_SeekLast", seekLastFunc);
-                rpc->bind(func_prefix+"_PopLast", popLastFunc);
+                rpc->bind(func_prefix+"_SeekFirst", seekFirstFunc);
+                rpc->bind(func_prefix+"_PopFirst", popFirstFunc);
                 rpc->bind(func_prefix+"_Size", sizeFunc);
                 break;
             }
@@ -489,11 +489,11 @@ set<KeyType, Compare>::GetAllDataInServer() {
 }
 
 template<typename KeyType, typename Compare>
-std::pair<bool, KeyType> set<KeyType, Compare>::LocalSeekLast() {
-    AutoTrace trace = AutoTrace("basket::set::SeekLast(local)");
+std::pair<bool, KeyType> set<KeyType, Compare>::LocalSeekFirst() {
+    AutoTrace trace = AutoTrace("basket::set::SeekFirst(local)");
     bip::scoped_lock<bip::interprocess_mutex> lock(*mutex);
     if (myset->size() > 0) {
-        auto iterator = myset->rbegin();  // We want last (largest) value in set
+        auto iterator = myset->begin();  // We want First (smallest) value in set
         KeyType value = *iterator;
         return std::pair<bool, KeyType>(true, value);
     }
@@ -501,23 +501,23 @@ std::pair<bool, KeyType> set<KeyType, Compare>::LocalSeekLast() {
 }
 
 template<typename KeyType, typename Compare>
-std::pair<bool, KeyType> set<KeyType, Compare>::SeekLast(uint16_t &key_int) {
+std::pair<bool, KeyType> set<KeyType, Compare>::SeekFirst(uint16_t &key_int) {
     if (key_int == my_server && server_on_node) {
-        return LocalPopLast();
+        return LocalPopFirst();
     } else {
-        AutoTrace trace = AutoTrace("basket::set::SeekLast(remote)",
+        AutoTrace trace = AutoTrace("basket::set::SeekFirst(remote)",
                                     key_int);
         typedef std::pair<bool, KeyType> ret_type;
-        return RPC_CALL_WRAPPER1("_SeekLast", key_int, ret_type);
+        return RPC_CALL_WRAPPER1("_SeekFirst", key_int, ret_type);
     }
 }
 
 template<typename KeyType, typename Compare>
-std::pair<bool, KeyType> set<KeyType, Compare>::LocalPopLast() {
-    AutoTrace trace = AutoTrace("basket::set::PopLast(local)");
+std::pair<bool, KeyType> set<KeyType, Compare>::LocalPopFirst() {
+    AutoTrace trace = AutoTrace("basket::set::PopFirst(local)");
     bip::scoped_lock<bip::interprocess_mutex> lock(*mutex);
     if (myset->size() > 0) {
-        auto iterator = myset->rbegin();  // We want last (largest) value in set
+        auto iterator = myset->begin();  // We want First (smallest) value in set
         KeyType value = *iterator;
         myset->erase(iterator);
         return std::pair<bool, KeyType>(true, value);
@@ -526,14 +526,14 @@ std::pair<bool, KeyType> set<KeyType, Compare>::LocalPopLast() {
 }
 
 template<typename KeyType, typename Compare>
-std::pair<bool, KeyType> set<KeyType, Compare>::PopLast(uint16_t &key_int) {
+std::pair<bool, KeyType> set<KeyType, Compare>::PopFirst(uint16_t &key_int) {
     if (key_int == my_server && server_on_node) {
-        return LocalPopLast();
+        return LocalPopFirst();
     } else {
-        AutoTrace trace = AutoTrace("basket::set::PopLast(remote)",
+        AutoTrace trace = AutoTrace("basket::set::PopFirst(remote)",
                                     key_int);
         typedef std::pair<bool, KeyType> ret_type;
-        return RPC_CALL_WRAPPER1("_PopLast", key_int, ret_type);
+        return RPC_CALL_WRAPPER1("_PopFirst", key_int, ret_type);
     }
 }
 

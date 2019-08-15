@@ -77,6 +77,7 @@
 #include <vector>
 #include <fstream>
 #include <iostream>
+#include <future>
 
 namespace bip = boost::interprocess;
 #if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)

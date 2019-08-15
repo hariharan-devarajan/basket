@@ -101,8 +101,8 @@ class set {
     bool LocalErase(KeyType &key);
     std::vector<KeyType> LocalGetAllDataInServer();
     std::vector<KeyType> LocalContainsInServer(KeyType &key_start, KeyType &key_end);
-    std::pair<bool, KeyType> LocalSeekLast();
-    std::pair<bool, KeyType> LocalPopLast();
+    std::pair<bool, KeyType> LocalSeekFirst();
+    std::pair<bool, KeyType> LocalPopFirst();
     size_t LocalSize();
 
 #if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
@@ -124,8 +124,8 @@ class set {
     std::vector<KeyType> ContainsInServer(KeyType &key_start,KeyType &key_end);
     std::vector<KeyType> GetAllDataInServer();
 
-    std::pair<bool, KeyType> SeekLast(uint16_t &key_int);
-    std::pair<bool, KeyType> PopLast(uint16_t &key_int);
+    std::pair<bool, KeyType> SeekFirst(uint16_t &key_int);
+    std::pair<bool, KeyType> PopFirst(uint16_t &key_int);
     size_t Size(uint16_t &key_int);
 };
 
