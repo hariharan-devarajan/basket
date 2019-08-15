@@ -31,6 +31,7 @@
 #include <unordered_map>
 #include <basket/common/data_structures.h>
 #include <basket/unordered_map/unordered_map.h>
+#include <basket.h>
 
 struct KeyType{
     size_t a;
@@ -130,8 +131,15 @@ int main (int argc,char* argv[])
     BASKET_CONF->MY_SERVER = my_server;
     BASKET_CONF->NUM_SERVERS = num_servers;
     BASKET_CONF->SERVER_ON_NODE = server_on_node || is_server;
-    
-    basket::unordered_map<KeyType,std::array<int, array_size>> map=basket::unordered_map<KeyType,std::array<int,array_size>>();
+
+    basket::unordered_map<KeyType,std::array<int, array_size>> *map;
+    if (is_server) {
+        map = new basket::unordered_map<KeyType,std::array<int,array_size>>();
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (!is_server) {
+        map = new basket::unordered_map<KeyType,std::array<int,array_size>>();
+    }
 
     std::unordered_map<KeyType,std::array<int, array_size>> lmap=std::unordered_map<KeyType,std::array<int, array_size>>();
 
@@ -143,8 +151,8 @@ int main (int argc,char* argv[])
         std::function<int(int)> func=[](int x){ std::cout<<x<<std::endl;return x; };
         int a;
         std::function<std::pair<bool,int>(KeyType&,std::array<int, array_size>&,std::string,int)> putFunc(std::bind(&basket::unordered_map<KeyType,std::array<int,
-                array_size>>::LocalPutWithCallback<int,int>,&map,std::placeholders::_1, std::placeholders::_2,std::placeholders::_3, std::placeholders::_4));
-        map.Bind("CB_Put", func, "APut",putFunc);
+                                                                                                                    array_size>>::LocalPutWithCallback<int,int>,map,std::placeholders::_1, std::placeholders::_2,std::placeholders::_3, std::placeholders::_4));
+        map->Bind("CB_Put", func, "APut",putFunc);
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
@@ -187,7 +195,7 @@ int main (int argc,char* argv[])
             size_t val=my_server+1;
             auto key=KeyType(val);
             local_map_timer.resumeTime();
-            map.PutWithCallback<int>(key,my_vals,"APut","CB_Put",42);
+            map->PutWithCallback<int>(key,my_vals,"APut","CB_Put",42);
             local_map_timer.pauseTime();
         }
         double local_map_throughput=num_request/local_map_timer.getElapsedTime()*1000*size_of_elem*my_vals.size()/1024/1024;
@@ -198,7 +206,7 @@ int main (int argc,char* argv[])
             size_t val=my_server;
             auto key=KeyType(val);
             local_get_map_timer.resumeTime();
-            auto result = map.Get(key);
+            auto result = map->Get(key);
             local_get_map_timer.pauseTime();
         }
 
@@ -231,7 +239,7 @@ int main (int argc,char* argv[])
             size_t val = my_server+1;
             auto key=KeyType(val);
             remote_map_timer.resumeTime();
-            map.Put(key
+            map->Put(key
                     ,my_vals);
             remote_map_timer.pauseTime();
         }
@@ -245,7 +253,7 @@ int main (int argc,char* argv[])
             size_t val = my_server+1;
             auto key=KeyType(val);
             remote_get_map_timer.resumeTime();
-            map.Get(key);
+            map->Get(key);
             remote_get_map_timer.pauseTime();
         }
         double remote_get_map_throughput=num_request/remote_get_map_timer.getElapsedTime()*1000*size_of_elem*my_vals.size()/1024/1024;
@@ -269,7 +277,8 @@ int main (int argc,char* argv[])
             printf("remote map throughput (get): %f\n",remote_get_tp_result);
         }
     }
-
+    MPI_Barrier(MPI_COMM_WORLD);
+    delete(map);
     MPI_Finalize();
     return 1;
 }
