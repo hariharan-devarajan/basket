@@ -73,10 +73,10 @@ map<KeyType, MappedType, Compare>::map(std::string name_)
                         getAllDataInServerFunc(std::bind(
                             &map<KeyType, MappedType, Compare>::LocalGetAllDataInServer,
                             this));
-                std::function<std::vector<std::pair<KeyType, MappedType>>(KeyType &)>
+                std::function<std::vector<std::pair<KeyType, MappedType>>(KeyType &,KeyType&)>
                         containsInServerFunc(std::bind(&map<KeyType, MappedType,
                                                        Compare>::LocalContainsInServer, this,
-                                                       std::placeholders::_1));
+                                                       std::placeholders::_1, std::placeholders::_2));
 
                 rpc->bind(func_prefix+"_Put", putFunc);
                 rpc->bind(func_prefix+"_Get", getFunc);
@@ -251,20 +251,15 @@ map<KeyType, MappedType, Compare>::Erase(KeyType &key) {
  */
 template<typename KeyType, typename MappedType, typename Compare>
 std::vector<std::pair<KeyType, MappedType>>
-map<KeyType, MappedType, Compare>::Contains(KeyType &key) {
-    AutoTrace trace = AutoTrace("basket::map::Contains", key);
-    std::vector<std::pair<KeyType, MappedType>> final_values =
-            std::vector<std::pair<KeyType, MappedType>>();
-    auto current_server = ContainsInServer(key);
-    final_values.insert(final_values.end(), current_server.begin(),
-                        current_server.end());
+map<KeyType, MappedType, Compare>::Contains(KeyType &key_start,KeyType &key_end) {
+    AutoTrace trace = AutoTrace("basket::map::Contains", key_start,key_end);
+    auto final_values = std::vector<std::pair<KeyType, MappedType>>();
+    auto current_server = ContainsInServer(key_start,key_end);
+    final_values.insert(final_values.end(), current_server.begin(), current_server.end());
     for (int i = 0; i < num_servers; ++i) {
         if (i != my_server) {
             typedef std::vector<std::pair<KeyType, MappedType>> ret_type;
-            auto server = RPC_CALL_WRAPPER("_Contains", i, ret_type,
-                                           key);
-            // auto server = rpc->call(i, func_prefix+"_Contains", key).template
-            //         as<std::vector<std::pair<KeyType, MappedType>>>();
+            auto server = RPC_CALL_WRAPPER("_Contains", i, ret_type, key_start,key_end);
             final_values.insert(final_values.end(), server.begin(), server.end());
         }
     }
@@ -275,11 +270,9 @@ template<typename KeyType, typename MappedType, typename Compare>
 std::vector<std::pair<KeyType, MappedType>>
 map<KeyType, MappedType, Compare>::GetAllData() {
     AutoTrace trace = AutoTrace("basket::map::GetAllData");
-    std::vector<std::pair<KeyType, MappedType>> final_values =
-            std::vector<std::pair<KeyType, MappedType>>();
+    auto final_values = std::vector<std::pair<KeyType, MappedType>>();
     auto current_server = GetAllDataInServer();
-    final_values.insert(final_values.end(), current_server.begin(),
-                        current_server.end());
+    final_values.insert(final_values.end(), current_server.begin(), current_server.end());
     for (int i = 0; i < num_servers ; ++i) {
         if (i != my_server) {
             typedef std::vector<std::pair<KeyType, MappedType> > ret_type;
@@ -292,33 +285,29 @@ map<KeyType, MappedType, Compare>::GetAllData() {
 
 template<typename KeyType, typename MappedType, typename Compare>
 std::vector<std::pair<KeyType, MappedType>>
-map<KeyType, MappedType, Compare>::LocalContainsInServer(KeyType &key) {
+map<KeyType, MappedType, Compare>::LocalContainsInServer(KeyType &key_start,KeyType &key_end) {
     AutoTrace trace = AutoTrace("basket::map::ContainsInServer", key);
-    std::vector<std::pair<KeyType, MappedType>> final_values =
-            std::vector<std::pair<KeyType, MappedType>>();
+    auto final_values = std::vector<std::pair<KeyType, MappedType>>();
     {
-        boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex>
-                lock(*mutex);
+        boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(*mutex);
         typename MyMap::iterator lower_bound;
         size_t size = mymap->size();
         if (size == 0) {
         } else if (size == 1) {
             lower_bound = mymap->begin();
-            final_values.insert(final_values.end(), std::pair<KeyType, MappedType>(
-                lower_bound->first, lower_bound->second));
+
+            if(lower_bound->first > key_start)
+                final_values.insert(final_values.end(), std::pair<KeyType, MappedType>(lower_bound->first, lower_bound->second));
         } else {
-            lower_bound = mymap->lower_bound(key);
+            lower_bound = mymap->lower_bound(key_start);
             if (lower_bound == mymap->end()) return final_values;
             if (lower_bound != mymap->begin()) {
                 --lower_bound;
-                if (!key.Contains(lower_bound->first)) lower_bound++;
+                if (key_start > lower_bound->first) lower_bound++;
             }
             while (lower_bound != mymap->end()) {
-                if (!(key.Contains(lower_bound->first) ||
-                      lower_bound->first.Contains(key))) break;
-                final_values.insert(final_values.end(), std::pair<KeyType,
-                                    MappedType>(lower_bound->first,
-                                                lower_bound->second));
+                if (lower_bound->first > key_end) break;
+                final_values.insert(final_values.end(), std::pair<KeyType, MappedType>(lower_bound->first, lower_bound->second));
                 lower_bound++;
             }
         }
@@ -328,15 +317,14 @@ map<KeyType, MappedType, Compare>::LocalContainsInServer(KeyType &key) {
 
 template<typename KeyType, typename MappedType, typename Compare>
 std::vector<std::pair<KeyType, MappedType>>
-map<KeyType, MappedType, Compare>::ContainsInServer(KeyType &key) {
+map<KeyType, MappedType, Compare>::ContainsInServer(KeyType &key_start,KeyType &key_end) {
     if (server_on_node) {
-        return LocalContainsInServer(key);
+        return LocalContainsInServer(key_start,key_end);
     }
     else {
         typedef std::vector<std::pair<KeyType, MappedType> > ret_type;
         auto my_server_i = my_server;
-        return RPC_CALL_WRAPPER("_Contains", my_server_i, ret_type,
-                                key);
+        return RPC_CALL_WRAPPER("_Contains", my_server_i, ret_type, key_start,key_end);
     }
 }
 
@@ -344,11 +332,9 @@ template<typename KeyType, typename MappedType, typename Compare>
 std::vector<std::pair<KeyType, MappedType>>
 map<KeyType, MappedType, Compare>::LocalGetAllDataInServer() {
     AutoTrace trace = AutoTrace("basket::map::GetAllDataInServer", NULL);
-    std::vector<std::pair<KeyType, MappedType>> final_values =
-            std::vector<std::pair<KeyType, MappedType>>();
+    auto final_values = std::vector<std::pair<KeyType, MappedType>>();
     {
-        boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex>
-                lock(*mutex);
+        boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(*mutex);
         typename MyMap::iterator lower_bound;
         lower_bound = mymap->begin();
         while (lower_bound != mymap->end()) {
