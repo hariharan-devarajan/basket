@@ -11,11 +11,19 @@ add_custom_command(
         ${CMAKE_CURRENT_SOURCE_DIR}/hostfile
         ${CMAKE_CURRENT_BINARY_DIR})
 
+add_custom_target(copy_server_list)
+add_custom_command(
+        TARGET copy_server_list
+        COMMAND ${CMAKE_COMMAND} -E copy
+        ${CMAKE_CURRENT_SOURCE_DIR}/server_list
+        ${CMAKE_CURRENT_BINARY_DIR})
+
 # Compile all examples
 foreach (example ${examples})
     add_executable (${example} ${example}.cpp util.h)
     add_dependencies(${example} basket)
     add_dependencies(${example} copy_hostfile)
+    add_dependencies(${example} copy_server_list)
     target_include_directories(${example} PRIVATE "${CMAKE_BINARY_DIR}/")
     set_target_properties(${example} PROPERTIES ENVIRONMENT LD_PRELOAD=${CMAKE_BINARY_DIR}/libbasket.so)
     target_link_libraries(${example} ${LIB_FLAGS} -L${CMAKE_BINARY_DIR}/ -lbasket -lmpi)
