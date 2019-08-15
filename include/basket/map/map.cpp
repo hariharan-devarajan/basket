@@ -286,7 +286,7 @@ map<KeyType, MappedType, Compare>::GetAllData() {
 template<typename KeyType, typename MappedType, typename Compare>
 std::vector<std::pair<KeyType, MappedType>>
 map<KeyType, MappedType, Compare>::LocalContainsInServer(KeyType &key_start,KeyType &key_end) {
-    AutoTrace trace = AutoTrace("basket::map::ContainsInServer", key);
+    AutoTrace trace = AutoTrace("basket::map::ContainsInServer", key_start,key_end);
     auto final_values = std::vector<std::pair<KeyType, MappedType>>();
     {
         boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(*mutex);
