@@ -77,6 +77,7 @@
 #include <vector>
 #include <fstream>
 #include <iostream>
+#include <future>
 
 namespace bip = boost::interprocess;
 #if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
@@ -124,22 +125,10 @@ class RPC {
   public:
     ~RPC();
 
-    RPC(std::string name_, bool is_server_, uint16_t my_server_,
-        int num_servers_, bool server_on_node_,
-        std::string processor_name_ = "");
-
-    // RPC(std::string server_list_, bool is_server_);
-
     RPC();
 
     template <typename F>
     void bind(std::string str, F func);
-
-    // template <typename F, typename CB>
-    // void bindWithCallback(std::string str, F func, CB callback);
-
-    // template <typename CB>
-    // void setCallback(std::string str, CB callback);
 
     void run(size_t workers = RPC_THREADS);
 
@@ -158,11 +147,10 @@ class RPC {
     Response call(uint16_t server_index,
                   std::string const &func_name,
                   Args... args);
-    // template <typename Response, typename CBArgs, typename... Args>
-    // Response callWithCallback(uint16_t server_index,
-    //                           std::string const &func_name,
-    //                           CBArgs cb_args,
-    //                           Args... args);
+    template <typename Response, typename... Args>
+    std::future<Response> async_call(
+            uint16_t server_index, std::string const &func_name, Args... args);
+
 };
 
 #include "rpc_lib.cpp"

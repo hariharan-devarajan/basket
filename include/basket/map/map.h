@@ -93,10 +93,6 @@ class map {
     ~map();
 
     explicit map(std::string name_ = "TEST_MAP");
-    explicit map(std::string name_, bool is_server_,
-                 uint16_t my_server_, int num_servers_,
-                 bool server_on_node_,
-                 std::string processor_name_ = "");
 
     bool LocalPut(KeyType &key, MappedType &data);
     std::pair<bool, MappedType> LocalGet(KeyType &key);

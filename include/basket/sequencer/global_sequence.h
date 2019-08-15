@@ -51,9 +51,6 @@ class global_sequence {
 
   public:
     ~global_sequence();
-    global_sequence(std::string name_, bool is_server_, uint16_t my_server_,
-                    int num_servers_, bool server_on_node_,
-                    std::string processor_name_ = "");
     global_sequence(std::string name_ = "TEST_GLOBAL_SEQUENCE");
 
     uint64_t GetNextSequence();

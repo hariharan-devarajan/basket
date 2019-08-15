@@ -74,6 +74,10 @@ typedef struct CharStruct {
     bool operator==(const CharStruct &o) const {
         return strcmp(value, o.value) == 0;
     }
+    CharStruct operator+(const CharStruct& o){
+        std::string added=std::string(this->c_str())+std::string(o.c_str());
+        return CharStruct(added);
+    }
 } CharStruct;
 namespace std {
 template<>

@@ -21,9 +21,7 @@
 #ifndef INCLUDE_BASKET_COMMUNICATION_RPC_LIB_CPP_
 #define INCLUDE_BASKET_COMMUNICATION_RPC_LIB_CPP_
 
-#include <future>
-
-template <typename F> 
+template <typename F>
 void RPC::bind(std::string str, F func) {
     switch (BASKET_CONF->RPC_IMPLEMENTATION) {
 #ifdef BASKET_ENABLE_RPCLIB
@@ -137,6 +135,40 @@ Response RPC::call(uint16_t server_index,
 #endif
     }
 }
+
+
+template <typename Response, typename... Args>
+std::future<Response> RPC::async_call(uint16_t server_index,
+                   std::string const &func_name,
+                   Args... args) {
+    AutoTrace trace = AutoTrace("RPC::call", server_index, func_name);
+    int16_t port = server_port + server_index;
+
+    switch (BASKET_CONF->RPC_IMPLEMENTATION) {
+#ifdef BASKET_ENABLE_RPCLIB
+        case RPCLIB: {
+            /* Connect to Server */
+            rpc::client client((shared_init ? server_list.shared->at(server_index).c_str() : server_list.single->at(server_index).c_str()), port);
+            // client.set_timeout(5000);
+            return client.async_call(func_name, std::forward<Args>(args)...);
+            break;
+        }
+#endif
+#ifdef BASKET_ENABLE_THALLIUM_TCP
+        case THALLIUM_TCP: {
+            //TODO:NotImplemented error
+            break;
+        }
+#endif
+#ifdef BASKET_ENABLE_THALLIUM_ROCE
+        case THALLIUM_ROCE: {
+             //TODO:NotImplemented error
+            break;
+        }
+#endif
+    }
+}
+
 
 #ifdef BASKET_ENABLE_THALLIUM_ROCE
 // These are still experimental for using RDMA bulk transfers

@@ -78,11 +78,11 @@ set<KeyType, Compare>::set(std::string name_)
                                                        std::placeholders::_1,
                                                        std::placeholders::_2));
                 std::function<std::pair<bool, KeyType>(void)>
-                        seekLastFunc(std::bind(&set<KeyType,
-                                               Compare>::LocalSeekLast, this));
+                        seekFirstFunc(std::bind(&set<KeyType,
+                                               Compare>::LocalSeekFirst, this));
                 std::function<std::pair<bool, KeyType>(void)>
-                        popLastFunc(std::bind(&set<KeyType,
-                                              Compare>::LocalPopLast, this));
+                        popFirstFunc(std::bind(&set<KeyType,
+                                              Compare>::LocalPopFirst, this));
                 std::function<size_t(void)>
                         sizeFunc(std::bind(&set<KeyType,
                                            Compare>::LocalSize, this));
@@ -92,8 +92,8 @@ set<KeyType, Compare>::set(std::string name_)
                 rpc->bind(func_prefix+"_GetAllData", getAllDataInServerFunc);
                 rpc->bind(func_prefix+"_Contains", containsInServerFunc);
 
-                rpc->bind(func_prefix+"_SeekLast", seekLastFunc);
-                rpc->bind(func_prefix+"_PopLast", popLastFunc);
+                rpc->bind(func_prefix+"_SeekFirst", seekFirstFunc);
+                rpc->bind(func_prefix+"_PopFirst", popFirstFunc);
                 rpc->bind(func_prefix+"_Size", sizeFunc);
                 break;
             }
@@ -129,139 +129,6 @@ set<KeyType, Compare>::set(std::string name_)
                     // rpc->bind(func_prefix+"_Get", getFunc);
                     // rpc->bind(func_prefix+"_Erase", eraseFunc);
                     // rpc->bind(func_prefix+"_GetAllData", getAllDataInServerFunc);
-                    rpc->bind(func_prefix+"_Contains", containsInServerFunc);
-                    break;
-                }
-#endif
-        }
-    }
-    MPI_Barrier(MPI_COMM_WORLD);
-    /* Map the clients to their respective memory pools */
-    if (!is_server && server_on_node) {
-        segment = boost::interprocess::managed_shared_memory(
-            boost::interprocess::open_only, name.c_str());
-        std::pair<MySet*,
-                  boost::interprocess::managed_shared_memory::size_type> res;
-        res = segment.find<MySet> (name.c_str());
-        myset = res.first;
-        std::pair<boost::interprocess::interprocess_mutex *,
-                  boost::interprocess::managed_shared_memory::size_type> res2;
-        res2 = segment.find<boost::interprocess::interprocess_mutex>("mtx");
-        mutex = res2.first;
-    }
-    MPI_Barrier(MPI_COMM_WORLD);
-}
-
-template<typename KeyType, typename Compare>
-set<KeyType, Compare>::set(std::string name_,
-                                       bool is_server_,
-                                       uint16_t my_server_,
-                                       int num_servers_,
-                                       bool server_on_node_,
-                                       std::string processor_name_)
-        : is_server(is_server_), my_server(my_server_), num_servers(num_servers_),
-          comm_size(1), my_rank(0), memory_allocated(1024ULL * 1024ULL * 128ULL),
-          name(name_), segment(), myset(), func_prefix(name_),
-          server_on_node(server_on_node_) {
-    AutoTrace trace = AutoTrace("basket::set", name_, is_server_, my_server_,
-                                num_servers_, server_on_node_, processor_name_);
-    /* Initialize MPI rank and size of world */
-    MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
-    MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
-    /* create per server name for shared memory. Needed if multiple servers are
-       spawned on one node*/
-    this->name += "_" + std::to_string(my_server);
-    /* if current rank is a server */
-    rpc = Singleton<RPC>::GetInstance("RPC_SERVER_LIST", is_server_, my_server_,
-                                      num_servers_, server_on_node_,
-                                      processor_name_);
-    if (is_server) {
-        /* Delete existing instance of shared memory space*/
-        boost::interprocess::shared_memory_object::remove(name.c_str());
-        /* allocate new shared memory space */
-        segment = boost::interprocess::managed_shared_memory(
-            boost::interprocess::create_only, name.c_str(), memory_allocated);
-        ShmemAllocator alloc_inst(segment.get_segment_manager());
-        /* Construct set in the shared memory space. */
-        myset = segment.construct<MySet>(name.c_str())(Compare(), alloc_inst);
-        mutex = segment.construct<boost::interprocess::interprocess_mutex>(
-            "mtx")();
-        /* Create a RPC server and map the methods to it. */
-        switch (BASKET_CONF->RPC_IMPLEMENTATION) {
-#ifdef BASKET_ENABLE_RPCLIB
-            case RPCLIB: {
-                std::function<bool(KeyType &)> putFunc(
-                    std::bind(&set<KeyType, Compare>::LocalPut, this,
-                              std::placeholders::_1));
-                std::function<bool(KeyType &)> getFunc(
-                    std::bind(&set<KeyType, Compare>::LocalGet, this,
-                              std::placeholders::_1));
-                std::function<bool(KeyType &)> eraseFunc(
-                    std::bind(&set<KeyType, Compare>::LocalErase, this,
-                              std::placeholders::_1));
-                std::function<std::vector<KeyType>(void)>
-                        getAllDataInServerFunc(std::bind(
-                            &set<KeyType, Compare>::LocalGetAllDataInServer,
-                            this));
-                std::function<std::vector<KeyType>(KeyType &,KeyType &)>
-                        containsInServerFunc(std::bind(&set<KeyType,
-                                                       Compare>::LocalContainsInServer, this,
-                                                       std::placeholders::_1,
-                                                       std::placeholders::_2));
-                std::function<std::pair<bool, KeyType>(void)>
-                        seekLastFunc(std::bind(&set<KeyType,
-                                               Compare>::LocalSeekLast, this));
-                std::function<std::pair<bool, KeyType>(void)>
-                        popLastFunc(std::bind(&set<KeyType,
-                                              Compare>::LocalPopLast, this));
-                std::function<size_t(void)>
-                        sizeFunc(std::bind(&set<KeyType,
-                                           Compare>::LocalSize, this));
-
-                rpc->bind(func_prefix+"_Put", putFunc);
-                rpc->bind(func_prefix+"_Get", getFunc);
-                rpc->bind(func_prefix+"_Erase", eraseFunc);
-                rpc->bind(func_prefix+"_GetAllData", getAllDataInServerFunc);
-                rpc->bind(func_prefix+"_Contains", containsInServerFunc);
-
-                rpc->bind(func_prefix+"_SeekLast", seekLastFunc);
-                rpc->bind(func_prefix+"_PopLast", popLastFunc);
-                rpc->bind(func_prefix+"_Size", sizeFunc);
-                break;
-            }
-#endif
-#ifdef BASKET_ENABLE_THALLIUM_TCP
-            case THALLIUM_TCP:
-#endif
-#ifdef BASKET_ENABLE_THALLIUM_ROCE
-            case THALLIUM_ROCE:
-#endif
-#if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
-                {
-
-                    std::function<void(const tl::request &, KeyType &, MappedType &)> putFunc(
-                        std::bind(&set<KeyType, Compare>::ThalliumLocalPut, this,
-                                  std::placeholders::_1, std::placeholders::_2,
-                                  std::placeholders::_3));
-                    std::function<void(const tl::request &, KeyType &)> getFunc(
-                        std::bind(&set<KeyType, Compare>::ThalliumLocalGet, this,
-                                  std::placeholders::_1, std::placeholders::_2));
-                    std::function<void(const tl::request &, KeyType &)> eraseFunc(
-                        std::bind(&set<KeyType, Compare>::ThalliumLocalErase, this,
-                                  std::placeholders::_1, std::placeholders::_2));
-                    std::function<void(const tl::request &)>
-                            getAllDataInServerFunc(std::bind(
-                                &set<KeyType, Compare>::ThalliumLocalGetAllDataInServer,
-                                this, std::placeholders::_1));
-                    std::function<void(const tl::request &, KeyType &)>
-                            containsInServerFunc(std::bind(&set<KeyType,
-                                                           Compare>::ThalliumLocalContainsInServer, this,
-                                                           std::placeholders::_1));
-
-                    rpc->bind(func_prefix+"_Put", putFunc);
-                    rpc->bind(func_prefix+"_Get", getFunc);
-                    rpc->bind(func_prefix+"_Erase", eraseFunc);
-                    rpc->bind(func_prefix+"_GetAllData", getAllDataInServerFunc);
                     rpc->bind(func_prefix+"_Contains", containsInServerFunc);
                     break;
                 }
@@ -489,11 +356,11 @@ set<KeyType, Compare>::GetAllDataInServer() {
 }
 
 template<typename KeyType, typename Compare>
-std::pair<bool, KeyType> set<KeyType, Compare>::LocalSeekLast() {
-    AutoTrace trace = AutoTrace("basket::set::SeekLast(local)");
+std::pair<bool, KeyType> set<KeyType, Compare>::LocalSeekFirst() {
+    AutoTrace trace = AutoTrace("basket::set::SeekFirst(local)");
     bip::scoped_lock<bip::interprocess_mutex> lock(*mutex);
     if (myset->size() > 0) {
-        auto iterator = myset->rbegin();  // We want last (largest) value in set
+        auto iterator = myset->begin();  // We want First (smallest) value in set
         KeyType value = *iterator;
         return std::pair<bool, KeyType>(true, value);
     }
@@ -501,23 +368,23 @@ std::pair<bool, KeyType> set<KeyType, Compare>::LocalSeekLast() {
 }
 
 template<typename KeyType, typename Compare>
-std::pair<bool, KeyType> set<KeyType, Compare>::SeekLast(uint16_t &key_int) {
+std::pair<bool, KeyType> set<KeyType, Compare>::SeekFirst(uint16_t &key_int) {
     if (key_int == my_server && server_on_node) {
-        return LocalPopLast();
+        return LocalPopFirst();
     } else {
-        AutoTrace trace = AutoTrace("basket::set::SeekLast(remote)",
+        AutoTrace trace = AutoTrace("basket::set::SeekFirst(remote)",
                                     key_int);
         typedef std::pair<bool, KeyType> ret_type;
-        return RPC_CALL_WRAPPER1("_SeekLast", key_int, ret_type);
+        return RPC_CALL_WRAPPER1("_SeekFirst", key_int, ret_type);
     }
 }
 
 template<typename KeyType, typename Compare>
-std::pair<bool, KeyType> set<KeyType, Compare>::LocalPopLast() {
-    AutoTrace trace = AutoTrace("basket::set::PopLast(local)");
+std::pair<bool, KeyType> set<KeyType, Compare>::LocalPopFirst() {
+    AutoTrace trace = AutoTrace("basket::set::PopFirst(local)");
     bip::scoped_lock<bip::interprocess_mutex> lock(*mutex);
     if (myset->size() > 0) {
-        auto iterator = myset->rbegin();  // We want last (largest) value in set
+        auto iterator = myset->begin();  // We want First (smallest) value in set
         KeyType value = *iterator;
         myset->erase(iterator);
         return std::pair<bool, KeyType>(true, value);
@@ -526,14 +393,14 @@ std::pair<bool, KeyType> set<KeyType, Compare>::LocalPopLast() {
 }
 
 template<typename KeyType, typename Compare>
-std::pair<bool, KeyType> set<KeyType, Compare>::PopLast(uint16_t &key_int) {
+std::pair<bool, KeyType> set<KeyType, Compare>::PopFirst(uint16_t &key_int) {
     if (key_int == my_server && server_on_node) {
-        return LocalPopLast();
+        return LocalPopFirst();
     } else {
-        AutoTrace trace = AutoTrace("basket::set::PopLast(remote)",
+        AutoTrace trace = AutoTrace("basket::set::PopFirst(remote)",
                                     key_int);
         typedef std::pair<bool, KeyType> ret_type;
-        return RPC_CALL_WRAPPER1("_PopLast", key_int, ret_type);
+        return RPC_CALL_WRAPPER1("_PopFirst", key_int, ret_type);
     }
 }
 
