@@ -98,7 +98,7 @@ class map {
     std::pair<bool, MappedType> LocalGet(KeyType &key);
     std::pair<bool, MappedType> LocalErase(KeyType &key);
     std::vector<std::pair<KeyType, MappedType>> LocalGetAllDataInServer();
-    std::vector<std::pair<KeyType, MappedType>> LocalContainsInServer(KeyType &key);
+    std::vector<std::pair<KeyType, MappedType>> LocalContainsInServer(KeyType &key_start,KeyType &key_end);
 
 #if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
     THALLIUM_DEFINE(LocalPut, (key,data), KeyType &key, MappedType &data)
@@ -112,11 +112,11 @@ class map {
     std::pair<bool, MappedType> Get(KeyType &key);
 
     std::pair<bool, MappedType> Erase(KeyType &key);
-    std::vector<std::pair<KeyType, MappedType>> Contains(KeyType &key);
+    std::vector<std::pair<KeyType, MappedType>> Contains(KeyType &key_start,KeyType &key_end);
 
     std::vector<std::pair<KeyType, MappedType>> GetAllData();
 
-    std::vector<std::pair<KeyType, MappedType>> ContainsInServer(KeyType &key);
+    std::vector<std::pair<KeyType, MappedType>> ContainsInServer(KeyType &key_start,KeyType &key_end);
     std::vector<std::pair<KeyType, MappedType>> GetAllDataInServer();
 };
 

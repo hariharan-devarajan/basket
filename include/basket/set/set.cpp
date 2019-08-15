@@ -299,8 +299,8 @@ std::vector<KeyType> set<KeyType, Compare>::LocalContainsInServer(KeyType &key_s
                 if (key_start > *lower_bound) lower_bound++;
             }
             while (lower_bound != myset->end()) {
-                if (*lower_bound < key_end)
-                    final_values.insert(final_values.end(), *lower_bound);
+                if (*lower_bound > key_end) break;
+                final_values.insert(final_values.end(), *lower_bound);
                 lower_bound++;
             }
         }
