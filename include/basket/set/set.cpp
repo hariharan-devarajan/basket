@@ -29,7 +29,7 @@ set<KeyType, Compare>::~set() {
 }
 
 template<typename KeyType, typename Compare>
-set<KeyType, Compare>::set(std::string name_)
+set<KeyType, Compare>::set(CharStruct name_)
         : is_server(BASKET_CONF->IS_SERVER), my_server(BASKET_CONF->MY_SERVER),
           num_servers(BASKET_CONF->NUM_SERVERS),
           comm_size(1), my_rank(0), memory_allocated(1024ULL * 1024ULL * 128ULL),
@@ -158,8 +158,8 @@ template<typename KeyType, typename Compare>
 bool set<KeyType, Compare>::LocalPut(KeyType &key) {
     AutoTrace trace = AutoTrace("basket::set::Put(local)", key);
     boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(*mutex);
-    myset->insert(key);
-    return true;
+    auto iter = myset->insert(key);
+    return iter.second;
 }
 
 /**
@@ -293,11 +293,15 @@ std::vector<KeyType> set<KeyType, Compare>::LocalContainsInServer(KeyType &key_s
             if(*lower_bound > key_start) final_values.insert(final_values.end(), *lower_bound);
         } else {
             lower_bound = myset->lower_bound(key_start);
+            /*KeyType k=*lower_bound;*/
             if (lower_bound == myset->end()) return final_values;
             if (lower_bound != myset->begin()) {
                 --lower_bound;
-                if (key_start > *lower_bound) lower_bound++;
+                /*k=*lower_bound;*/
+                if (key_start > *lower_bound)
+                    lower_bound++;
             }
+            /*k=*lower_bound;*/
             while (lower_bound != myset->end()) {
                 if (*lower_bound > key_end) break;
                 final_values.insert(final_values.end(), *lower_bound);

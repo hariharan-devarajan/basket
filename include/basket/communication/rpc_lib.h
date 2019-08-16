@@ -83,18 +83,11 @@ namespace bip = boost::interprocess;
 #if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
 namespace tl = thallium;
 #endif
-/* typedefs */
-typedef bip::allocator<CharStruct, bip::managed_shared_memory::segment_manager>
-ShmemAllocator;
-typedef bip::vector<CharStruct, ShmemAllocator> MyVector;
 
 class RPC {
-  private:
-    bool isInitialized, is_server;
-    int my_rank, comm_size, num_servers;
-    uint16_t server_port, my_server;
+private:
+    uint16_t server_port;
     std::string name;
-    bool server_on_node;
 #ifdef BASKET_ENABLE_RPCLIB
     std::shared_ptr<rpc::server> rpclib_server;
 #endif
@@ -110,19 +103,14 @@ class RPC {
       }*/
 
 #endif
-
-    std::vector<std::string> * server_list;
-
-    really_long memory_allocated;
-    boost::interprocess::managed_shared_memory segment;
-
+    std::vector<CharStruct> server_list;
   public:
     ~RPC();
 
     RPC();
 
     template <typename F>
-    void bind(std::string str, F func);
+    void bind(CharStruct str, F func);
 
     void run(size_t workers = RPC_THREADS);
 
@@ -139,11 +127,11 @@ class RPC {
      */
     template <typename Response, typename... Args>
     Response call(uint16_t server_index,
-                  std::string const &func_name,
+                  CharStruct const &func_name,
                   Args... args);
     template <typename Response, typename... Args>
     std::future<Response> async_call(
-            uint16_t server_index, std::string const &func_name, Args... args);
+            uint16_t server_index, CharStruct const &func_name, Args... args);
 
 };
 

@@ -22,11 +22,11 @@
 #define INCLUDE_BASKET_COMMUNICATION_RPC_LIB_CPP_
 
 template <typename F>
-void RPC::bind(std::string str, F func) {
+void RPC::bind(CharStruct str, F func) {
     switch (BASKET_CONF->RPC_IMPLEMENTATION) {
 #ifdef BASKET_ENABLE_RPCLIB
         case RPCLIB: {
-            rpclib_server->bind(str, func);
+            rpclib_server->bind(str.c_str(), func);
             break;
         }
 #endif
@@ -47,7 +47,7 @@ void RPC::bind(std::string str, F func) {
 
 template <typename Response, typename... Args>
 Response RPC::call(uint16_t server_index,
-                   std::string const &func_name,
+                   CharStruct const &func_name,
                    Args... args) {
     AutoTrace trace = AutoTrace("RPC::call", server_index, func_name);
     int16_t port = server_port + server_index;
@@ -56,9 +56,9 @@ Response RPC::call(uint16_t server_index,
 #ifdef BASKET_ENABLE_RPCLIB
         case RPCLIB: {
             /* Connect to Server */
-            rpc::client client(server_list->at(server_index).c_str(), port);
+            rpc::client client(server_list.at(server_index).c_str(), port);
             // client.set_timeout(5000);
-            return client.call(func_name, std::forward<Args>(args)...);
+            return client.call(func_name.c_str(), std::forward<Args>(args)...);
             break;
         }
 #endif
@@ -133,8 +133,8 @@ Response RPC::call(uint16_t server_index,
 
 template <typename Response, typename... Args>
 std::future<Response> RPC::async_call(uint16_t server_index,
-                   std::string const &func_name,
-                   Args... args) {
+                                      CharStruct const &func_name,
+                                        Args... args) {
     AutoTrace trace = AutoTrace("RPC::call", server_index, func_name);
     int16_t port = server_port + server_index;
 
@@ -142,9 +142,9 @@ std::future<Response> RPC::async_call(uint16_t server_index,
 #ifdef BASKET_ENABLE_RPCLIB
         case RPCLIB: {
             /* Connect to Server */
-            rpc::client client(server_list->at(server_index).c_str(), port);
+            rpc::client client(server_list.at(server_index).c_str(), port);
             // client.set_timeout(5000);
-            return client.async_call(func_name, std::forward<Args>(args)...);
+            return client.async_call(func_name.c_str(), std::forward<Args>(args)...);
             break;
         }
 #endif

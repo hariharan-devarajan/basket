@@ -82,7 +82,7 @@ class set {
     really_long memory_allocated;
     bool is_server;
     boost::interprocess::managed_shared_memory segment;
-    std::string name, func_prefix;
+    CharStruct name, func_prefix;
     MySet *myset;
     boost::interprocess::interprocess_mutex* mutex;
     bool server_on_node;
@@ -90,7 +90,7 @@ class set {
   public:
     ~set();
 
-    explicit set(std::string name_ = "TEST_SET");
+    explicit set(CharStruct name_ = std::string("TEST_SET"));
 
     bool LocalPut(KeyType &key);
     bool LocalGet(KeyType &key);

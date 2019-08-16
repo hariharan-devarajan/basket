@@ -21,9 +21,7 @@
 #include <basket/communication/rpc_lib.h>
 
 RPC::~RPC() {
-    delete server_list;
-
-    if (is_server) {
+    if (BASKET_CONF->IS_SERVER) {
         switch (BASKET_CONF->RPC_IMPLEMENTATION) {
 #ifdef BASKET_ENABLE_RPCLIB
             case RPCLIB: {
@@ -48,62 +46,43 @@ RPC::~RPC() {
     }
 }
 
-RPC::RPC() : isInitialized(false),
-             is_server(BASKET_CONF->IS_SERVER),
-             my_server(BASKET_CONF->MY_SERVER),
-             num_servers(BASKET_CONF->NUM_SERVERS),
-             server_on_node(BASKET_CONF->SERVER_ON_NODE),
+RPC::RPC() : server_list(),
              server_port(RPC_PORT) {
     AutoTrace trace = AutoTrace("RPC");
-    if (!isInitialized) {
-        int len;
-        char proc_name[MPI_MAX_PROCESSOR_NAME];
-        MPI_Get_processor_name(proc_name, &len);
-        std::string processor_name = std::string(proc_name);
-        // so we can compare to servers and for server init
 
-        server_list = new std::vector<std::string>();
-        fstream file;
-        file.open(BASKET_CONF->SERVER_LIST,ios::in);
-        if (file.is_open()) {
-            std::string file_line;
-            std::string server_node;
-            std::string server_network;
-            server_on_node = false;  // in case there is no server on node
-            while (getline(file, file_line)) {
-                int split_loc = file_line.find(':');  // split to node and net
-                if (split_loc != std::string::npos) {
-                    server_node = file_line.substr(0, split_loc);
-                    server_network = file_line.substr(split_loc+1, std::string::npos);
-                    if (is_server) {
-                        processor_name = server_network;  // set network to suggestion
-                    }
-                } else {
-                    // no special network
-                    server_node = file_line;
-                    server_network = file_line;
-                }
-                // server list is list of network interfaces
-                server_list->push_back(std::string(server_network));
+    fstream file;
+    file.open(BASKET_CONF->SERVER_LIST,ios::in);
+    if (file.is_open()) {
+        std::string file_line;
+        std::string server_node;
+        std::string server_network;
+        while (getline(file, file_line)) {
+            int split_loc = file_line.find(':');  // split to node and net
+            if (split_loc != std::string::npos) {
+                server_node = file_line.substr(0, split_loc);
+                server_network = file_line.substr(split_loc+1, std::string::npos);
+            } else {
+                // no special network
+                server_node = file_line;
+                server_network = file_line;
             }
-        } else {
-            printf("Error: Can't open server list file %s\n", BASKET_CONF->SERVER_LIST.c_str());
-            exit(EXIT_FAILURE);
+            // server list is list of network interfaces
+            server_list.emplace_back(server_network);
         }
-        file.close();
+    } else {
+        printf("Error: Can't open server list file %s\n", BASKET_CONF->SERVER_LIST.c_str());
+        exit(EXIT_FAILURE);
+    }
+    file.close();
 
-        /* Initialize MPI rank and size of world */
-        MPI_Comm_size(MPI_COMM_WORLD, &comm_size);
-        MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
-
-        /* if current rank is a server */
-        if (is_server) {
-            switch (BASKET_CONF->RPC_IMPLEMENTATION) {
+    /* if current rank is a server */
+    if (BASKET_CONF->IS_SERVER) {
+        switch (BASKET_CONF->RPC_IMPLEMENTATION) {
 #ifdef BASKET_ENABLE_RPCLIB
-                case RPCLIB: {
-                  rpclib_server = std::make_shared<rpc::server>(server_port+my_server);
-                  break;
-                }
+            case RPCLIB: {
+              rpclib_server = std::make_shared<rpc::server>(server_port+BASKET_CONF->MY_SERVER);
+              break;
+            }
 #endif
 #ifdef BASKET_ENABLE_THALLIUM_TCP
                 case THALLIUM_TCP: {
@@ -124,13 +103,13 @@ RPC::RPC() : isInitialized(false),
                     break;
                 }
 #endif
-            }
-        } else {
-            switch (BASKET_CONF->RPC_IMPLEMENTATION) {
+        }
+    } else {
+        switch (BASKET_CONF->RPC_IMPLEMENTATION) {
 #ifdef BASKET_ENABLE_RPCLIB
-                case RPCLIB: {
-                  break;
-                }
+            case RPCLIB: {
+              break;
+            }
 #endif
 #ifdef BASKET_ENABLE_THALLIUM_TCP
                 case THALLIUM_TCP: {
@@ -146,17 +125,14 @@ RPC::RPC() : isInitialized(false),
                   break;
                 }
 #endif
-            }
         }
-        /* Create server list from the broadcast list*/
-        isInitialized = true;
-        run();
     }
+    run();
 }
 
 void RPC::run(size_t workers) {
     AutoTrace trace = AutoTrace("RPC::run", workers);
-    if (is_server){
+    if (BASKET_CONF->IS_SERVER){
         switch (BASKET_CONF->RPC_IMPLEMENTATION) {
 #ifdef BASKET_ENABLE_RPCLIB
             case RPCLIB: {

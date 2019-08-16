@@ -32,12 +32,12 @@
 #ifdef BASKET_ENABLE_RPCLIB
 #define RPC_CALL_WRAPPER_RPCLIB1(funcname, serverVar,ret) \
  case RPCLIB: {								\
-    return rpc->call<RPCLIB_MSGPACK::object_handle>( serverVar , func_prefix + funcname ).template as< ret >(); \
+    return rpc->call<RPCLIB_MSGPACK::object_handle>( serverVar , func_prefix + std::string(funcname) ).template as< ret >(); \
     break;\
   }
 #define RPC_CALL_WRAPPER_RPCLIB(funcname, serverVar,ret,args...)			\
  case RPCLIB: {								\
-  return rpc->call<RPCLIB_MSGPACK::object_handle>( serverVar , func_prefix + funcname ,args).template as< ret >(); \
+  return rpc->call<RPCLIB_MSGPACK::object_handle>( serverVar , func_prefix + std::string(funcname) ,args).template as< ret >(); \
     break;\
   }
 #else

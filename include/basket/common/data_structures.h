@@ -49,16 +49,21 @@ namespace bip = boost::interprocess;
 typedef struct CharStruct {
   private:
     char value[256];
+    void Set(char* data_, size_t size) {
+        snprintf(this->value, size+1, "%s", data_);
+    }
+    void Set(std::string data_) {
+        snprintf(this->value, data_.length()+1, "%s", data_.c_str());
+    }
   public:
     CharStruct() {}
-    CharStruct(std::string data_) {
-        snprintf(this->value, sizeof(this->value), "%s", data_.c_str());
+    CharStruct(const char* data_) {
+        snprintf(this->value, strlen(data_)+1, "%s", data_);
     }
-    CharStruct(bip::string data_) {
-        snprintf(this->value, sizeof(this->value), "%s", data_.c_str());
-    }
+    CharStruct(std::string data_):CharStruct(data_.c_str()) {}
+
     CharStruct(char* data_, size_t size) {
-        snprintf(this->value, sizeof(this->value), "%s", data_);
+        snprintf(this->value, size, "%s", data_);
     }
     const char* c_str() const {
         return value;
@@ -78,6 +83,17 @@ typedef struct CharStruct {
         std::string added=std::string(this->c_str())+std::string(o.c_str());
         return CharStruct(added);
     }
+    CharStruct operator+(std::string &o)
+    {
+        std::string added=std::string(this->c_str())+o;
+        return CharStruct(added);
+    }
+    CharStruct& operator+=(const CharStruct& rhs){
+        std::string added=std::string(this->c_str())+std::string(rhs.c_str());
+        Set(added);
+        return *this;
+    }
+
 } CharStruct;
 namespace std {
 template<>

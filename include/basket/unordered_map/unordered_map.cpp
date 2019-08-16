@@ -30,7 +30,7 @@ unordered_map<KeyType, MappedType>::~unordered_map() {
 }
 
 template<typename KeyType, typename MappedType>
-unordered_map<KeyType, MappedType>::unordered_map(std::string name_)
+unordered_map<KeyType, MappedType>::unordered_map(CharStruct name_)
         : is_server(BASKET_CONF->IS_SERVER), my_server(BASKET_CONF->MY_SERVER),
           num_servers(BASKET_CONF->NUM_SERVERS),
           comm_size(1), my_rank(0), memory_allocated(1024ULL * 1024ULL * 128ULL),
@@ -44,7 +44,7 @@ unordered_map<KeyType, MappedType>::unordered_map(std::string name_)
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
     /* create per server name for shared memory. Needed if multiple servers are
        spawned on one node*/
-    this->name += "_" + std::to_string(my_server);
+    this->name = this->name + std::string("_") + std::to_string(my_server);
     /* if current rank is a server */
     rpc = Singleton<RPC>::GetInstance();
     // rpc->copyArgs(&my_server, &num_servers, &server_on_node);
@@ -177,9 +177,9 @@ bool unordered_map<KeyType, MappedType>::Put(KeyType &key,
 
 template<typename KeyType, typename MappedType>
 template<typename CF, typename ReturnType,typename... ArgsType>
-void unordered_map<KeyType, MappedType>::Bind(  std::string callback_name,
+void unordered_map<KeyType, MappedType>::Bind(  CharStruct callback_name,
                                                 std::function<ReturnType(ArgsType...)> callback_func,
-                                                std::string caller_func_name,
+                                                CharStruct caller_func_name,
                                                 CF caller_func) {
     binding_map.insert_or_assign(callback_name, &callback_func);
     rpc->bind(caller_func_name, caller_func);
@@ -188,7 +188,7 @@ void unordered_map<KeyType, MappedType>::Bind(  std::string callback_name,
 template<typename KeyType, typename MappedType>
 template<typename ReturnType,typename... CB_Tuple_Args>
 typename std::enable_if_t<std::is_void<ReturnType>::value,bool>
-unordered_map<KeyType, MappedType>::LocalPutWithCallback(KeyType &key, MappedType &data, std::string cb_name, CB_Tuple_Args... cb_args){
+unordered_map<KeyType, MappedType>::LocalPutWithCallback(KeyType &key, MappedType &data, CharStruct cb_name, CB_Tuple_Args... cb_args){
     auto ret_1=LocalPut(key,data);
     auto ret_2=Call<ReturnType>(cb_name,std::forward<CB_Tuple_Args>(cb_args)...);
     return ret_1;
@@ -197,7 +197,7 @@ unordered_map<KeyType, MappedType>::LocalPutWithCallback(KeyType &key, MappedTyp
 template<typename KeyType, typename MappedType>
 template<typename ReturnType,typename... CB_Tuple_Args>
 typename std::enable_if_t<!std::is_void<ReturnType>::value,std::pair<bool,ReturnType>> unordered_map<KeyType, MappedType>::LocalPutWithCallback(KeyType &key, MappedType &data,
-                                                              std::string cb_name,
+                                                                                                                                                CharStruct cb_name,
                                                               CB_Tuple_Args... cb_args) {
     auto ret_1=LocalPut(key,data);
     auto ret_2=Call<ReturnType>(cb_name,std::forward<CB_Tuple_Args>(cb_args)...);
@@ -207,8 +207,8 @@ typename std::enable_if_t<!std::is_void<ReturnType>::value,std::pair<bool,Return
 template<typename KeyType, typename MappedType>
 template<typename ReturnType,typename... CB_Args>
 typename std::enable_if_t<!std::is_void<ReturnType>::value,std::pair<bool,ReturnType>> unordered_map<KeyType, MappedType>::PutWithCallback(KeyType &key, MappedType &data,
-                                                         std::string c_name,
-                                                         std::string cb_name,
+                                                                                                                                           CharStruct c_name,
+                                                                                                                                           CharStruct cb_name,
                                                          CB_Args... cb_args) {
     uint16_t key_int = (uint16_t)keyHash(key)% num_servers;
     if (key_int == my_server && server_on_node) {
@@ -222,9 +222,9 @@ typename std::enable_if_t<!std::is_void<ReturnType>::value,std::pair<bool,Return
 template<typename KeyType, typename MappedType>
 template<typename ReturnType,typename... CB_Args>
 typename std::enable_if_t<std::is_void<ReturnType>::value,bool> unordered_map<KeyType, MappedType>::PutWithCallback(KeyType &key, MappedType &data,
-                                                                                                                                                std::string c_name,
-                                                                                                                                                std::string cb_name,
-                                                                                                                                                CB_Args... cb_args) {
+                                                                                                                    CharStruct c_name,
+                                                                                                                    CharStruct cb_name,
+                                                                                                                    CB_Args... cb_args) {
     uint16_t key_int = (uint16_t)keyHash(key)% num_servers;
     if (key_int == my_server && server_on_node) {
         return LocalPutWithCallback<ReturnType>(key, data, cb_name, std::forward<CB_Args>(cb_args)...);
@@ -287,7 +287,7 @@ unordered_map<KeyType, MappedType>::Get(KeyType &key) {
 template<typename KeyType, typename MappedType>
 template<typename ReturnType,typename... CB_Tuple_Args>
 typename std::enable_if_t<std::is_void<ReturnType>::value,std::pair<bool, MappedType>>
-unordered_map<KeyType, MappedType>::LocalGetWithCallback(KeyType &key, std::string cb_name, CB_Tuple_Args... cb_args){
+unordered_map<KeyType, MappedType>::LocalGetWithCallback(KeyType &key, CharStruct cb_name, CB_Tuple_Args... cb_args){
     auto ret_1=LocalGet(key);
     auto ret_2=Call<ReturnType>(cb_name,std::forward<CB_Tuple_Args>(cb_args)...);
     return ret_1;
@@ -295,9 +295,8 @@ unordered_map<KeyType, MappedType>::LocalGetWithCallback(KeyType &key, std::stri
 
 template<typename KeyType, typename MappedType>
 template<typename ReturnType,typename... CB_Tuple_Args>
-typename std::enable_if_t<!std::is_void<ReturnType>::value,std::pair<std::pair<bool, MappedType>,ReturnType>> unordered_map<KeyType, MappedType>::LocalGetWithCallback(KeyType &key,
-                                                              std::string cb_name,
-                                                              CB_Tuple_Args... cb_args) {
+typename std::enable_if_t<!std::is_void<ReturnType>::value,std::pair<std::pair<bool, MappedType>,ReturnType>>
+        unordered_map<KeyType, MappedType>::LocalGetWithCallback(KeyType &key, CharStruct cb_name, CB_Tuple_Args... cb_args) {
     auto ret_1=LocalGet(key);
     auto ret_2=Call<ReturnType>(cb_name,std::forward<CB_Tuple_Args>(cb_args)...);
     return std::pair<decltype(ret_1),ReturnType>(ret_1,ret_2);
@@ -306,8 +305,8 @@ typename std::enable_if_t<!std::is_void<ReturnType>::value,std::pair<std::pair<b
 template<typename KeyType, typename MappedType>
 template<typename ReturnType,typename... CB_Args>
 typename std::enable_if_t<!std::is_void<ReturnType>::value,std::pair<std::pair<bool, MappedType>,ReturnType>> unordered_map<KeyType, MappedType>::GetWithCallback(KeyType &key,
-                                                         std::string c_name,
-                                                         std::string cb_name,
+                                                                                                                                                                  CharStruct c_name,
+                                                                                                                                                                  CharStruct cb_name,
                                                          CB_Args... cb_args) {
     uint16_t key_int = (uint16_t)keyHash(key)% num_servers;
     if (key_int == my_server && server_on_node) {
@@ -321,8 +320,8 @@ typename std::enable_if_t<!std::is_void<ReturnType>::value,std::pair<std::pair<b
 template<typename KeyType, typename MappedType>
 template<typename ReturnType,typename... CB_Args>
 typename std::enable_if_t<std::is_void<ReturnType>::value,std::pair<bool, MappedType>> unordered_map<KeyType, MappedType>::GetWithCallback(KeyType &key,
-                                                                                                                                                std::string c_name,
-                                                                                                                                                std::string cb_name,
+                                                                                                                                           CharStruct c_name,
+                                                                                                                                                CharStruct cb_name,
                                                                                                                                                 CB_Args... cb_args) {
     uint16_t key_int = (uint16_t)keyHash(key)% num_servers;
     if (key_int == my_server && server_on_node) {
