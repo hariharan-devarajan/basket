@@ -44,7 +44,7 @@ multimap<KeyType, MappedType,
        spawned on one node*/
     this->name += "_" + std::to_string(my_server);
     /* if current rank is a server */
-    rpc = Singleton<RPC>::GetInstance();
+    rpc = Singleton<RPCFactory>::GetInstance()->GetRPC(BASKET_CONF->RPC_PORT);
     if (is_server) {
         /* Delete existing instance of shared memory space*/
         boost::interprocess::shared_memory_object::remove(name.c_str());

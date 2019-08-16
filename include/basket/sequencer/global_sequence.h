@@ -22,6 +22,7 @@
 #define INCLUDE_BASKET_SEQUENCER_GLOBAL_SEQUENCE_H_
 
 #include <basket/communication/rpc_lib.h>
+#include <basket/communication/rpc_factory.h>
 #include <basket/common/singleton.h>
 #include <stdint-gcc.h>
 #include <mpi.h>

@@ -40,7 +40,7 @@ set(BASKET_SRC  include/basket/common/singleton.h
                 include/basket/set/set.h
                 include/basket/sequencer/global_sequence.h
                 src/basket/sequencer/global_sequence.cpp
-	)
+        include/basket/communication/rpc_factory.h)
 
 add_library(${PROJECT_NAME} SHARED ${BASKET_SRC})
 

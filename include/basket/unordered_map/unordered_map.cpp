@@ -46,7 +46,7 @@ unordered_map<KeyType, MappedType>::unordered_map(CharStruct name_)
        spawned on one node*/
     this->name = this->name + std::string("_") + std::to_string(my_server);
     /* if current rank is a server */
-    rpc = Singleton<RPC>::GetInstance();
+    rpc = Singleton<RPCFactory>::GetInstance()->GetRPC(BASKET_CONF->RPC_PORT);
     // rpc->copyArgs(&my_server, &num_servers, &server_on_node);
 
     if (is_server) {

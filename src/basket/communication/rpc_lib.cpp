@@ -47,7 +47,7 @@ RPC::~RPC() {
 }
 
 RPC::RPC() : server_list(),
-             server_port(RPC_PORT) {
+             server_port(BASKET_CONF->RPC_PORT) {
     AutoTrace trace = AutoTrace("RPC");
 
     server_list = BASKET_CONF->LoadLayers();

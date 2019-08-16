@@ -36,7 +36,7 @@ queue<MappedType>::queue(std::string name_)
     /* create per server name for shared memory. Needed if multiple servers are
        spawned on one node*/
     this->name += "_" + std::to_string(my_server);
-    rpc = Singleton<RPC>::GetInstance();
+    rpc = Singleton<RPCFactory>::GetInstance()->GetRPC(BASKET_CONF->RPC_PORT);
     if (is_server) {
         /* Delete existing instance of shared memory space*/
         bip::shared_memory_object::remove(name.c_str());

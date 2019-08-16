@@ -28,6 +28,7 @@
 #include <basket/communication/rpc_lib.h>
 #include <basket/common/singleton.h>
 #include <basket/common/debug.h>
+#include <basket/communication/rpc_factory.h>
 /** MPI Headers**/
 #include <mpi.h>
 /** RPC Lib Headers**/
