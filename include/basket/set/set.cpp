@@ -290,7 +290,7 @@ std::vector<KeyType> set<KeyType, Compare>::LocalContainsInServer(KeyType &key_s
         if (size == 0) {
         } else if (size == 1) {
             lower_bound = myset->begin();
-            if(*lower_bound > key_start) final_values.insert(final_values.end(), *lower_bound);
+            if(*lower_bound >= key_start) final_values.insert(final_values.end(), *lower_bound);
         } else {
             lower_bound = myset->lower_bound(key_start);
             /*KeyType k=*lower_bound;*/

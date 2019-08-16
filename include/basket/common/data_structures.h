@@ -93,6 +93,18 @@ typedef struct CharStruct {
         Set(added);
         return *this;
     }
+    bool operator>(const CharStruct &o) const {
+        return  strcmp(this->value,o.c_str()) > 0;
+    }
+    bool operator>=(const CharStruct &o) const {
+        return strcmp(this->value,o.c_str()) >= 0;
+    }
+    bool operator<(const CharStruct &o) const {
+        return strcmp(this->value,o.c_str()) < 0;
+    }
+    bool operator<=(const CharStruct &o) const {
+        return strcmp(this->value,o.c_str()) <= 0;
+    }
 
 } CharStruct;
 namespace std {

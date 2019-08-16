@@ -29,6 +29,8 @@
 #include <basket/common/enumerations.h>
 #include <basket/common/singleton.h>
 #include <fstream>
+#include <vector>
+#include <basket/common/data_structures.h>
 
 namespace basket{
 
@@ -71,6 +73,7 @@ namespace basket{
       }
 
         std::vector<CharStruct> LoadLayers(){
+          SERVER_LIST=std::vector<CharStruct>();
           fstream file;
           file.open(SERVER_LIST_PATH, ios::in);
           if (file.is_open()) {
