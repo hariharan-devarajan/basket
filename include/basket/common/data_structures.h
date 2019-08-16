@@ -57,6 +57,10 @@ typedef struct CharStruct {
     }
   public:
     CharStruct() {}
+    CharStruct(const CharStruct &other) : CharStruct(other.value) {} /* copy constructor*/
+    CharStruct(CharStruct &&other) :CharStruct(other.value){} /* move constructor*/
+
+
     CharStruct(const char* data_) {
         snprintf(this->value, strlen(data_)+1, "%s", data_);
     }
@@ -74,6 +78,13 @@ typedef struct CharStruct {
     }
     const size_t size() const {
         return strlen(value);
+    }
+    /**
+   * Operators
+   */
+    CharStruct &operator=(const CharStruct &other) {
+        strcpy(value,other.c_str());
+        return *this;
     }
     /* equal operator for comparing two Chars. */
     bool operator==(const CharStruct &o) const {
