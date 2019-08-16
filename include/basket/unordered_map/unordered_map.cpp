@@ -33,7 +33,7 @@ template<typename KeyType, typename MappedType>
 unordered_map<KeyType, MappedType>::unordered_map(CharStruct name_)
         : is_server(BASKET_CONF->IS_SERVER), my_server(BASKET_CONF->MY_SERVER),
           num_servers(BASKET_CONF->NUM_SERVERS),
-          comm_size(1), my_rank(0), memory_allocated(1024ULL * 1024ULL * 128ULL),
+          comm_size(1), my_rank(0), memory_allocated(BASKET_CONF->MEMORY_ALLOCATED),
           name(name_), segment(), myHashMap(), func_prefix(name_),
           server_on_node(BASKET_CONF->SERVER_ON_NODE) {
     // init my_server, num_servers, server_on_node, processor_name from RPC

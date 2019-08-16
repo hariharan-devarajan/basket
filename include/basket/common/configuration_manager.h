@@ -31,6 +31,7 @@
 #include <fstream>
 #include <vector>
 #include <basket/common/data_structures.h>
+#include "typedefs.h"
 
 namespace basket{
 
@@ -43,6 +44,7 @@ namespace basket{
         std::string TCP_CONF;
         std::string VERBS_CONF;
         std::string VERBS_DOMAIN;
+        really_long MEMORY_ALLOCATED;
 
         std::string SHMEM_NAME;
         bool IS_SERVER;
@@ -56,6 +58,7 @@ namespace basket{
 
       ConfigurationManager():
               SERVER_LIST(),
+              MEMORY_ALLOCATED(1024ULL * 1024ULL * 128ULL),
               RPC_PORT(8080), RPC_THREADS(1),
 #if defined(BASKET_ENABLE_RPCLIB)
               RPC_IMPLEMENTATION(RPCLIB),
