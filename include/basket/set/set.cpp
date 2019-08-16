@@ -158,8 +158,8 @@ template<typename KeyType, typename Compare>
 bool set<KeyType, Compare>::LocalPut(KeyType &key) {
     AutoTrace trace = AutoTrace("basket::set::Put(local)", key);
     boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(*mutex);
-    auto iter = myset->insert(key);
-    return iter.second;
+    myset->insert(key);
+    return true;
 }
 
 /**
