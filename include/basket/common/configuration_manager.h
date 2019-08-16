@@ -28,6 +28,7 @@
 #include <basket/common/debug.h>
 #include <basket/common/enumerations.h>
 #include <basket/common/singleton.h>
+#include <fstream>
 
 namespace basket{
 
@@ -46,26 +47,72 @@ namespace basket{
         uint16_t MY_SERVER;
         int NUM_SERVERS;
         bool SERVER_ON_NODE;
-        std::string SERVER_LIST;
+        std::string SERVER_LIST_PATH;
+        std::vector<CharStruct> SERVER_LIST;
 
         bool DYN_CONFIG;  // Does not do anything (yet)
 
       ConfigurationManager():
-        RPC_PORT(8080), RPC_THREADS(1),
+              SERVER_LIST(),
+              RPC_PORT(8080), RPC_THREADS(1),
 #if defined(BASKET_ENABLE_RPCLIB)
-        RPC_IMPLEMENTATION(RPCLIB),
+              RPC_IMPLEMENTATION(RPCLIB),
 #elif defined(BASKET_ENABLE_THALLIUM_TCP)
         RPC_IMPLEMENTATION(THALLIUM_TCP),
 #elif defined(BASKET_ENABLE_THALLIUM_ROCE)
         RPC_IMPLEMENTATION(THALLIUM_ROCE),
 #endif
-        TCP_CONF("ofi+tcp"), VERBS_CONF("verbs"), VERBS_DOMAIN("mlx5_0"),
-        IS_SERVER(false), MY_SERVER(0), NUM_SERVERS(1),
-        SERVER_ON_NODE(true), SERVER_LIST("./server_list"), DYN_CONFIG(false) {
+              TCP_CONF("ofi+tcp"), VERBS_CONF("verbs"), VERBS_DOMAIN("mlx5_0"),
+              IS_SERVER(false), MY_SERVER(0), NUM_SERVERS(1),
+              SERVER_ON_NODE(true), SERVER_LIST_PATH("./server_list"), DYN_CONFIG(false) {
           AutoTrace trace = AutoTrace("ConfigurationManager");
           MPI_Comm_size(MPI_COMM_WORLD, &COMM_SIZE);
           MPI_Comm_rank(MPI_COMM_WORLD, &MPI_RANK);
       }
+
+        std::vector<CharStruct> LoadLayers(){
+          fstream file;
+          file.open(SERVER_LIST_PATH, ios::in);
+          if (file.is_open()) {
+              std::string file_line;
+              std::string server_node;
+              std::string server_network;
+              while (getline(file, file_line)) {
+                  int split_loc = file_line.find(':');  // split to node and net
+                  if (split_loc != std::string::npos) {
+                      server_node = file_line.substr(0, split_loc);
+                      server_network = file_line.substr(split_loc+1, std::string::npos);
+                  } else {
+                      // no special network
+                      server_node = file_line;
+                      server_network = file_line;
+                  }
+                  // server list is list of network interfaces
+                  SERVER_LIST.emplace_back(server_network);
+              }
+          } else {
+              printf("Error: Can't open server list file %s\n", SERVER_LIST_PATH.c_str());
+              exit(EXIT_FAILURE);
+          }
+          NUM_SERVERS = SERVER_LIST.size();
+          file.close();
+          return SERVER_LIST;
+      }
+      void ConfigureDefaultClient(std::string server_list_path=""){
+          if(server_list_path!="") SERVER_LIST_PATH = server_list_path;
+          LoadLayers();
+          IS_SERVER=false;
+          MY_SERVER=MPI_RANK%NUM_SERVERS;
+          SERVER_ON_NODE=false;
+      }
+
+        void ConfigureDefaultServer(std::string server_list_path=""){
+            if(server_list_path!="") SERVER_LIST_PATH = server_list_path;
+            LoadLayers();
+            IS_SERVER=true;
+            MY_SERVER=MPI_RANK%NUM_SERVERS;
+            SERVER_ON_NODE=true;
+        }
     };
 
 }

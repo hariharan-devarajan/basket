@@ -50,30 +50,7 @@ RPC::RPC() : server_list(),
              server_port(RPC_PORT) {
     AutoTrace trace = AutoTrace("RPC");
 
-    fstream file;
-    file.open(BASKET_CONF->SERVER_LIST,ios::in);
-    if (file.is_open()) {
-        std::string file_line;
-        std::string server_node;
-        std::string server_network;
-        while (getline(file, file_line)) {
-            int split_loc = file_line.find(':');  // split to node and net
-            if (split_loc != std::string::npos) {
-                server_node = file_line.substr(0, split_loc);
-                server_network = file_line.substr(split_loc+1, std::string::npos);
-            } else {
-                // no special network
-                server_node = file_line;
-                server_network = file_line;
-            }
-            // server list is list of network interfaces
-            server_list.emplace_back(server_network);
-        }
-    } else {
-        printf("Error: Can't open server list file %s\n", BASKET_CONF->SERVER_LIST.c_str());
-        exit(EXIT_FAILURE);
-    }
-    file.close();
+    server_list = BASKET_CONF->LoadLayers();
 
     /* if current rank is a server */
     if (BASKET_CONF->IS_SERVER) {

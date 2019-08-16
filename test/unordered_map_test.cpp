@@ -131,7 +131,7 @@ int main (int argc,char* argv[])
     BASKET_CONF->MY_SERVER = my_server;
     BASKET_CONF->NUM_SERVERS = num_servers;
     BASKET_CONF->SERVER_ON_NODE = server_on_node || is_server;
-    BASKET_CONF->SERVER_LIST="/home/hariharan/CLionProjects/basket/cmake-build-debug/test/server_list";
+    BASKET_CONF->SERVER_LIST_PATH="/home/hariharan/CLionProjects/basket/cmake-build-debug/test/server_list";
 
     basket::unordered_map<KeyType,std::array<int, array_size>> *map;
     if (is_server) {
