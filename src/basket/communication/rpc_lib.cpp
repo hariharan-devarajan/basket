@@ -104,7 +104,7 @@ RPC::RPC() : server_list(),
 #endif
         }
     }
-    run();
+    run(BASKET_CONF->RPC_THREADS);
 }
 
 void RPC::run(size_t workers) {
