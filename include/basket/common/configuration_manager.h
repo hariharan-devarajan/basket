@@ -75,7 +75,7 @@ namespace basket{
           MPI_Comm_rank(MPI_COMM_WORLD, &MPI_RANK);
       }
 
-        std::vector<CharStruct> LoadLayers(){
+        std::vector<CharStruct> LoadServers(){
           SERVER_LIST=std::vector<CharStruct>();
           fstream file;
           file.open(SERVER_LIST_PATH, ios::in);
@@ -106,7 +106,7 @@ namespace basket{
       }
       void ConfigureDefaultClient(std::string server_list_path=""){
           if(server_list_path!="") SERVER_LIST_PATH = server_list_path;
-          LoadLayers();
+          LoadServers();
           IS_SERVER=false;
           MY_SERVER=MPI_RANK%NUM_SERVERS;
           SERVER_ON_NODE=false;
@@ -114,7 +114,7 @@ namespace basket{
 
         void ConfigureDefaultServer(std::string server_list_path=""){
             if(server_list_path!="") SERVER_LIST_PATH = server_list_path;
-            LoadLayers();
+            LoadServers();
             IS_SERVER=true;
             MY_SERVER=MPI_RANK%NUM_SERVERS;
             SERVER_ON_NODE=true;

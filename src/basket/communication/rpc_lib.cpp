@@ -50,7 +50,7 @@ RPC::RPC() : server_list(),
              server_port(BASKET_CONF->RPC_PORT) {
     AutoTrace trace = AutoTrace("RPC");
 
-    server_list = BASKET_CONF->LoadLayers();
+    server_list = BASKET_CONF->LoadServers();
 
     /* if current rank is a server */
     if (BASKET_CONF->IS_SERVER) {

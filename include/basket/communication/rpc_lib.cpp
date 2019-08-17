@@ -57,7 +57,7 @@ Response RPC::call(uint16_t server_index,
         case RPCLIB: {
             /* Connect to Server */
             rpc::client client(server_list.at(server_index).c_str(), port);
-            // client.set_timeout(5000);
+            client.set_timeout(5000);
             return client.call(func_name.c_str(), std::forward<Args>(args)...);
             break;
         }
