@@ -130,6 +130,11 @@ private:
                   CharStruct const &func_name,
                   Args... args);
     template <typename Response, typename... Args>
+    Response callWithTimeout(uint16_t server_index,
+                  int timeout_ms,
+                  CharStruct const &func_name,
+                  Args... args);
+    template <typename Response, typename... Args>
     std::future<Response> async_call(
             uint16_t server_index, CharStruct const &func_name, Args... args);
 
