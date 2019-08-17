@@ -45,7 +45,7 @@ void RPC::bind(CharStruct str, F func) {
     }
 }
 template <typename Response, typename... Args>
-Response RPC::callWithTimeout(uint16_t server_index, int timeout_ms, CharStruct const &func_name, Args... args){
+Response RPC::callWithTimeout(uint16_t server_index, int timeout_ms, CharStruct const &func_name, Args... args) {
     AutoTrace trace = AutoTrace("RPC::call", server_index, func_name);
     int16_t port = server_port + server_index;
 
@@ -125,6 +125,7 @@ Response RPC::callWithTimeout(uint16_t server_index, int timeout_ms, CharStruct 
         }
 #endif
     }
+}
 template <typename Response, typename... Args>
 Response RPC::call(uint16_t server_index,
                    CharStruct const &func_name,
