@@ -120,7 +120,8 @@ class set {
 
     std::vector<KeyType> ContainsInServer(KeyType &key_start,KeyType &key_end);
     std::vector<KeyType> GetAllDataInServer();
-
+    std::pair<bool, std::vector<KeyType>> LocalSeekFirstN(uint32_t n);
+    std::pair<bool, std::vector<KeyType>> SeekFirstN(uint16_t &key_int,uint32_t n);
     std::pair<bool, KeyType> SeekFirst(uint16_t &key_int);
     std::pair<bool, KeyType> PopFirst(uint16_t &key_int);
     size_t Size(uint16_t &key_int);

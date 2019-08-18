@@ -86,6 +86,9 @@ set<KeyType, Compare>::set(CharStruct name_)
                 std::function<size_t(void)>
                         sizeFunc(std::bind(&set<KeyType,
                                            Compare>::LocalSize, this));
+                std::function<std::pair<bool, std::vector<KeyType>>(uint32_t)> localSeekFirstNFunc(
+                        std::bind(&set<KeyType, Compare>::LocalSeekFirstN, this,
+                                                      std::placeholders::_1));
                 rpc->bind(func_prefix+"_Put", putFunc);
                 rpc->bind(func_prefix+"_Get", getFunc);
                 rpc->bind(func_prefix+"_Erase", eraseFunc);
@@ -94,6 +97,7 @@ set<KeyType, Compare>::set(CharStruct name_)
 
                 rpc->bind(func_prefix+"_SeekFirst", seekFirstFunc);
                 rpc->bind(func_prefix+"_PopFirst", popFirstFunc);
+                rpc->bind(func_prefix+"_SeekFirstN", localSeekFirstNFunc);
                 rpc->bind(func_prefix+"_Size", sizeFunc);
                 break;
             }
@@ -380,6 +384,32 @@ std::pair<bool, KeyType> set<KeyType, Compare>::SeekFirst(uint16_t &key_int) {
 }
 
 template<typename KeyType, typename Compare>
+std::pair<bool, std::vector<KeyType>> set<KeyType, Compare>::LocalSeekFirstN(uint32_t n){
+    AutoTrace trace = AutoTrace("basket::set::LocalSeekFirstN(local)");
+    bip::scoped_lock<bip::interprocess_mutex> lock(*mutex);
+    auto keys = std::vector<KeyType>();
+    auto iterator = myset->begin();
+    int i=0;
+    while(iterator != myset->end() && i<n){
+        keys.push_back(*iterator);
+        i++;
+        iterator++;
+    }
+    return std::pair<bool, std::vector<KeyType>>(i>0, keys);
+}
+
+template<typename KeyType, typename Compare>
+std::pair<bool, std::vector<KeyType>> set<KeyType, Compare>::SeekFirstN(uint16_t &key_int,uint32_t n){
+    if (key_int == my_server && server_on_node) {
+        return LocalSeekFirstN(n);
+    } else {
+        AutoTrace trace = AutoTrace("basket::set::SeekFirstN(remote)", key_int,n);
+        typedef std::pair<bool, KeyType> ret_type;
+        return RPC_CALL_WRAPPER("_SeekFirstN", key_int, ret_type,n);
+    }
+}
+
+template<typename KeyType, typename Compare>
 std::pair<bool, KeyType> set<KeyType, Compare>::LocalPopFirst() {
     AutoTrace trace = AutoTrace("basket::set::PopFirst(local)");
     bip::scoped_lock<bip::interprocess_mutex> lock(*mutex);
@@ -407,7 +437,6 @@ std::pair<bool, KeyType> set<KeyType, Compare>::PopFirst(uint16_t &key_int) {
 template<typename KeyType, typename Compare>
 size_t set<KeyType, Compare>::LocalSize() {
     AutoTrace trace = AutoTrace("basket::set::Size(local)");
-    boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(*mutex);
     return myset->size();
 }
 

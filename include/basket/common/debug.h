@@ -124,19 +124,30 @@ using std::string;
 using namespace std;
 class AutoTrace
 {
+#if  defined(HERMES_TIMER)
     Timer timer;
+#endif
     static int rank,item;
-
+#if defined(HERMES_TRACE) || defined(HERMES_TIMER)
+    string m_line;
+#endif
   public:
     template <typename... Args>
-    AutoTrace(std::string string,Args... args):m_line(string)
+    AutoTrace(
+#if defined(HERMES_TRACE) || defined(HERMES_TIMER)
+            std::string string,
+#endif
+            Args... args)
+#if defined(HERMES_TRACE) || defined(HERMES_TIMER)
+    :m_line(string)
+#endif
     {
+#if defined(HERMES_TRACE) || defined(HERMES_TIMER)
         char thread_name[256];
         pthread_getname_np(pthread_self(), thread_name,256);
         std::stringstream stream;
 
         if(rank == -1) MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-#if defined(HERMES_TRACE) || defined(HERMES_TIMER)
         stream << "\033[31m";
         stream <<++item<<";"<<thread_name<<";"<< rank << ";" <<m_line << ";";
 #endif
@@ -168,11 +179,11 @@ class AutoTrace
 
     ~AutoTrace()
     {
+#if defined(HERMES_TRACE) || defined(HERMES_TIMER)
         std::stringstream stream;
         char thread_name[256];
         pthread_getname_np(pthread_self(), thread_name,256);
         stream << "\033[31m";
-#if defined(HERMES_TRACE) || defined(HERMES_TIMER)
         stream <<item-- <<";"<<std::string(thread_name)<<";"<< rank << ";" << m_line << ";";
 #endif
 #if defined(HERMES_TRACE)
@@ -188,8 +199,6 @@ class AutoTrace
         cout << stream.str();
 #endif
     }
-  private:
-    string m_line;
 };
 
 
