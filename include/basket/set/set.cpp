@@ -164,7 +164,7 @@ bool set<KeyType, Compare>::LocalPut(KeyType &key) {
     AutoTrace trace = AutoTrace("basket::set::Put(local)", key);
     boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(*mutex);
     myset->insert(key);
-    segment.flush();
+    
     return true;
 }
 
@@ -229,7 +229,7 @@ bool set<KeyType, Compare>::LocalErase(KeyType &key) {
     AutoTrace trace = AutoTrace("basket::set::Erase(local)", key);
     boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(*mutex);
     size_t s = myset->erase(key);
-    segment.flush();
+    
     return s > 0;
 }
 

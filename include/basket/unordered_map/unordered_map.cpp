@@ -144,7 +144,7 @@ bool unordered_map<KeyType, MappedType>::LocalPut(KeyType &key,
                                                   MappedType &data) {
     boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex>lock(*mutex);
     myHashMap->insert_or_assign(key, data);
-    segment.flush();
+    
     return true;
 }
 /**
@@ -322,7 +322,7 @@ unordered_map<KeyType, MappedType>::LocalErase(KeyType &key) {
     boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex>
             lock(*mutex);
     size_t s = myHashMap->erase(key);
-    segment.flush();
+    
     return std::pair<bool, MappedType>(s > 0, MappedType());
 }
 
