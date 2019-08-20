@@ -60,3 +60,4 @@
 * TODO Make all methods asynchronous (call and wait)
 * TODO Persistence
 ** NVM-enabled data structures
+* TODO Make method call names and variable names consistent (eg. in rpc_lib.cpp some calls have improper CamelCase)

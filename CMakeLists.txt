@@ -4,6 +4,7 @@ project(basket VERSION 1.0.0 DESCRIPTION "Basket: A library for flexible distrib
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -gdwarf-2 -g3")
+
 option(BASKET_ENABLE_RPCLIB "allow basket to use RPCLIB" ON)
 if(BASKET_ENABLE_RPCLIB)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBASKET_ENABLE_RPCLIB")
@@ -18,6 +19,10 @@ option(BASKET_ENABLE_THALLIUM_ROCE "allow basket to use RPCLIB" OFF)
 if(BASKET_ENABLE_THALLIUM_ROCE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBASKET_ENABLE_THALLIUM_ROCE")
 endif()
+
+message("BASKET_ENABLE_RPCLIB: ${BASKET_ENABLE_RPCLIB}")
+message("BASKET_ENABLE_THALLIUM_TCP: ${BASKET_ENABLE_THALLIUM_TCP}")
+message("BASKET_ENABLE_THALLIUM_ROCE: ${BASKET_ENABLE_THALLIUM_ROCE}")
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
 
@@ -63,10 +68,10 @@ configure_file(basket.pc.in basket.pc @ONLY)
 
 target_include_directories(${PROJECT_NAME} PRIVATE .)
 
-if(DEFINED BASKET_ENABLE_RPCLIB)
+if(BASKET_ENABLE_RPCLIB)
     set(RPC_LIB_FLAGS -lrpc ${RPC_LIB_FLAGS})
 endif()
-if(DEFINED BASKET_ENABLE_THALLIUM_ROCE OR DEFINED BASKET_ENABLE_THALLIUM_TCP)
+if(BASKET_ENABLE_THALLIUM_ROCE OR BASKET_ENABLE_THALLIUM_TCP)
     set(RPC_LIB_FLAGS -lthallium -lmercury -lmercury_util -lmargo -labt ${RPC_LIB_FLAGS})
 endif()
 set(LIB_FLAGS ${RPC_LIB_FLAGS} -lmpi -lpthread -lrt -lboost_filesystem)
@@ -83,8 +88,14 @@ install(TARGETS ${PROJECT_NAME}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
-install(FILES ${CMAKE_BINARY_DIR}/basket.pc
-    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/pkgconfig)
+if (DEFINED ENV{PKG_CONFIG_PATH})
+   install(FILES ${CMAKE_BINARY_DIR}/basket.pc
+                  DESTINATION $ENV{PKG_CONFIG_PATH}/pkgconfig)
+else()
+   install(FILES ${CMAKE_BINARY_DIR}/basket.pc
+                  DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/pkgconfig)
+endif()
+
 
 option(BUILD_TEST "Build the unit tests" ON)
 if(BUILD_TEST)
