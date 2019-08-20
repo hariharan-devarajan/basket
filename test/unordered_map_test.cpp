@@ -154,13 +154,13 @@ int main (int argc,char* argv[])
     MPI_Comm_split(MPI_COMM_WORLD, !is_server, my_rank, &client_comm);
     int client_comm_size;
     MPI_Comm_size(client_comm, &client_comm_size);
-    if(is_server){
+   /* if(is_server){
         std::function<int(int)> func=[](int x){ std::cout<<x<<std::endl;return x; };
         int a;
         std::function<std::pair<bool,int>(KeyType&,std::array<int, array_size>&,std::string,int)> putFunc(std::bind(&basket::unordered_map<KeyType,std::array<int,
                                                                                                                     array_size>>::LocalPutWithCallback<int,int>,map,std::placeholders::_1, std::placeholders::_2,std::placeholders::_3, std::placeholders::_4));
         map->Bind("CB_Put", func, "APut",putFunc);
-    }
+    }*/
     MPI_Barrier(MPI_COMM_WORLD);
     if (!is_server) {
         Timer llocal_map_timer=Timer();
@@ -201,7 +201,7 @@ int main (int argc,char* argv[])
             size_t val=my_server;
             auto key=KeyType(val);
             local_map_timer.resumeTime();
-            map->PutWithCallback<int>(key,my_vals,"APut","CB_Put",42);
+            map->Put(key,my_vals);
             local_map_timer.pauseTime();
         }
         double local_map_throughput=num_request/local_map_timer.getElapsedTime()*1000*size_of_elem*my_vals.size()/1024/1024;
