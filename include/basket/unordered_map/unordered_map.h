@@ -59,6 +59,7 @@
 #include <boost/unordered/unordered_map.hpp>
 #include <boost/functional/hash.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/interprocess/managed_mapped_file.hpp>
 
 /** Namespaces Uses **/
 
@@ -77,19 +78,19 @@ class unordered_map {
     std::hash<KeyType> keyHash;
     /** Class Typedefs for ease of use **/
     typedef std::pair<const KeyType, MappedType> ValueType;
-    typedef boost::interprocess::allocator<ValueType, boost::interprocess::
-                                           managed_shared_memory::segment_manager>
-    ShmemAllocator;
+    typedef boost::interprocess::allocator<ValueType, boost::interprocess::managed_mapped_file::segment_manager> ShmemAllocator;
+    typedef boost::interprocess::managed_mapped_file managed_segment;
     typedef boost::unordered::unordered_map<KeyType, MappedType, std::hash<KeyType>,
-                                            std::equal_to<KeyType>,
-                                            ShmemAllocator> MyHashMap;
+                                                                std::equal_to<KeyType>,
+                                                                ShmemAllocator>
+                                                                MyHashMap;
     /** Class attributes**/
     int comm_size, my_rank, num_servers;
     uint16_t  my_server;
     std::shared_ptr<RPC> rpc;
     really_long memory_allocated;
     bool is_server;
-    boost::interprocess::managed_shared_memory segment;
+    boost::interprocess::managed_mapped_file segment;
     CharStruct name, func_prefix;
     MyHashMap *myHashMap;
     boost::interprocess::interprocess_mutex* mutex;
