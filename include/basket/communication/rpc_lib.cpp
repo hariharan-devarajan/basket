@@ -38,7 +38,7 @@ void RPC::bind(CharStruct str, F func) {
 #endif
 #if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
             {
-	      thallium_engine->define(str.c_str(), func);
+	      thallium_engine->define(str.string(), func);
                 break;
             }
 #endif

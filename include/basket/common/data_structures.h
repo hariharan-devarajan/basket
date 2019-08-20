@@ -72,6 +72,9 @@ typedef struct CharStruct {
     const char* c_str() const {
         return value;
     }
+  std::string string() const {
+    return std::string(value);
+    }
 
     char* data() {
         return value;

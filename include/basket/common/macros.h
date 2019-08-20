@@ -117,7 +117,7 @@ switch (BASKET_CONF->RPC_IMPLEMENTATION) {\
   RPC_CALL_WRAPPER_RPCLIB_CB(funcname, serverVar,ret, __VA_ARGS__)	\
 RPC_CALL_WRAPPER_THALLIUM_TCP()\
 RPC_CALL_WRAPPER_THALLIUM_ROCE()\
-    RPC_CALL_WRAPPER_THALLIUM(funcname, serverVar,ret,args)	\
+    RPC_CALL_WRAPPER_THALLIUM(funcname, serverVar,ret,__VA_ARGS__)	\
 }\
   }();
 
