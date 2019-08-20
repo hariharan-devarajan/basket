@@ -77,7 +77,7 @@ namespace basket{
         std::vector<CharStruct> LoadServers(){
           SERVER_LIST=std::vector<CharStruct>();
           fstream file;
-          file.open(SERVER_LIST_PATH, ios::in);
+          file.open(SERVER_LIST_PATH.c_str(), ios::in);
           if (file.is_open()) {
               std::string file_line;
               std::string server_node;

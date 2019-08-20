@@ -38,7 +38,7 @@ void RPC::bind(CharStruct str, F func) {
 #endif
 #if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
             {
-                thallium_engine->define(str, func);
+	      thallium_engine->define(str.c_str(), func);
                 break;
             }
 #endif
@@ -65,7 +65,7 @@ Response RPC::callWithTimeout(uint16_t server_index, int timeout_ms, CharStruct 
 
             std::shared_ptr<tl::engine> thallium_client;
             if (BASKET_CONF->IS_SERVER) {
-                thallium_client = std::make_shared<tl::engine>(BASKET_CONF->TCP_CONF, MARGO_CLIENT_MODE);
+	      thallium_client = std::make_shared<tl::engine>(BASKET_CONF->TCP_CONF.c_str(), MARGO_CLIENT_MODE);
             }
             else {
                 thallium_client = thallium_engine;
@@ -81,9 +81,9 @@ Response RPC::callWithTimeout(uint16_t server_index, int timeout_ms, CharStruct 
             in_addr **addr_list = (struct in_addr **)he->h_addr_list;
             strcpy(ip, inet_ntoa(*addr_list[0]));
 
-            std::string lookup_str = BASKET_CONF->TCP_CONF + "://" + std::string(ip) + ":" +
+            CharStruct lookup_str = BASKET_CONF->TCP_CONF + "://" + std::string(ip) + ":" +
                     std::to_string(port);
-            tl::endpoint server_endpoint = thallium_client->lookup(lookup_str);
+            tl::endpoint server_endpoint = thallium_client->lookup(lookup_str.c_str());
             return remote_procedure.on(server_endpoint)(std::forward<Args>(args)...);
             break;
         }
@@ -94,7 +94,7 @@ Response RPC::callWithTimeout(uint16_t server_index, int timeout_ms, CharStruct 
 
             std::shared_ptr<tl::engine> thallium_client;
             if (BASKET_CONF->IS_SERVER) {
-                thallium_client = std::make_shared<tl::engine>(BASKET_CONF->VERBS_CONF, MARGO_CLIENT_MODE);
+	      thallium_client = std::make_shared<tl::engine>(BASKET_CONF->VERBS_CONF.c_str(), MARGO_CLIENT_MODE);
             }
             else {
                 thallium_client = thallium_engine;
@@ -111,9 +111,9 @@ Response RPC::callWithTimeout(uint16_t server_index, int timeout_ms, CharStruct 
             in_addr **addr_list = (struct in_addr **)he->h_addr_list;
             strcpy(ip, inet_ntoa(*addr_list[0]));
 
-            std::string lookup_str = BASKET_CONF->VERBS_CONF + "://" + std::string(ip) + ":" +
+            CharStruct lookup_str = BASKET_CONF->VERBS_CONF + "://" + std::string(ip) + ":" +
                     std::to_string(port);
-            tl::endpoint server_endpoint = thallium_client->lookup(lookup_str);
+            tl::endpoint server_endpoint = thallium_client->lookup(lookup_str.c_str());
             // if (func_name == "test_Get") {
             //     tl::bulk bulk_handle = remote_procedure.on(server_endpoint)(std::forward<Args>(args)...);
             //     return std::make_pair(lookup_str, bulk_handle);
@@ -149,7 +149,7 @@ Response RPC::call(uint16_t server_index,
 
             std::shared_ptr<tl::engine> thallium_client;
             if (BASKET_CONF->IS_SERVER) {
-                thallium_client = std::make_shared<tl::engine>(BASKET_CONF->TCP_CONF, MARGO_CLIENT_MODE);
+	      thallium_client = std::make_shared<tl::engine>(BASKET_CONF->TCP_CONF.c_str(), MARGO_CLIENT_MODE);
             }
             else {
                 thallium_client = thallium_engine;
@@ -165,9 +165,9 @@ Response RPC::call(uint16_t server_index,
             in_addr **addr_list = (struct in_addr **)he->h_addr_list;
             strcpy(ip, inet_ntoa(*addr_list[0]));
 
-            std::string lookup_str = BASKET_CONF->TCP_CONF + "://" + std::string(ip) + ":" + 
+            CharStruct lookup_str = BASKET_CONF->TCP_CONF + "://" + std::string(ip) + ":" + 
                     std::to_string(port);
-            tl::endpoint server_endpoint = thallium_client->lookup(lookup_str);
+            tl::endpoint server_endpoint = thallium_client->lookup(lookup_str.c_str());
             return remote_procedure.on(server_endpoint)(std::forward<Args>(args)...);
             break;
         }
@@ -178,7 +178,7 @@ Response RPC::call(uint16_t server_index,
 
             std::shared_ptr<tl::engine> thallium_client;
             if (BASKET_CONF->IS_SERVER) {
-                thallium_client = std::make_shared<tl::engine>(BASKET_CONF->VERBS_CONF, MARGO_CLIENT_MODE);
+	      thallium_client = std::make_shared<tl::engine>(BASKET_CONF->VERBS_CONF.c_str(), MARGO_CLIENT_MODE);
             }
             else {
                 thallium_client = thallium_engine;
@@ -195,9 +195,9 @@ Response RPC::call(uint16_t server_index,
             in_addr **addr_list = (struct in_addr **)he->h_addr_list;
             strcpy(ip, inet_ntoa(*addr_list[0]));
 
-            std::string lookup_str = BASKET_CONF->VERBS_CONF + "://" + std::string(ip) + ":" + 
-                    std::to_string(port);
-            tl::endpoint server_endpoint = thallium_client->lookup(lookup_str);
+            CharStruct lookup_str = BASKET_CONF->VERBS_CONF + "://" + std::string(ip) + ":" + 
+	      std::to_string(port);
+            tl::endpoint server_endpoint = thallium_client->lookup(lookup_str.c_str());
             // if (func_name == "test_Get") {
             //     tl::bulk bulk_handle = remote_procedure.on(server_endpoint)(std::forward<Args>(args)...);
             //     return std::make_pair(lookup_str, bulk_handle);

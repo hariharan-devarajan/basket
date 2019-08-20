@@ -91,14 +91,14 @@ RPC::RPC() : server_list(),
 #endif
 #ifdef BASKET_ENABLE_THALLIUM_TCP
                 case THALLIUM_TCP: {
-                    thallium_engine = Singleton<tl::engine>::GetInstance(BASKET_CONF->TCP_CONF,
+		  thallium_engine = basket::Singleton<tl::engine>::GetInstance(BASKET_CONF->TCP_CONF.c_str(),
                                                                          MARGO_CLIENT_MODE);
                     break;
                 }
 #endif
 #ifdef BASKET_ENABLE_THALLIUM_ROCE
                 case THALLIUM_ROCE: {
-                  thallium_engine = Singleton<tl::engine>::GetInstance(BASKET_CONF->VERBS_CONF,
+                  thallium_engine = basket::Singleton<tl::engine>::GetInstance(BASKET_CONF->VERBS_CONF.c_str(),
                                            MARGO_CLIENT_MODE);
                   break;
                 }
@@ -126,7 +126,7 @@ void RPC::run(size_t workers) {
 #endif
 #if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
                 {
-		  thallium_engine = Singleton<tl::engine>::GetInstance(engine_init_str.c_str(), THALLIUM_SERVER_MODE,true,RPC_THREADS);
+		  thallium_engine = basket::Singleton<tl::engine>::GetInstance(engine_init_str.c_str(), THALLIUM_SERVER_MODE,true,BASKET_CONF->RPC_THREADS);
                     break;
                 }
 #endif
