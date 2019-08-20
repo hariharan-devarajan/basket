@@ -42,7 +42,7 @@ queue<MappedType>::queue(std::string name_)
         /* Delete existing instance of shared memory space*/
         bip::file_mapping::remove(backed_file.c_str());
         /* allocate new shared memory space */
-        segment = bip::file_mapping(bip::create_only, backed_file.c_str(),
+        segment = bip::managed_mapped_file(bip::create_only, backed_file.c_str(),
                                              memory_allocated);
         ShmemAllocator alloc_inst(segment.get_segment_manager());
         /* Construct queue in the shared memory space. */

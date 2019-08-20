@@ -86,7 +86,7 @@ class priority_queue {
     std::shared_ptr<RPC> rpc;
     really_long memory_allocated;
     bool is_server;
-    boost::interprocess::managed_shared_memory segment;
+    boost::interprocess::managed_mapped_file segment;
     std::string name, func_prefix;
     Queue *queue;
     boost::interprocess::interprocess_mutex* mutex;
