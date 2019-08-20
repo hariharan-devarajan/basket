@@ -52,11 +52,13 @@ namespace basket{
         bool SERVER_ON_NODE;
         CharStruct SERVER_LIST_PATH;
         std::vector<CharStruct> SERVER_LIST;
+        CharStruct BACKED_FILE_DIR;
 
         bool DYN_CONFIG;  // Does not do anything (yet)
 
       ConfigurationManager():
               SERVER_LIST(),
+              BACKED_FILE_DIR("/dev/shm"),
               MEMORY_ALLOCATED(1024ULL * 1024ULL * 128ULL),
               RPC_PORT(8080), RPC_THREADS(1),
 #if defined(BASKET_ENABLE_RPCLIB)

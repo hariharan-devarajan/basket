@@ -48,16 +48,13 @@ unordered_map<KeyType, MappedType>::unordered_map(CharStruct name_)
     /* if current rank is a server */
     rpc = Singleton<RPCFactory>::GetInstance()->GetRPC(BASKET_CONF->RPC_PORT);
     // rpc->copyArgs(&my_server, &num_servers, &server_on_node);
-
+    CharStruct backed_file = BASKET_CONF->BACKED_FILE_DIR + PATH_SEPARATOR + name;
     if (is_server) {
         /* Delete existing instance of shared memory space*/
-        boost::interprocess::shared_memory_object::remove(name.c_str());
+        boost::interprocess::file_mapping::remove(backed_file.c_str());
         /* allocate new shared memory space */
-        segment = boost::interprocess::managed_shared_memory(
-            boost::interprocess::create_only, name.c_str(), memory_allocated);
-        ShmemAllocator alloc_inst(segment.get_segment_manager());
-        mutex = segment.construct<boost::interprocess::interprocess_mutex>(
-            "mtx")();
+        segment = boost::interprocess::managed_mapped_file(boost::interprocess::create_only, backed_file.c_str(), memory_allocated);
+        mutex = segment.construct<boost::interprocess::interprocess_mutex>( "mtx")();
         /* Construct unordered_map in the shared memory space. */
         myHashMap = segment.construct<MyHashMap>(name.c_str())(
             128, std::hash<KeyType>(), std::equal_to<KeyType>(),
@@ -124,15 +121,12 @@ unordered_map<KeyType, MappedType>::unordered_map(CharStruct name_)
   }
         // srv->suppress_exceptions(true);
     }else if (!is_server && server_on_node) {
-        segment = boost::interprocess::managed_shared_memory(
-            boost::interprocess::open_only, name.c_str());
-        std::pair<MyHashMap *,
-                  boost::interprocess::managed_shared_memory::size_type> res;
+        segment = boost::interprocess::managed_mapped_file(boost::interprocess::open_only, name.c_str());
+        std::pair<MyHashMap *, boost::interprocess::managed_mapped_file::size_type> res;
         res = segment.find<MyHashMap>(name.c_str());
         myHashMap = res.first;
         size_t size = myHashMap->size();
-        std::pair<boost::interprocess::interprocess_mutex *,
-                  boost::interprocess::managed_shared_memory::size_type> res2;
+        std::pair<boost::interprocess::interprocess_mutex *, boost::interprocess::managed_shared_memory::size_type> res2;
         res2 = segment.find<boost::interprocess::interprocess_mutex>("mtx");
         mutex = res2.first;
     }
@@ -149,6 +143,7 @@ bool unordered_map<KeyType, MappedType>::LocalPut(KeyType &key,
                                                   MappedType &data) {
     boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex>lock(*mutex);
     myHashMap->insert_or_assign(key, data);
+    segment.flush();
     return true;
 }
 /**
@@ -267,20 +262,8 @@ unordered_map<KeyType, MappedType>::Get(KeyType &key) {
     if (key_int == my_server && server_on_node) {
         return LocalGet(key);
     } else {
-
-        // #ifdef BASKET_ENABLE_THALLIUM_ROCE
-        // auto rpc_result = rpc->call<tl::packed_response>( key_int, func_prefix + "_Get" , key).template as< std::pair<tl::endpoint, tl::bulk> >();
-
-        // auto final_result = rpc->prep_rdma_server<std::string>(rpc_result.first, rpc_result.second);
-        // return std::make_pair(true, final_result);
-        // #ENDIF
-
-      typedef std::pair<bool, MappedType> ret_type;
-       return RPC_CALL_WRAPPER("_Get", key_int, ret_type,
-                                     key);
-        
-      // rpc->call(key_int, func_prefix+"_Get",
-      //                key).template as<std::pair<bool, MappedType>>();
+        typedef std::pair<bool, MappedType> ret_type;
+       return RPC_CALL_WRAPPER("_Get", key_int, ret_type,key);
     }
 }
 
@@ -338,6 +321,7 @@ unordered_map<KeyType, MappedType>::LocalErase(KeyType &key) {
     boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex>
             lock(*mutex);
     size_t s = myHashMap->erase(key);
+    segment.flush();
     return std::pair<bool, MappedType>(s > 0, MappedType());
 }
 
