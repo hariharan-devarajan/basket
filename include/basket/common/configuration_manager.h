@@ -41,17 +41,16 @@ namespace basket{
         uint16_t RPC_THREADS;
         RPCImplementation RPC_IMPLEMENTATION;
         int MPI_RANK, COMM_SIZE;
-        std::string TCP_CONF;
-        std::string VERBS_CONF;
-        std::string VERBS_DOMAIN;
+        CharStruct TCP_CONF;
+        CharStruct VERBS_CONF;
+        CharStruct VERBS_DOMAIN;
         really_long MEMORY_ALLOCATED;
 
-        std::string SHMEM_NAME;
         bool IS_SERVER;
         uint16_t MY_SERVER;
         int NUM_SERVERS;
         bool SERVER_ON_NODE;
-        std::string SERVER_LIST_PATH;
+        CharStruct SERVER_LIST_PATH;
         std::vector<CharStruct> SERVER_LIST;
 
         bool DYN_CONFIG;  // Does not do anything (yet)

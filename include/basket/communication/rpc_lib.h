@@ -93,7 +93,7 @@ private:
 #endif
 #if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
     std::shared_ptr<tl::engine> thallium_engine;
-    std::string engine_init_str;
+    CharStruct engine_init_str;
     /*std::promise<void> thallium_exit_signal;
 
       void runThalliumServer(std::future<void> futureObj){

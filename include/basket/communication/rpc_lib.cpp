@@ -53,7 +53,7 @@ Response RPC::callWithTimeout(uint16_t server_index, int timeout_ms, CharStruct 
 #ifdef BASKET_ENABLE_RPCLIB
         case RPCLIB: {
             /* Connect to Server */
-            rpc::client client(server_list.at(server_index).c_str(), port);
+            rpc::client client(BASKET_CONF->SERVER_LIST[server_index].c_str(), port);
             client.set_timeout(timeout_ms);
             return client.call(func_name.c_str(), std::forward<Args>(args)...);
             break;
@@ -64,24 +64,24 @@ Response RPC::callWithTimeout(uint16_t server_index, int timeout_ms, CharStruct 
             /* Connect to Server */
 
             std::shared_ptr<tl::engine> thallium_client;
-            if (is_server) {
-                thallium_client = std::make_shared<tl::engine>(CONF->TCP_CONF, MARGO_CLIENT_MODE);
+            if (BASKET_CONF->IS_SERVER) {
+                thallium_client = std::make_shared<tl::engine>(BASKET_CONF->TCP_CONF, MARGO_CLIENT_MODE);
             }
             else {
                 thallium_client = thallium_engine;
             }
 
-            tl::remote_procedure remote_procedure = thallium_client->define(func_name);
+            tl::remote_procedure remote_procedure = thallium_client->define(func_name.c_str());
             // Setup args for RDMA bulk transfer
             // std::vector<std::pair<void*,std::size_t>> segments(num_args);
 
             // We use addr lookup because mercury addresses must be exactly 15 char
             char ip[16];
-            struct hostent *he = gethostbyname(server_list->at(server_index).c_str());
+            struct hostent *he = gethostbyname(BASKET_CONF->SERVER_LIST[server_index].c_str());
             in_addr **addr_list = (struct in_addr **)he->h_addr_list;
             strcpy(ip, inet_ntoa(*addr_list[0]));
 
-            std::string lookup_str = CONF->TCP_CONF + "://" + std::string(ip) + ":" +
+            std::string lookup_str = BASKET_CONF->TCP_CONF + "://" + std::string(ip) + ":" +
                     std::to_string(port);
             tl::endpoint server_endpoint = thallium_client->lookup(lookup_str);
             return remote_procedure.on(server_endpoint)(std::forward<Args>(args)...);
@@ -93,25 +93,25 @@ Response RPC::callWithTimeout(uint16_t server_index, int timeout_ms, CharStruct 
             /* Connect to Server */
 
             std::shared_ptr<tl::engine> thallium_client;
-            if (is_server) {
-                thallium_client = std::make_shared<tl::engine>(CONF->VERBS_CONF, MARGO_CLIENT_MODE);
+            if (BASKET_CONF->IS_SERVER) {
+                thallium_client = std::make_shared<tl::engine>(BASKET_CONF->VERBS_CONF, MARGO_CLIENT_MODE);
             }
             else {
                 thallium_client = thallium_engine;
             }
 
-            tl::remote_procedure remote_procedure = thallium_client->define(func_name);
+            tl::remote_procedure remote_procedure = thallium_client->define(func_name.c_str());
 
             // Setup args for RDMA bulk transfer
             // std::vector<std::pair<void*,std::size_t>> segments(num_args);
 
             // We use addr lookup because mercury addresses must be exactly 15 char
             char ip[16];
-            struct hostent *he = gethostbyname(server_list->at(server_index).c_str());
+            struct hostent *he = gethostbyname(BASKET_CONF->SERVER_LIST[server_index].c_str());
             in_addr **addr_list = (struct in_addr **)he->h_addr_list;
             strcpy(ip, inet_ntoa(*addr_list[0]));
 
-            std::string lookup_str = CONF->VERBS_CONF + "://" + std::string(ip) + ":" +
+            std::string lookup_str = BASKET_CONF->VERBS_CONF + "://" + std::string(ip) + ":" +
                     std::to_string(port);
             tl::endpoint server_endpoint = thallium_client->lookup(lookup_str);
             // if (func_name == "test_Get") {
@@ -148,24 +148,24 @@ Response RPC::call(uint16_t server_index,
             /* Connect to Server */
 
             std::shared_ptr<tl::engine> thallium_client;
-            if (is_server) {
-                thallium_client = std::make_shared<tl::engine>(CONF->TCP_CONF, MARGO_CLIENT_MODE);
+            if (BASKET_CONF->IS_SERVER) {
+                thallium_client = std::make_shared<tl::engine>(BASKET_CONF->TCP_CONF, MARGO_CLIENT_MODE);
             }
             else {
                 thallium_client = thallium_engine;
             }
 
-            tl::remote_procedure remote_procedure = thallium_client->define(func_name);
+            tl::remote_procedure remote_procedure = thallium_client->define(func_name.c_str());
             // Setup args for RDMA bulk transfer
             // std::vector<std::pair<void*,std::size_t>> segments(num_args);
 
             // We use addr lookup because mercury addresses must be exactly 15 char
             char ip[16];
-            struct hostent *he = gethostbyname(server_list->at(server_index).c_str());
+            struct hostent *he = gethostbyname(server_list.at(server_index).c_str());
             in_addr **addr_list = (struct in_addr **)he->h_addr_list;
             strcpy(ip, inet_ntoa(*addr_list[0]));
 
-            std::string lookup_str = CONF->TCP_CONF + "://" + std::string(ip) + ":" + 
+            std::string lookup_str = BASKET_CONF->TCP_CONF + "://" + std::string(ip) + ":" + 
                     std::to_string(port);
             tl::endpoint server_endpoint = thallium_client->lookup(lookup_str);
             return remote_procedure.on(server_endpoint)(std::forward<Args>(args)...);
@@ -177,25 +177,25 @@ Response RPC::call(uint16_t server_index,
             /* Connect to Server */
 
             std::shared_ptr<tl::engine> thallium_client;
-            if (is_server) {
-                thallium_client = std::make_shared<tl::engine>(CONF->VERBS_CONF, MARGO_CLIENT_MODE);
+            if (BASKET_CONF->IS_SERVER) {
+                thallium_client = std::make_shared<tl::engine>(BASKET_CONF->VERBS_CONF, MARGO_CLIENT_MODE);
             }
             else {
                 thallium_client = thallium_engine;
             }
 
-            tl::remote_procedure remote_procedure = thallium_client->define(func_name);
+            tl::remote_procedure remote_procedure = thallium_client->define(func_name.c_str());
 
             // Setup args for RDMA bulk transfer
             // std::vector<std::pair<void*,std::size_t>> segments(num_args);
 
             // We use addr lookup because mercury addresses must be exactly 15 char
             char ip[16];
-            struct hostent *he = gethostbyname(server_list->at(server_index).c_str());
+            struct hostent *he = gethostbyname(server_list.at(server_index).c_str());
             in_addr **addr_list = (struct in_addr **)he->h_addr_list;
             strcpy(ip, inet_ntoa(*addr_list[0]));
 
-            std::string lookup_str = CONF->VERBS_CONF + "://" + std::string(ip) + ":" + 
+            std::string lookup_str = BASKET_CONF->VERBS_CONF + "://" + std::string(ip) + ":" + 
                     std::to_string(port);
             tl::endpoint server_endpoint = thallium_client->lookup(lookup_str);
             // if (func_name == "test_Get") {

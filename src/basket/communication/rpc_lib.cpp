@@ -56,30 +56,30 @@ RPC::RPC() : server_list(),
     if (BASKET_CONF->IS_SERVER) {
         switch (BASKET_CONF->RPC_IMPLEMENTATION) {
 #ifdef BASKET_ENABLE_RPCLIB
-            case RPCLIB: {
-              rpclib_server = std::make_shared<rpc::server>(server_port+BASKET_CONF->MY_SERVER);
-                rpclib_server->suppress_exceptions(true);
-              break;
-            }
+        case RPCLIB: {
+            rpclib_server = std::make_shared<rpc::server>(server_port+BASKET_CONF->MY_SERVER);
+            rpclib_server->suppress_exceptions(true);
+	break;
+      }
 #endif
 #ifdef BASKET_ENABLE_THALLIUM_TCP
-                case THALLIUM_TCP: {
-                   engine_init_str = BASKET_CONF->TCP_CONF + "://" +
-                                                  std::string(processor_name) +
-                                                  ":" +
-                                                  std::to_string(server_port + my_server);
-                    break;
-                }
+        case THALLIUM_TCP: {
+	engine_init_str = BASKET_CONF->TCP_CONF + "://" +
+	  BASKET_CONF->SERVER_LIST[BASKET_CONF->MPI_RANK] +
+	  ":" +
+	  std::to_string(server_port + BASKET_CONF->MY_SERVER);
+	break;
+      }
 #endif
 #ifdef BASKET_ENABLE_THALLIUM_ROCE
-                case THALLIUM_ROCE: {
-                    engine_init_str = BASKET_CONF->VERBS_CONF + "://" +
-                            BASKET_CONF->VERBS_DOMAIN + "://" +
-                            std::string(processor_name) +
-                            ":" +
-                            std::to_string(server_port+my_server);
-                    break;
-                }
+      case THALLIUM_ROCE: {
+	  engine_init_str = BASKET_CONF->VERBS_CONF + "://" +
+	    BASKET_CONF->VERBS_DOMAIN + "://" +
+	    std::string(BASKET_CONF->SERVER_LIST[BASKET_CONF->MPI_RANK]) +
+	    ":" +
+	    std::to_string(server_port+BASKET_CONF->MY_SERVER);
+	  break;
+	}
 #endif
         }
     } else {
@@ -126,7 +126,7 @@ void RPC::run(size_t workers) {
 #endif
 #if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
                 {
-                    thallium_engine = Singleton<tl::engine>::GetInstance(engine_init_str, THALLIUM_SERVER_MODE,true,RPC_THREADS);
+		  thallium_engine = Singleton<tl::engine>::GetInstance(engine_init_str.c_str(), THALLIUM_SERVER_MODE,true,RPC_THREADS);
                     break;
                 }
 #endif

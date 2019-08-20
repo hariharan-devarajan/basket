@@ -286,5 +286,5 @@ int main (int argc,char* argv[])
     MPI_Barrier(MPI_COMM_WORLD);
     delete(map);
     MPI_Finalize();
-    return 1;
+    exit(EXIT_SUCCESS);
 }
