@@ -121,7 +121,7 @@ unordered_map<KeyType, MappedType>::unordered_map(CharStruct name_)
   }
         // srv->suppress_exceptions(true);
     }else if (!is_server && server_on_node) {
-        segment = boost::interprocess::managed_mapped_file(boost::interprocess::open_only, name.c_str());
+        segment = boost::interprocess::managed_mapped_file(boost::interprocess::open_only, backed_file.c_str());
         std::pair<MyHashMap *, boost::interprocess::managed_mapped_file::size_type> res;
         res = segment.find<MyHashMap>(name.c_str());
         myHashMap = res.first;
