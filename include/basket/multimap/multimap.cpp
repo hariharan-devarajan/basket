@@ -74,7 +74,7 @@ multimap<KeyType, MappedType,
                             &multimap<KeyType, MappedType, Compare>::LocalGetAllDataInServer,
                             this));
                 std::function<std::vector<std::pair<KeyType, MappedType>>(KeyType &)>
-                        containsInServerFunc(std::bind(&map<KeyType, MappedType,
+                        containsInServerFunc(std::bind(&multimap<KeyType, MappedType,
                                                        Compare>::LocalContainsInServer, this,
                                                        std::placeholders::_1));
 
@@ -110,7 +110,7 @@ multimap<KeyType, MappedType,
                                 &multimap<KeyType, MappedType, Compare>::ThalliumLocalGetAllDataInServer,
                                 this, std::placeholders::_1));
                     std::function<void(const tl::request &, KeyType &)>
-                            containsInServerFunc(std::bind(&map<KeyType, MappedType,
+                            containsInServerFunc(std::bind(&multimap<KeyType, MappedType,
                                                            Compare>::ThalliumLocalContainsInServer, this,
                                                            std::placeholders::_1));
 

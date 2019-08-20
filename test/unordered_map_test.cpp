@@ -31,7 +31,6 @@
 #include <unordered_map>
 #include <basket/common/data_structures.h>
 #include <basket/unordered_map/unordered_map.h>
-#include <basket.h>
 
 struct KeyType{
     size_t a;
@@ -47,6 +46,12 @@ struct KeyType{
     KeyType& operator=( const KeyType& other ) {
         a = other.a;
         return *this;
+    }
+    bool operator<(const KeyType &o) const {
+        return a < o.a;
+    }
+    bool Contains(const KeyType &o) const {
+        return a==o.a;
     }
 #if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
     template<typename A>
@@ -127,11 +132,12 @@ int main (int argc,char* argv[])
 
     std::array<int,array_size> my_vals=std::array<int,array_size>();
 
+    
     BASKET_CONF->IS_SERVER = is_server;
     BASKET_CONF->MY_SERVER = my_server;
     BASKET_CONF->NUM_SERVERS = num_servers;
     BASKET_CONF->SERVER_ON_NODE = server_on_node || is_server;
-    BASKET_CONF->SERVER_LIST_PATH="/home/hariharan/CLionProjects/basket/cmake-build-debug/test/server_list";
+    BASKET_CONF->SERVER_LIST_PATH = "./test/server_list";
 
     basket::unordered_map<KeyType,std::array<int, array_size>> *map;
     if (is_server) {
@@ -155,7 +161,6 @@ int main (int argc,char* argv[])
                                                                                                                     array_size>>::LocalPutWithCallback<int,int>,map,std::placeholders::_1, std::placeholders::_2,std::placeholders::_3, std::placeholders::_4));
         map->Bind("CB_Put", func, "APut",putFunc);
     }
-
     MPI_Barrier(MPI_COMM_WORLD);
     if (!is_server) {
         Timer llocal_map_timer=Timer();
@@ -193,7 +198,7 @@ int main (int argc,char* argv[])
         Timer local_map_timer=Timer();
         /*Local map test*/
         for(int i=0;i<num_request;i++){
-            size_t val=my_server+1;
+            size_t val=my_server;
             auto key=KeyType(val);
             local_map_timer.resumeTime();
             map->PutWithCallback<int>(key,my_vals,"APut","CB_Put",42);
