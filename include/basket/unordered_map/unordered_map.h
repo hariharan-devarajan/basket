@@ -96,6 +96,7 @@ class unordered_map {
     boost::interprocess::interprocess_mutex* mutex;
     bool server_on_node;
     std::unordered_map<CharStruct, void*> binding_map;
+    CharStruct backed_file;
 
   public:
     ~unordered_map();

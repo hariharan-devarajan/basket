@@ -42,7 +42,7 @@
 #endif
 
 /** Boost Headers **/
-#include <boost/interprocess/managed_shared_memory.hpp>
+#include <boost/interprocess/managed_mapped_file.hpp>
 #include <boost/interprocess/containers/deque.hpp>
 #include <boost/interprocess/allocators/allocator.hpp>
 #include <boost/interprocess/sync/interprocess_mutex.hpp>
@@ -54,6 +54,7 @@
 #include <utility>
 #include <memory>
 #include <string>
+#include <boost/interprocess/managed_mapped_file.hpp>
 
 /** Namespaces Uses **/
 namespace bip = boost::interprocess;
@@ -71,7 +72,7 @@ class queue {
   private:
     /** Class Typedefs for ease of use **/
     typedef bip::allocator<MappedType,
-                           bip::managed_shared_memory::segment_manager>
+                           bip::managed_mapped_file::segment_manager>
     ShmemAllocator;
     typedef boost::interprocess::deque<MappedType, ShmemAllocator> Queue;
 
@@ -81,11 +82,12 @@ class queue {
     std::shared_ptr<RPC> rpc;
     really_long memory_allocated;
     bool is_server;
-    boost::interprocess::managed_shared_memory segment;
+    boost::interprocess::managed_mapped_file segment;
     std::string name, func_prefix;
     Queue *my_queue;
     boost::interprocess::interprocess_mutex* mutex;
     bool server_on_node;
+    CharStruct backed_file;
 
   public:
     ~queue();

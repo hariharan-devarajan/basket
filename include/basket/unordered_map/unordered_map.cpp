@@ -1,3 +1,4 @@
+#include <boost/interprocess/file_mapping.hpp>
 /*
  * Copyright (C) 2019  Hariharan Devarajan, Keith Bateman
  *
@@ -25,7 +26,7 @@
 template<typename KeyType, typename MappedType>
 unordered_map<KeyType, MappedType>::~unordered_map() {
     if (is_server) {
-        boost::interprocess::shared_memory_object::remove(name.c_str());
+        boost::interprocess::file_mapping::remove(backed_file.c_str());
     }
 }
 
@@ -35,6 +36,7 @@ unordered_map<KeyType, MappedType>::unordered_map(CharStruct name_)
           num_servers(BASKET_CONF->NUM_SERVERS),
           comm_size(1), my_rank(0), memory_allocated(BASKET_CONF->MEMORY_ALLOCATED),
           name(name_), segment(), myHashMap(), func_prefix(name_),
+          backed_file(BASKET_CONF->BACKED_FILE_DIR + PATH_SEPARATOR + name_),
           server_on_node(BASKET_CONF->SERVER_ON_NODE) {
     // init my_server, num_servers, server_on_node, processor_name from RPC
     AutoTrace trace = AutoTrace("basket::unordered_map");
@@ -48,7 +50,6 @@ unordered_map<KeyType, MappedType>::unordered_map(CharStruct name_)
     /* if current rank is a server */
     rpc = Singleton<RPCFactory>::GetInstance()->GetRPC(BASKET_CONF->RPC_PORT);
     // rpc->copyArgs(&my_server, &num_servers, &server_on_node);
-    CharStruct backed_file = BASKET_CONF->BACKED_FILE_DIR + PATH_SEPARATOR + name;
     if (is_server) {
         /* Delete existing instance of shared memory space*/
         boost::interprocess::file_mapping::remove(backed_file.c_str());

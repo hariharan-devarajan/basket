@@ -23,7 +23,7 @@
 
 #include <stdint-gcc.h>
 #include <mpi.h>
-#include <boost/interprocess/managed_shared_memory.hpp>
+#include <boost/interprocess/managed_mapped_file.hpp>
 #include <boost/interprocess/allocators/allocator.hpp>
 #include <boost/interprocess/sync/interprocess_mutex.hpp>
 #include <boost/interprocess/sync/scoped_lock.hpp>
@@ -48,10 +48,11 @@ class global_clock {
     really_long memory_allocated;
     int my_rank, comm_size, num_servers;
     uint16_t my_server;
-    bip::managed_shared_memory segment;
+    bip::managed_mapped_file segment;
     std::string name, func_prefix;
     std::shared_ptr<RPC> rpc;
     bool server_on_node;
+    CharStruct backed_file;
 
   public:
     ~global_clock();

@@ -74,7 +74,7 @@ class priority_queue {
   private:
     /** Class Typedefs for ease of use **/
     typedef bip::allocator<MappedType,
-                           bip::managed_shared_memory::segment_manager>
+                           bip::managed_mapped_file::segment_manager>
     ShmemAllocator;
     typedef std::priority_queue<MappedType,
                                 std::vector<MappedType, ShmemAllocator>, Compare>
@@ -91,6 +91,7 @@ class priority_queue {
     Queue *queue;
     boost::interprocess::interprocess_mutex* mutex;
     bool server_on_node;
+    CharStruct backed_file;
 
   public:
     ~priority_queue();

@@ -20,13 +20,14 @@
 
 template<typename MappedType>
 queue<MappedType>::~queue() {
-    if (is_server) bip::shared_memory_object::remove(name.c_str());
+    if (is_server) bip::file_mapping::remove(backed_file.c_str());
 }
 template<typename MappedType>
 queue<MappedType>::queue(std::string name_)
         : is_server(BASKET_CONF->IS_SERVER), my_server(BASKET_CONF->MY_SERVER),
           num_servers(BASKET_CONF->NUM_SERVERS),
           comm_size(1), my_rank(0), memory_allocated(BASKET_CONF->MEMORY_ALLOCATED),
+          backed_file(BASKET_CONF->BACKED_FILE_DIR + PATH_SEPARATOR + name_),
           name(name_), segment(), my_queue(), func_prefix(name_),
           server_on_node(BASKET_CONF->SERVER_ON_NODE) {
     AutoTrace trace = AutoTrace("basket::queue(local)");
@@ -39,9 +40,9 @@ queue<MappedType>::queue(std::string name_)
     rpc = Singleton<RPCFactory>::GetInstance()->GetRPC(BASKET_CONF->RPC_PORT);
     if (is_server) {
         /* Delete existing instance of shared memory space*/
-        bip::shared_memory_object::remove(name.c_str());
+        bip::file_mapping::remove(backed_file.c_str());
         /* allocate new shared memory space */
-        segment = bip::managed_shared_memory(bip::create_only, name.c_str(),
+        segment = bip::file_mapping(bip::create_only, backed_file.c_str(),
                                              memory_allocated);
         ShmemAllocator alloc_inst(segment.get_segment_manager());
         /* Construct queue in the shared memory space. */
@@ -95,12 +96,12 @@ queue<MappedType>::queue(std::string name_)
         }
     }else if (!is_server && server_on_node) {
         /* Map the clients to their respective memory pools */
-        segment = bip::managed_shared_memory(bip::open_only, name.c_str());
-        std::pair<Queue*, bip::managed_shared_memory::size_type> res;
+        segment = bip::managed_mapped_file(bip::open_only, backed_file.c_str());
+        std::pair<Queue*, bip::managed_mapped_file::size_type> res;
         res = segment.find<Queue> ("Queue");
         my_queue = res.first;
         std::pair<bip::interprocess_mutex *,
-                  bip::managed_shared_memory::size_type> res2;
+                  bip::managed_mapped_file::size_type> res2;
         res2 = segment.find<bip::interprocess_mutex>("mtx");
         mutex = res2.first;
     }

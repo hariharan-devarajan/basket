@@ -43,7 +43,7 @@
 #endif
 
 /** Boost Headers **/
-#include <boost/interprocess/managed_shared_memory.hpp>
+#include <boost/interprocess/managed_mapped_file.hpp>
 #include <boost/interprocess/containers/map.hpp>
 #include <boost/interprocess/allocators/allocator.hpp>
 #include <boost/interprocess/sync/interprocess_mutex.hpp>
@@ -74,7 +74,7 @@ class map {
     /** Class Typedefs for ease of use **/
     typedef std::pair<const KeyType, MappedType> ValueType;
     typedef boost::interprocess::allocator<
-        ValueType, boost::interprocess::managed_shared_memory::segment_manager>
+        ValueType, boost::interprocess::managed_mapped_file::segment_manager>
     ShmemAllocator;
     typedef boost::interprocess::map<KeyType, MappedType, Compare, ShmemAllocator>
     MyMap;
@@ -84,11 +84,12 @@ class map {
     std::shared_ptr<RPC> rpc;
     really_long memory_allocated;
     bool is_server;
-    boost::interprocess::managed_shared_memory segment;
+    boost::interprocess::managed_mapped_file segment;
     std::string name, func_prefix;
     MyMap *mymap;
     boost::interprocess::interprocess_mutex* mutex;
     bool server_on_node;
+    CharStruct backed_file;
 
   public:
     ~map();

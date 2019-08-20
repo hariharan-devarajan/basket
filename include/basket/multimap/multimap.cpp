@@ -24,8 +24,8 @@
 /* Constructor to deallocate the shared memory*/
 template<typename KeyType, typename MappedType, typename Compare>
 multimap<KeyType, MappedType, Compare>::~multimap() {
-    if (is_server) boost::interprocess::shared_memory_object::remove(
-            name.c_str());
+    if (is_server) boost::interprocess::file_mapping::remove(
+                backed_file.c_str());
 }
 
 template<typename KeyType, typename MappedType, typename Compare>
@@ -35,6 +35,7 @@ multimap<KeyType, MappedType,
                    num_servers(BASKET_CONF->NUM_SERVERS),
                    comm_size(1), my_rank(0), memory_allocated(BASKET_CONF->MEMORY_ALLOCATED),
                    name(name_), segment(), mymap(), func_prefix(name_),
+                   backed_file(BASKET_CONF->BACKED_FILE_DIR + PATH_SEPARATOR + name_),
                    server_on_node(BASKET_CONF->SERVER_ON_NODE) {
     AutoTrace trace = AutoTrace("basket::multimap");
     /* Initialize MPI rank and size of world */
@@ -47,10 +48,10 @@ multimap<KeyType, MappedType,
     rpc = Singleton<RPCFactory>::GetInstance()->GetRPC(BASKET_CONF->RPC_PORT);
     if (is_server) {
         /* Delete existing instance of shared memory space*/
-        boost::interprocess::shared_memory_object::remove(name.c_str());
+        boost::interprocess::file_mapping::remove(backed_file.c_str());
         /* allocate new shared memory space */
-        segment = boost::interprocess::managed_shared_memory(
-            boost::interprocess::create_only, name.c_str(), memory_allocated);
+        segment = boost::interprocess::managed_mapped_file(
+            boost::interprocess::create_only, backed_file.c_str(), memory_allocated);
         ShmemAllocator alloc_inst(segment.get_segment_manager());
         /* Construct Multimap in the shared memory space. */
         mymap = segment.construct<MyMap>(name.c_str())(Compare(), alloc_inst);
@@ -125,14 +126,14 @@ multimap<KeyType, MappedType,
         }
     }else if (!is_server && server_on_node) {
         /* Map the clients to their respective memory pools */
-        segment = boost::interprocess::managed_shared_memory(
-            boost::interprocess::open_only, name.c_str());
-        std::pair<MyMap*, boost::interprocess:: managed_shared_memory::size_type>
+        segment = boost::interprocess::managed_mapped_file(
+            boost::interprocess::open_only, backed_file.c_str());
+        std::pair<MyMap*, boost::interprocess:: managed_mapped_file::size_type>
                 res;
         res = segment.find<MyMap>(name.c_str());
         mymap = res.first;
         std::pair<boost::interprocess::interprocess_mutex *,
-                  boost::interprocess::managed_shared_memory::size_type> res2;
+                  boost::interprocess::managed_mapped_file::size_type> res2;
         res2 = segment.find<boost::interprocess::interprocess_mutex>("mtx");
         mutex = res2.first;
     }

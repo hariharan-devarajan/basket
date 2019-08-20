@@ -23,13 +23,14 @@
 namespace basket {
 
 global_sequence::~global_sequence() {
-    if (is_server) bip::shared_memory_object::remove(name.c_str());
+    if (is_server) bip::file_mapping::remove(backed_file.c_str());
 }
 
 global_sequence::global_sequence(std::string name_)
         : is_server(BASKET_CONF->IS_SERVER), my_server(BASKET_CONF->MY_SERVER),
           num_servers(BASKET_CONF->NUM_SERVERS),
           comm_size(1), my_rank(0), memory_allocated(BASKET_CONF->MEMORY_ALLOCATED),
+          backed_file(BASKET_CONF->BACKED_FILE_DIR + PATH_SEPARATOR + name_),
           name(name_), segment(),
           func_prefix(name_),
           server_on_node(BASKET_CONF->SERVER_ON_NODE) {
@@ -65,19 +66,18 @@ global_sequence::global_sequence(std::string name_)
 #endif
         }
 
-        bip::shared_memory_object::remove(name.c_str());
-        segment = bip::managed_shared_memory(bip::create_only, name.c_str(),
-                                             65536);
+        boost::interprocess::file_mapping::remove(backed_file.c_str());
+        segment = bip::managed_mapped_file(bip::create_only, backed_file.c_str(), 65536);
         value = segment.construct<uint64_t>(name.c_str())(0);
         mutex = segment.construct<boost::interprocess::interprocess_mutex>(
             "mtx")();
     }else if (!is_server && server_on_node) {
-        segment = bip::managed_shared_memory(bip::open_only, name.c_str());
-        std::pair<uint64_t*, bip::managed_shared_memory::size_type> res;
+        segment = bip::managed_mapped_file(bip::open_only, backed_file.c_str());
+        std::pair<uint64_t*, bip::managed_mapped_file::size_type> res;
         res = segment.find<uint64_t> (name.c_str());
         value = res.first;
         std::pair<bip::interprocess_mutex *,
-                  bip::managed_shared_memory::size_type> res2;
+                  bip::managed_mapped_file::size_type> res2;
         res2 = segment.find<bip::interprocess_mutex>("mtx");
         mutex = res2.first;
     }

@@ -25,7 +25,7 @@
 template<typename KeyType, typename Compare>
 set<KeyType, Compare>::~set() {
     if (is_server)
-        boost::interprocess::shared_memory_object::remove(name.c_str());
+        boost::interprocess::file_mapping::remove(backed_file.c_str());
 }
 
 template<typename KeyType, typename Compare>
@@ -34,6 +34,7 @@ set<KeyType, Compare>::set(CharStruct name_)
           num_servers(BASKET_CONF->NUM_SERVERS),
           comm_size(1), my_rank(0), memory_allocated(BASKET_CONF->MEMORY_ALLOCATED),
           name(name_), segment(), myset(), func_prefix(name_),
+          backed_file(BASKET_CONF->BACKED_FILE_DIR + PATH_SEPARATOR + name_),
           server_on_node(BASKET_CONF->SERVER_ON_NODE) {
     AutoTrace trace = AutoTrace("basket::set");
     /* Initialize MPI rank and size of world */
@@ -46,10 +47,10 @@ set<KeyType, Compare>::set(CharStruct name_)
     rpc = Singleton<RPCFactory>::GetInstance()->GetRPC(BASKET_CONF->RPC_PORT);
     if (is_server) {
         /* Delete existing instance of shared memory space*/
-        boost::interprocess::shared_memory_object::remove(name.c_str());
+        boost::interprocess::file_mapping::remove(backed_file.c_str());
         /* allocate new shared memory space */
-        segment = boost::interprocess::managed_shared_memory(
-            boost::interprocess::create_only, name.c_str(), memory_allocated);
+        segment = boost::interprocess::managed_mapped_file(
+            boost::interprocess::create_only, backed_file.c_str(), memory_allocated);
         ShmemAllocator alloc_inst(segment.get_segment_manager());
         /* Construct set in the shared memory space. */
         myset = segment.construct<MySet>(name.c_str())(Compare(), alloc_inst);
@@ -139,14 +140,14 @@ set<KeyType, Compare>::set(CharStruct name_)
 #endif
         }
     }else if (!is_server && server_on_node) {
-        segment = boost::interprocess::managed_shared_memory(
-            boost::interprocess::open_only, name.c_str());
+        segment = boost::interprocess::managed_mapped_file(
+            boost::interprocess::open_only, backed_file.c_str());
         std::pair<MySet*,
-                  boost::interprocess::managed_shared_memory::size_type> res;
+                  boost::interprocess::managed_mapped_file::size_type> res;
         res = segment.find<MySet> (name.c_str());
         myset = res.first;
         std::pair<boost::interprocess::interprocess_mutex *,
-                  boost::interprocess::managed_shared_memory::size_type> res2;
+                  boost::interprocess::managed_mapped_file::size_type> res2;
         res2 = segment.find<boost::interprocess::interprocess_mutex>("mtx");
         mutex = res2.first;
     }
@@ -163,6 +164,7 @@ bool set<KeyType, Compare>::LocalPut(KeyType &key) {
     AutoTrace trace = AutoTrace("basket::set::Put(local)", key);
     boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(*mutex);
     myset->insert(key);
+    segment.flush();
     return true;
 }
 
@@ -227,6 +229,7 @@ bool set<KeyType, Compare>::LocalErase(KeyType &key) {
     AutoTrace trace = AutoTrace("basket::set::Erase(local)", key);
     boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex> lock(*mutex);
     size_t s = myset->erase(key);
+    segment.flush();
     return s > 0;
 }
 
