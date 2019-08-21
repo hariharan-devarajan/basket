@@ -82,20 +82,22 @@ namespace basket{
           file.open(SERVER_LIST_PATH.c_str(), ios::in);
           if (file.is_open()) {
               std::string file_line;
-              std::string server_node;
-              std::string server_network;
+              std::string server_node_name;
+              int count;
               while (getline(file, file_line)) {
                   int split_loc = file_line.find(':');  // split to node and net
                   if (split_loc != std::string::npos) {
-                      server_node = file_line.substr(0, split_loc);
-                      server_network = file_line.substr(split_loc+1, std::string::npos);
+                      server_node_name = file_line.substr(0, split_loc);
+                      count = atoi(file_line.substr(split_loc+1, std::string::npos).c_str());
                   } else {
                       // no special network
-                      server_node = file_line;
-                      server_network = file_line;
+                      server_node_name = file_line;
+                      count = 1;
                   }
                   // server list is list of network interfaces
-                  SERVER_LIST.emplace_back(server_network);
+                  for(int i=0;i<count;++i){
+                      SERVER_LIST.emplace_back(server_node_name);
+                  }
               }
           } else {
               printf("Error: Can't open server list file %s\n", SERVER_LIST_PATH.c_str());
