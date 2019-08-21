@@ -35,7 +35,7 @@ multimap<KeyType, MappedType,
                    num_servers(BASKET_CONF->NUM_SERVERS),
                    comm_size(1), my_rank(0), memory_allocated(BASKET_CONF->MEMORY_ALLOCATED),
                    name(name_), segment(), mymap(), func_prefix(name_),
-                   backed_file(BASKET_CONF->BACKED_FILE_DIR + PATH_SEPARATOR + name_),
+                   backed_file(BASKET_CONF->BACKED_FILE_DIR + PATH_SEPARATOR + name_+"_"+std::to_string(my_server)),
                    server_on_node(BASKET_CONF->SERVER_ON_NODE) {
     AutoTrace trace = AutoTrace("basket::multimap");
     /* Initialize MPI rank and size of world */

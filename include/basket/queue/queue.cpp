@@ -27,7 +27,7 @@ queue<MappedType>::queue(std::string name_)
         : is_server(BASKET_CONF->IS_SERVER), my_server(BASKET_CONF->MY_SERVER),
           num_servers(BASKET_CONF->NUM_SERVERS),
           comm_size(1), my_rank(0), memory_allocated(BASKET_CONF->MEMORY_ALLOCATED),
-          backed_file(BASKET_CONF->BACKED_FILE_DIR + PATH_SEPARATOR + name_),
+          backed_file(BASKET_CONF->BACKED_FILE_DIR + PATH_SEPARATOR + name_+"_"+std::to_string(my_server)),
           name(name_), segment(), my_queue(), func_prefix(name_),
           server_on_node(BASKET_CONF->SERVER_ON_NODE) {
     AutoTrace trace = AutoTrace("basket::queue(local)");
