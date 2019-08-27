@@ -377,7 +377,7 @@ std::pair<bool, KeyType> set<KeyType, Compare>::LocalSeekFirst() {
 template<typename KeyType, typename Compare>
 std::pair<bool, KeyType> set<KeyType, Compare>::SeekFirst(uint16_t &key_int) {
     if (key_int == my_server && server_on_node) {
-        return LocalPopFirst();
+        return LocalSeekFirst();
     } else {
         AutoTrace trace = AutoTrace("basket::set::SeekFirst(remote)",
                                     key_int);
