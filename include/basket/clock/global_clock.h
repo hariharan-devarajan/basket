@@ -57,7 +57,10 @@ class global_clock {
   public:
     ~global_clock();
     global_clock(std::string name_ = "TEST_GLOBAL_CLOCK");
-
+    chrono_time * data(){
+        if(server_on_node || is_server) return start;
+        else nullptr;
+    }
     HTime GetTime();
 
     HTime GetTimeServer(uint16_t &server);

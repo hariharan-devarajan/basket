@@ -91,7 +91,10 @@ class multimap {
   public:
     /* Constructor to deallocate the shared memory*/
     ~multimap();
-
+    MyMap * data(){
+        if(server_on_node || is_server) return mymap;
+        else nullptr;
+    }
     explicit multimap(std::string name_ = "TEST_MULTIMAP");
 
     bool LocalPut(KeyType &key, MappedType &data);

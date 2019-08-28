@@ -93,7 +93,10 @@ class queue {
     ~queue();
 
     explicit queue(std::string name_ = "TEST_QUEUE");
-
+    Queue * data(){
+        if(server_on_node || is_server) return my_queue;
+        else nullptr;
+    }
     bool LocalPush(MappedType &data);
     std::pair<bool, MappedType> LocalPop();
     bool LocalWaitForElement();

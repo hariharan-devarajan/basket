@@ -55,7 +55,10 @@ class global_sequence {
   public:
     ~global_sequence();
     global_sequence(std::string name_ = "TEST_GLOBAL_SEQUENCE");
-
+    uint64_t * data(){
+        if(server_on_node || is_server) return value;
+        else nullptr;
+    }
     uint64_t GetNextSequence();
     uint64_t GetNextSequenceServer(uint16_t &server);
 

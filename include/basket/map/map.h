@@ -95,7 +95,10 @@ class map {
     ~map();
 
     explicit map(std::string name_ = "TEST_MAP");
-
+    MyMap * data(){
+        if(server_on_node || is_server) return mymap;
+        else nullptr;
+    }
     bool LocalPut(KeyType &key, MappedType &data);
     std::pair<bool, MappedType> LocalGet(KeyType &key);
     std::pair<bool, MappedType> LocalErase(KeyType &key);

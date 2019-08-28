@@ -102,7 +102,10 @@ class unordered_map {
     ~unordered_map();
 
     explicit unordered_map(CharStruct name_ = std::string("TEST_UNORDERED_MAP"));
-
+    MyHashMap* data(){
+        if(server_on_node || is_server) return myHashMap;
+        else nullptr;
+    }
    /* template <typename F>
     void Bind(std::string rpc_name, F fun);*/
 

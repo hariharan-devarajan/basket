@@ -97,7 +97,10 @@ class priority_queue {
     ~priority_queue();
 
     explicit priority_queue(std::string name_ = "TEST_PRIORITY_QUEUE");
-
+    Queue * data(){
+        if(server_on_node || is_server) return queue;
+        else nullptr;
+    }
     bool LocalPush(MappedType &data);
     std::pair<bool, MappedType> LocalPop();
     std::pair<bool, MappedType> LocalTop();

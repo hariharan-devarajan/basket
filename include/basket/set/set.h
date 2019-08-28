@@ -92,7 +92,10 @@ class set {
 
   public:
     ~set();
-
+    MySet * data(){
+        if(server_on_node || is_server) return myset;
+        else nullptr;
+    }
     explicit set(CharStruct name_ = std::string("TEST_SET"));
 
     bool LocalPut(KeyType &key);
