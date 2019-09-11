@@ -8,6 +8,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -gdwarf-2 -g3")
 option(BASKET_ENABLE_RPCLIB "allow basket to use RPCLIB" ON)
 option(BASKET_ENABLE_THALLIUM_TCP "allow basket to use RPCLIB" OFF)
 option(BASKET_ENABLE_THALLIUM_ROCE "allow basket to use RPCLIB" OFF)
+option(BASKET_TIMER "Show timing information of library calls." OFF)
+option(BASKET_TRACE "Show traces of library calls." OFF)
 
 if(BASKET_ENABLE_RPCLIB)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBASKET_ENABLE_RPCLIB")
@@ -19,7 +21,6 @@ elseif(BASKET_ENABLE_THALLIUM_ROCE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBASKET_ENABLE_THALLIUM_ROCE")
     message("BASKET_ENABLE_THALLIUM_ROCE: ${BASKET_ENABLE_THALLIUM_ROCE}")
 endif()
-
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
 
@@ -59,6 +60,14 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     PUBLIC_HEADER include/basket.h)
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
+if(BASKET_TIMER)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE BASKET_TIMER)
+endif()
+
+if(BASKET_TRACE)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE BASKET_TRACE)
+endif()
+
 set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
 
 configure_file(basket.pc.in basket.pc @ONLY)
@@ -69,6 +78,7 @@ endif()
 if(BASKET_ENABLE_THALLIUM_ROCE OR BASKET_ENABLE_THALLIUM_TCP)
     set(RPC_LIB_FLAGS -lthallium -lmercury -lmercury_util -lmargo -labt ${RPC_LIB_FLAGS})
 endif()
+
 set(LIB_FLAGS ${RPC_LIB_FLAGS} -lmpi -lpthread -lrt)
 
 # libs for NATS tests
