@@ -29,9 +29,9 @@ include_directories(src)
 include_directories(include)
 set(BASKET_SRC  include/basket/common/singleton.h
                 include/basket/common/debug.h
-		include/basket/common/enumerations.h
-		include/basket/common/macros.h
-		include/basket/common/configuration_manager.h
+                include/basket/common/enumerations.h
+                include/basket/common/macros.h
+                include/basket/common/configuration_manager.h
                 src/basket/common/debug.cpp
                 include/basket/common/constants.h
                 include/basket/common/typedefs.h
@@ -49,7 +49,7 @@ set(BASKET_SRC  include/basket/common/singleton.h
                 include/basket/set/set.h
                 include/basket/sequencer/global_sequence.h
                 src/basket/sequencer/global_sequence.cpp
-        include/basket/communication/rpc_factory.h)
+                include/basket/communication/rpc_factory.h)
 
 add_library(${PROJECT_NAME} SHARED ${BASKET_SRC})
 
@@ -63,15 +63,13 @@ set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
 
 configure_file(basket.pc.in basket.pc @ONLY)
 
-target_include_directories(${PROJECT_NAME} PRIVATE .)
-
 if(BASKET_ENABLE_RPCLIB)
     set(RPC_LIB_FLAGS -lrpc ${RPC_LIB_FLAGS})
 endif()
 if(BASKET_ENABLE_THALLIUM_ROCE OR BASKET_ENABLE_THALLIUM_TCP)
     set(RPC_LIB_FLAGS -lthallium -lmercury -lmercury_util -lmargo -labt ${RPC_LIB_FLAGS})
 endif()
-set(LIB_FLAGS ${RPC_LIB_FLAGS} -lmpi -lpthread -lrt -lboost_filesystem)
+set(LIB_FLAGS ${RPC_LIB_FLAGS} -lmpi -lpthread -lrt)
 
 # libs for NATS tests
 #set(LIB_FLAGS ${LIB_FLAGS} -lnats)
@@ -97,11 +95,5 @@ endif()
 option(BUILD_TEST "Build the unit tests" ON)
 if(BUILD_TEST)
     enable_testing()
-    include(CTest)
     add_subdirectory(test)
-    foreach (example ${examples})
-        add_custom_command(TARGET ${example} POST_BUILD
-                                  COMMAND ${CMAKE_COMMAND} -E copy
-                                  "" $<TARGET_FILE_DIR:${example}>)
-    endforeach()
 endif()
