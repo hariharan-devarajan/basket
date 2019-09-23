@@ -65,7 +65,7 @@ RPC::RPC() : server_list(),
 #ifdef BASKET_ENABLE_THALLIUM_TCP
         case THALLIUM_TCP: {
 	engine_init_str = BASKET_CONF->TCP_CONF + "://" +
-	  BASKET_CONF->SERVER_LIST[BASKET_CONF->MPI_RANK] +
+	  BASKET_CONF->SERVER_LIST[BASKET_CONF->MY_SERVER] +
 	  ":" +
 	  std::to_string(server_port + BASKET_CONF->MY_SERVER);
 	break;
@@ -75,7 +75,7 @@ RPC::RPC() : server_list(),
       case THALLIUM_ROCE: {
 	  engine_init_str = BASKET_CONF->VERBS_CONF + "://" +
 	    BASKET_CONF->VERBS_DOMAIN + "://" +
-	    std::string(BASKET_CONF->SERVER_LIST[BASKET_CONF->MPI_RANK]) +
+	    std::string(BASKET_CONF->SERVER_LIST[BASKET_CONF->MY_SERVER]) +
 	    ":" +
 	    std::to_string(server_port+BASKET_CONF->MY_SERVER);
 	  break;
