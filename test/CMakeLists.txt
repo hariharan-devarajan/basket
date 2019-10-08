@@ -1,6 +1,6 @@
 # target_link_libraries(DistributedHashMapTest ${CMAKE_BINARY_DIR}/libbasket.so)
 
-set(examples unordered_map_test map_test queue_test priority_queue_test multimap_test set_test)
+set(examples unordered_map_test map_test queue_test priority_queue_test multimap_test set_test thallium_bulk_test)
 # global_clock_test global_sequence_test
 
 add_custom_target(copy_hostfile)
@@ -24,6 +24,7 @@ foreach (example ${examples})
     add_dependencies(${example} copy_hostfile)
     add_dependencies(${example} copy_server_list)
     set_target_properties(${example} PROPERTIES ENVIRONMENT LD_PRELOAD=${CMAKE_BINARY_DIR}/libbasket.so)
+    target_include_directories(${example} PRIVATE ".")
     target_link_libraries(${example} ${PROJECT_NAME})
     set_target_properties (${example} PROPERTIES FOLDER test)
 endforeach()

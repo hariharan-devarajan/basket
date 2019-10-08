@@ -123,7 +123,15 @@ private:
 
     void run(size_t workers = RPC_THREADS);
 
-#ifdef BASKET_ENABLE_THALLIUM_ROCE
+#if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
+    std::shared_ptr<tl::engine> get_engine();
+
+    template <typename Response, typename KeyType, typename ValueType>
+    Response bulk_call_put(uint16_t server_index, CharStruct const &func_name, KeyType &key, ValueType &val);
+
+    template <typename KeyType, typename ValueType>
+    std::pair<bool, ValueType> bulk_call_get(uint16_t server_index, CharStruct const &func_name, KeyType &key);
+
     template<typename MappedType>
     MappedType prep_rdma_server(tl::endpoint endpoint, tl::bulk &bulk_handle);
 
