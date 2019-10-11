@@ -23,29 +23,52 @@
 #include <ctime>
 
 #include <mpi.h>
+
 #include "util.h"
-#include <basket/unordered_map/unordered_map.h>
+#include "basket/unordered_map/unordered_map.h"
 
 int main (int argc, char* argv[])
 {
     MpiData mpi = initMpiData(&argc, &argv);
 
-    if (mpi.comm_size != 2) {
-        fprintf(stderr, "thallium_bulk_test is meant to be run with 2 MPI processes\n");
-        exit(EXIT_FAILURE);
+    int ranks_per_server = mpi.comm_size;
+    int num_requests = 512;
+    long size_of_request = 1000;
+    bool debug = false;
+    bool server_on_node = false;
+
+    if(argc > 1) ranks_per_server = atoi(argv[1]);
+    if(argc > 2) num_requests = atoi(argv[2]);
+    if(argc > 3) size_of_request = (long)atol(argv[3]);
+    if(argc > 4) server_on_node = (bool)atoi(argv[4]);
+    if(argc > 5) debug = (bool)atoi(argv[5]);
+
+    if (debug) {
+        printf("%s/%d: %d\n", mpi.processor_name.c_str(), mpi.rank, getpid());
+        if (mpi.rank == 0) {
+            printf("%d ready for attach\n", mpi.comm_size);
+            fflush(stdout);
+            getchar();
+        }
     }
 
-    int num_requests = 1;
-    bool is_server = mpi.rank == mpi.comm_size - 1;
-
-    BASKET_CONF->IS_SERVER = is_server;
-    BASKET_CONF->MY_SERVER = 0;
-    BASKET_CONF->NUM_SERVERS = 1;
-    BASKET_CONF->SERVER_ON_NODE = is_server;
-    BASKET_CONF->SERVER_LIST_PATH = "./server_list";
+    bool is_server = (mpi.rank + 1) % ranks_per_server == 0;
+    int my_server = mpi.rank / ranks_per_server;
+    int num_servers = mpi.comm_size / ranks_per_server;
 
     constexpr int array_size= 1000;
-    constexpr size_t size_of_elem = sizeof(array_size);
+
+    if (size_of_request != array_size) {
+        printf("Please set TEST_REQUEST_SIZE in include/basket/common/constants.h instead."
+               "Testing with %d\n", array_size);
+    }
+
+    BASKET_CONF->IS_SERVER = is_server;
+    BASKET_CONF->MY_SERVER = my_server;
+    BASKET_CONF->NUM_SERVERS = num_servers;
+    BASKET_CONF->SERVER_ON_NODE = server_on_node || is_server;
+    BASKET_CONF->SERVER_LIST_PATH = "./server_list";
+
     using MyArray = std::array<int, array_size>;
     using MyMap = basket::unordered_map<KeyType, MyArray>;
 
@@ -59,27 +82,29 @@ int main (int argc, char* argv[])
         map = new MyMap(shm_name);
     }
 
+    MPI_Comm client_comm;
+    MPI_Comm_split(MPI_COMM_WORLD, !is_server, mpi.rank, &client_comm);
+    int client_comm_size;
+    MPI_Comm_size(client_comm, &client_comm_size);
+
     if (!is_server) {
         for(int i = 0; i < num_requests; ++i) {
-            size_t val = i;
-            auto key = KeyType(val);
+            auto key = KeyType(i);
             MyArray arr;
             for (auto &x : arr) {
                 x = 5;
             }
-            std::cout << "Put " << i << "\n";
             map->BulkPut(key, arr);
         }
 
+        MPI_Barrier(client_comm);
+
         for(int i = 0; i < num_requests; ++i) {
-            size_t val = i;
-            auto key = KeyType(val);
-            std::cout << "Get " << i << "\n";
+            auto key = KeyType(i);
             auto result = map->BulkGet(key);
             assert(result.first);
-            MyArray arr = result.second;
-            assert(arr.size() == array_size);
-            for (const auto &x : arr) {
+            assert(result.second.size() == array_size);
+            for (const auto &x : result.second) {
                 assert(x == 5);
             }
         }

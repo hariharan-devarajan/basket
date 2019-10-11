@@ -129,8 +129,8 @@ private:
     template <typename Response, typename KeyType, typename ValueType>
     Response bulk_call_put(uint16_t server_index, CharStruct const &func_name, KeyType &key, ValueType &val);
 
-    template <typename KeyType, typename ValueType>
-    std::pair<bool, ValueType> bulk_call_get(uint16_t server_index, CharStruct const &func_name, KeyType &key);
+    template <typename Response, typename KeyType>
+    Response bulk_call_get(uint16_t server_index, CharStruct const &func_name, KeyType &key);
 
     template<typename MappedType>
     MappedType prep_rdma_server(tl::endpoint endpoint, tl::bulk &bulk_handle);

@@ -192,21 +192,26 @@ Response RPC::bulk_call_put(uint16_t server_index, CharStruct const &func_name, 
 
     tl::remote_procedure remote_procedure = thallium_client->define(func_name.c_str());
 
+    // Serialize val into a buffer_output_archive
+    tl::buffer buf;
+    tl::buffer_output_archive archive(buf);
+    archive & val;
+
     std::vector<std::pair<void*, std::size_t>> segments(1);
-    segments[0].first  = val.data();
-    segments[0].second = val.size() * sizeof(typename ValueType::value_type);
+    segments[0].first  = buf.data();
+    segments[0].second = buf.size();
     tl::bulk bulk = thallium_client->expose(segments, tl::bulk_mode::read_only);
-    return remote_procedure.on(thallium_endpoints[server_index])(bulk, key, segments[0].second);
+    return remote_procedure.on(thallium_endpoints[server_index])(bulk, key);
 }
 
-template <typename KeyType, typename ValueType>
-std::pair<bool, ValueType> RPC::bulk_call_get(uint16_t server_index, CharStruct const &func_name, KeyType &key) {
+template <typename Response, typename KeyType>
+Response RPC::bulk_call_get(uint16_t server_index, CharStruct const &func_name, KeyType &key) {
     AutoTrace trace = AutoTrace("RPC::bulk_call_get", server_index, func_name);
     int16_t port = server_port + server_index;
 
-    const char *thallium_protocol = BASKET_CONF->RPC_IMPLEMENTATION == THALLIUM_TCP ?
-        BASKET_CONF->TCP_CONF.c_str() :
-        BASKET_CONF->VERBS_CONF.c_str();
+    const char *thallium_protocol = BASKET_CONF->RPC_IMPLEMENTATION == THALLIUM_TCP
+        ? BASKET_CONF->TCP_CONF.c_str()
+        : BASKET_CONF->VERBS_CONF.c_str();
     std::shared_ptr<tl::engine> thallium_client;
     if (BASKET_CONF->IS_SERVER) {
         thallium_client = std::make_shared<tl::engine>(thallium_protocol, THALLIUM_CLIENT_MODE);
@@ -217,18 +222,24 @@ std::pair<bool, ValueType> RPC::bulk_call_get(uint16_t server_index, CharStruct 
 
     tl::remote_procedure remote_procedure = thallium_client->define(func_name.c_str());
 
-    ValueType val;
+    // Serialize an empty result in a buffer_output_archive. Note, this won't
+    // work for variable sized containers. We would have to make a request to
+    // get the size first.
+    tl::buffer buf;
+    tl::buffer_output_archive archive(buf);
+    Response result;
+    archive & result;
+
     std::vector<std::pair<void*, std::size_t>> segments(1);
-    segments[0].first  = val.data();
-    segments[0].second = val.size() * sizeof(typename ValueType::value_type);
+    segments[0].first  = buf.data();
+    segments[0].second = buf.size();
     tl::bulk bulk = thallium_client->expose(segments, tl::bulk_mode::write_only);
-    std::pair<bool, ValueType> result;
-    if (remote_procedure.on(thallium_endpoints[server_index])(bulk, key, segments[0].second).template as<bool>()) {
-        result.first = true;
-    }
-    else {
-        result.first = false;
-    }
+    bool success = remote_procedure.on(thallium_endpoints[server_index])(bulk, key).template as<bool>();
+
+    // Deserialize result
+    tl::buffer_input_archive in_archive(buf);
+    in_archive & result;
+
     return result;
 }
 
@@ -255,5 +266,4 @@ tl::bulk RPC::prep_rdma_client(MappedType &data) {
     return thallium_engine->expose(segments, tl::bulk_mode::read_only);
 }
 #endif
-
 #endif  // INCLUDE_BASKET_COMMUNICATION_RPC_LIB_CPP_
