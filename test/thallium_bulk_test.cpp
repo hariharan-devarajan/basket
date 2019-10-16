@@ -72,8 +72,11 @@ int main (int argc, char* argv[])
     using MyArray = std::array<int, array_size>;
     using MyMap = basket::unordered_map<KeyType, MyArray>;
 
+    char *username = std::getenv("USER");
+    std::string shm_string = std::string(username ? username : "") + "_THALLIUM_BULK_TEST";
+    CharStruct shm_name(shm_string);
+
     MyMap *map;
-    CharStruct shm_name("THALLIUM_BULK_TEST");
     if (is_server) {
         map = new MyMap(shm_name);
     }

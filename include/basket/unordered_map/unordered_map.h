@@ -129,10 +129,12 @@ class unordered_map {
 #if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
     bool BulkPut(KeyType &key, MappedType &val);
     std::pair<bool, MappedType> BulkGet(KeyType &key);
+    size_t GetBulkSize(KeyType &key);
 
     void ThalliumBulkPut(const tl::request &thallium_req, tl::bulk &bulk_handle, KeyType &key);
     void ThalliumBulkGet(const tl::request &thallium_req, tl::bulk &bulk_handle, KeyType &key);
 
+    THALLIUM_DEFINE(GetBulkSize, (key), KeyType &key)
     THALLIUM_DEFINE(LocalPut, (key,data) ,KeyType &key, MappedType &data)
     THALLIUM_DEFINE(LocalGet, (key), KeyType &key)
     THALLIUM_DEFINE(LocalErase, (key), KeyType &key)

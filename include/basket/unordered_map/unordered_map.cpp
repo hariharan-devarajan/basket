@@ -106,6 +106,9 @@ unordered_map<KeyType, MappedType>::unordered_map(CharStruct name_)
      std::function<void(const tl::request &, tl::bulk &, KeyType &)> bulkGetFunc(
          std::bind(&unordered_map<KeyType, MappedType>::ThalliumBulkGet, this,
                    std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+     std::function<void(const tl::request &, KeyType &)> getBulkSizeFunc(
+         std::bind(&unordered_map<KeyType, MappedType>::ThalliumGetBulkSize, this,
+                   std::placeholders::_1, std::placeholders::_2));
      std::function<void(const tl::request &, KeyType &)> eraseFunc(
          std::bind(&unordered_map<KeyType, MappedType>::ThalliumLocalErase, this,
                    std::placeholders::_1, std::placeholders::_2));
@@ -117,6 +120,7 @@ unordered_map<KeyType, MappedType>::unordered_map(CharStruct name_)
         rpc->bind(func_prefix+"_Get", getFunc);
         rpc->bind(func_prefix+"_BulkPut", bulkPutFunc);
         rpc->bind(func_prefix+"_BulkGet", bulkGetFunc);
+        rpc->bind(func_prefix+"_GetBulkSize", getBulkSizeFunc);
         rpc->bind(func_prefix+"_Erase", eraseFunc);
         rpc->bind(func_prefix+"_GetAllData", getAllDataInServerFunc);
 	break;
@@ -147,7 +151,7 @@ bool unordered_map<KeyType, MappedType>::LocalPut(KeyType &key,
                                                   MappedType &data) {
     boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex>lock(*mutex);
     myHashMap->insert_or_assign(key, data);
-    
+    MappedType result = myHashMap->at(key);
     return true;
 }
 /**
@@ -500,6 +504,19 @@ unordered_map<KeyType, MappedType>::GetAllDataInServerWithCallback(std::string c
 }
 
 #if defined(BASKET_ENABLE_THALLIUM_TCP) || defined(BASKET_ENABLE_THALLIUM_ROCE)
+
+template<typename KeyType, typename MappedType>
+size_t unordered_map<KeyType, MappedType>::GetBulkSize(KeyType &key) {
+    auto response = LocalGet(key);
+    // Serialize result into a buffer_output_archive in order to get the total, serialized size
+    tl::buffer buf;
+    tl::buffer_output_archive archive(buf);
+    archive & response;
+    size_t result = buf.size();
+
+    return result;
+}
+
 template<typename KeyType, typename MappedType>
 bool unordered_map<KeyType, MappedType>::BulkPut(KeyType &key, MappedType &val) {
     uint16_t server_key = (uint16_t)keyHash(key) % num_servers;
@@ -521,9 +538,14 @@ std::pair<bool, MappedType> unordered_map<KeyType, MappedType>::BulkGet(KeyType 
     if (server_key == my_server && server_on_node) {
         return LocalGet(key);
     } else {
+        // First make a call to get the size of the serialized buffer
+        size_t buf_size = rpc->call<tl::packed_response>(server_key,
+                                                         func_prefix + "_GetBulkSize",
+                                                         key).template as<size_t>();
         return rpc->bulk_call_get<std::pair<bool, MappedType>, KeyType>(server_key,
                                                                         func_prefix + "_BulkGet",
-                                                                        key);
+                                                                        key,
+                                                                        buf_size);
     }
 }
 

@@ -205,7 +205,7 @@ Response RPC::bulk_call_put(uint16_t server_index, CharStruct const &func_name, 
 }
 
 template <typename Response, typename KeyType>
-Response RPC::bulk_call_get(uint16_t server_index, CharStruct const &func_name, KeyType &key) {
+Response RPC::bulk_call_get(uint16_t server_index, CharStruct const &func_name, KeyType &key, size_t buf_size) {
     AutoTrace trace = AutoTrace("RPC::bulk_call_get", server_index, func_name);
     int16_t port = server_port + server_index;
 
@@ -222,14 +222,7 @@ Response RPC::bulk_call_get(uint16_t server_index, CharStruct const &func_name, 
 
     tl::remote_procedure remote_procedure = thallium_client->define(func_name.c_str());
 
-    // Serialize an empty result in a buffer_output_archive. Note, this won't
-    // work for variable sized containers. We would have to make a request to
-    // get the size first.
-    tl::buffer buf;
-    tl::buffer_output_archive archive(buf);
-    Response result;
-    archive & result;
-
+    tl::buffer buf(buf_size);
     std::vector<std::pair<void*, std::size_t>> segments(1);
     segments[0].first  = buf.data();
     segments[0].second = buf.size();
@@ -238,6 +231,7 @@ Response RPC::bulk_call_get(uint16_t server_index, CharStruct const &func_name, 
 
     // Deserialize result
     tl::buffer_input_archive in_archive(buf);
+    Response result;
     in_archive & result;
 
     return result;
