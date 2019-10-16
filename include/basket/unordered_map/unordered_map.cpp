@@ -151,7 +151,7 @@ bool unordered_map<KeyType, MappedType>::LocalPut(KeyType &key,
                                                   MappedType &data) {
     boost::interprocess::scoped_lock<boost::interprocess::interprocess_mutex>lock(*mutex);
     myHashMap->insert_or_assign(key, data);
-    MappedType result = myHashMap->at(key);
+
     return true;
 }
 /**
